@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Small Hours</title>
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="style2.css">
+<link rel="stylesheet" href="style3.css">
+</head>
+<body>
+<div id="title">
+  <canvas id="titleCanvas"></canvas>
+  <div class="tbox">
+    <h1 class="logo">SMALL HOURS</h1>
+    <div class="tag">A story about three weeks, one backpack, and the hours nobody sees.</div>
+    <div class="cw"><b>16+ · Content note.</b> A fictional narrative life-sim about a troubled 12-year-old. Depicts family conflict, alcohol misuse, emotional and physical abuse, bullying, homelessness, and online grooming. Nothing graphic, but it doesn't look away. It isn't a guide, and it doesn't glamorize running away. It's about what it feels like, and who can help.</div>
+    <div class="row"><label>Name</label><input type="text" id="nameIn" placeholder="Sam" maxlength="14"></div>
+    <div class="row"><label>Story</label><input type="text" id="seedIn" placeholder="random: a new story every time" maxlength="20" style="width:230px"><button class="btn" id="diceBtn" title="Roll a seed">🎲</button></div>
+    <div class="row"><label>Mode</label><div class="seg" id="modeSeg"><button class="on" data-m="story">Story</button><button data-m="survival">Survival (harsher needs)</button></div></div>
+    <div class="row" style="margin-top:18px"><button class="btn primary" id="startBtn">Begin: Monday, October 5</button><button class="btn hidden" id="contBtn">Continue</button></div>
+    <div style="font-size:11.5px;color:var(--muted);margin-top:12px">Every playthrough is a different story · free-text conversations · working phone · live town map · 16 endings · friends, crushes &amp; a whole country map</div>
+  </div>
+</div>
+
+<div id="app" class="hidden">
+  <div id="top"></div>
+  <div id="left"></div>
+  <div id="center">
+    <canvas id="scene"></canvas>
+    <div id="locbar"><div><div id="locname"></div><div id="locsub"></div></div><div class="grow"></div></div>
+    <div id="log"></div>
+    <div id="actions"></div>
+    <div id="mapWrap" class="hidden">
+      <div id="mapTop"><b style="font-family:Georgia,serif;font-size:17px">Harlow</b><span class="legend">Click a place to see travel options · dashed amber line = city bus route · red zones = where they're searching</span><div style="flex:1"></div><button class="btn" id="mapClose">Close ✕</button></div>
+      <canvas id="mapCanvas"></canvas>
+      <div id="mapInfo" class="hidden"></div>
+    </div>
+  </div>
+  <div id="right">
+    <div id="phone"><div id="screen"><div id="notch"></div><div id="sbar"></div><div id="banner"></div><div id="pbody"></div>
+      <svg id="crack" class="hidden" viewBox="0 0 300 600" preserveAspectRatio="none"><g stroke="#fff" stroke-width="1.2" fill="none" opacity=".8"><path d="M210 140 L180 200 L200 260 L150 330 L170 420 L120 520"/><path d="M210 140 L260 110 L300 120"/><path d="M180 200 L120 190 L60 230 L0 220"/><path d="M200 260 L260 300 L300 290"/><path d="M150 330 L90 360 L40 350"/><path d="M170 420 L230 460 L260 540"/><path d="M210 140 L230 60 L220 0"/><path d="M180 200 L150 150 L100 90"/></g></svg>
+    </div></div>
+  </div>
+</div>
+<div id="modal" class="hidden"></div>
+<div id="toast"></div>
+<script src="data.js"></script>
+<script src="state.js"></script>
+<script src="engine.js"></script>
+<script src="nlp.js"></script>
+<script src="npcs.js"></script>
+<script src="phone.js"></script>
+<script src="memory.js"></script>
+<script src="world.js"></script>
+<script src="rumors.js"></script>
+<script src="talk.js"></script>
+<script src="events.js"></script>
+<script src="subplots.js"></script>
+<script src="story.js"></script>
+<script src="ambient.js"></script>
+<script src="props.js"></script>
+<script src="run.js"></script>
+<script src="endings.js"></script>
+<script src="actions.js"></script>
+<script src="actions2.js"></script>
+<script src="scene.js"></script>
+<script src="portraits.js"></script>
+<script src="scene2.js"></script>
+<script src="map.js"></script>
+<script src="map2.js"></script>
+<script src="ui.js"></script>
+<script src="phone2.js"></script>
+<script src="city.js"></script>
+<script src="rail.js"></script>
+<script src="jobs.js"></script>
+<script src="hustle.js"></script>
+<script src="vocab.js"></script>
+<script src="friends.js"></script>
+<script src="atlas.js"></script>
+<script src="net.js"></script>
+<script src="okafor.js"></script>
+<script src="lex.js"></script>
+<script src="mind.js"></script>
+<script src="converse.js"></script>
+<script src="ui2.js"></script>
+<script src="stage.js"></script>
+<script src="saves.js"></script>
+<script src="fixes.js"></script>
+<script src="family.js"></script>
+<script src="main.js"></script>
+<script src="mobile.js"></script>
+</body>
+</html>
