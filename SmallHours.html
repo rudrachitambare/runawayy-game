@@ -777,6 +777,14 @@ body.v3 #left .need .trk{display:none}
 @media (hover:hover){.hs:hover .hc{opacity:1;transform:translateY(-50%)}.hs.flipy:hover .hc{transform:none}.hs:hover .hl{opacity:0!important}}
 @media (hover:none){.hs .hc{display:none}}
 
+/* phone: every app view scrolls (home grid, lists, cards) — touch, wheel and drag */
+#pbody{overflow-y:auto!important;overflow-x:hidden;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;touch-action:pan-y}
+#pbody .appbody,#pbody .msgs{min-height:0;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;touch-action:pan-y}
+#pbody.dragging,#pbody.dragging *{cursor:grabbing!important;user-select:none!important}
+#pbody input[type=text],#pbody input:not([type]),#pbody input[type=number],#pbody textarea{background:#0009;color:inherit;border:1px solid #ffffff22;border-radius:10px;padding:6px 9px;font:inherit;font-size:12.5px;outline:none}
+#pbody input:focus,#pbody textarea:focus{border-color:#7ab8ff88}
+#pbody .seg button.on{background:#ffffff1f}
+
 </style>
 </head>
 <body>
@@ -6711,6 +6719,7 @@ window.SH = window.SH || {};
     if (sv.shelter && p.tier === 'city') ch.push({ t: 'Find the youth shelter', cls: 'safe', sub: 'Every city has one. They\'ll take you in, no questions tonight.', fn: () => SH.Endings.harbor ? SH.Endings.harbor('city') : SH.Endings.found('self') });
     if (p.hasPolice) ch.push({ t: 'Walk into the police station', cls: 'safe', sub: 'Tell them. Running away isn\'t a crime.', fn: () => SH.Endings.found('self') });
     else ch.push({ t: 'Call the sheriff (911 non-emergency)', cls: 'safe', sub: 'No station here. A deputy will drive out.', fn: () => SH.Endings.found('sheriff') });
+    (A.extra || []).forEach((f) => { try { f(p, ch, dark); } catch (e) { console.warn(e); } });
     ch.push({ t: dark ? 'Find somewhere to sleep' : 'Rest a while', sub: p.tier === 'village' ? 'Church steps, a bus shelter, a barn' : 'A laundromat, a bench, a library corner', fn: () => A.act('sleep') });
     ch.push({ t: 'Open Atlas (go somewhere else)', fn: () => { SH.Phone.open('atlas'); SH.Mobile && SH.Mobile.showPhone && SH.Mobile.showPhone(); } });
     SH.UI.dialog({ title: p.name, text: [`${A.TIERS[p.tier].n}, pop. ${p.pop.toLocaleString()} · ${SH.fmt()} · ${dark ? 'dark' : 'daylight'}`, noticeLine(p)], choices: ch });
@@ -6832,7 +6841,7 @@ window.SH = window.SH || {};
       <div class="sech">MOBILE DATA · Harlow Mobile prepaid</div>
       <div class="setrow"><span>${s.cut ? '⛔ Line suspended' : (s.mb / 1000).toFixed(2) + ' GB left of ' + (s.cap / 1000).toFixed(0) + ' GB'}</span></div>
       <div style="height:8px;background:#333;border-radius:5px;overflow:hidden;margin:4px 0 8px"><div style="height:100%;width:${pct}%;background:${pct < 15 ? '#ff453a' : pct < 35 ? '#ffd60a' : '#30d158'}"></div></div>
-      <div class="muted" style="font-size:11.5px">${renewIn > 0 ? `Mom's plan renews in ${renewIn} day${renewIn === 1 ? '' : 's'}${g.phase === 'run' ? ' (if she doesn\'t cancel it)' : ''}.` : 'Plan renewal overdue.'} Used so far: ${(s.used / 1000).toFixed(2)} GB. Texts and calls don't use data.</div>
+      <div class="muted" style="font-size:11.5px">${renewIn > 0 ? `Mom's plan renews in ${renewIn} day${renewIn === 1 ? '' : 's'}${g.phase === 'run' ? ' (if she doesn\'t cancel it)' : ''}.` : 'Plan renewal overdue.'} Used so far: ${(s.used / 1000).toFixed(2)} GB. Texts, photos and calls go over data too.</div>
       <div class="sech">TOP-UP CARDS</div>
       ${s.cards.length ? s.cards.map((c, i) => `<div class="setrow"><span>🎫 ${c} GB card</span><button class="btn small" onclick="SH.Net.redeem(${i})">Redeem</button></div>`).join('') : '<p class="muted" style="font-size:12px">None. QuikMart sells them by the register: $10 = 2 GB · $15 = 5 GB · $25 = 15 GB.</p>'}
       <div class="sech">LOCATION</div>
@@ -6889,6 +6898,1098 @@ window.SH = window.SH || {};
     if (sb && !g.phone.airplane && g.phone.bat > 0 && !g.phone.confiscated) { const html = sb.innerHTML; sb.innerHTML = html.replace('▂▄▆', w ? '📶wifi' : s.cut || s.mb <= 0 ? '▂▄▆ <span style="color:#ff453a">no data</span>' : '▂▄▆ LTE'); }
     return r;
   };
+})(window.SH);
+
+</script>
+<script>
+/* catalog.js */
+/* SMALL HOURS — Part 1c: the product catalog ("buy ANY product"). Every category exists. Items register into
+   SH.ITEMS as x_<id> so the bag/stash/pawn systems understand them. Big things (tents, bikes, scooters, TVs)
+   go to G.owned instead of the backpack. Adult-only stuff exists in the catalog but Sam refuses it;
+   age-restricted stuff (medicine, lighters, knives, fuel) needs an adult signature/ID and won't be handed over.
+   Row: [id, name, icon, price, weight, cat, extras] */
+(function (SH) {
+  const C = SH.Catalog = {};
+  const R = [
+    // food & drink
+    ['ramen', 'Instant ramen (6-pack)', '🍜', 3.5, 0.6, 'food', { food: 18, uses: 6 }], ['pb', 'Peanut butter jar', '🥜', 3.2, 0.5, 'food', { food: 15, uses: 5 }],
+    ['bread', 'Loaf of bread', '🍞', 2.5, 0.5, 'food', { food: 10, uses: 6 }], ['cereal', 'Cereal box', '🥣', 4, 0.5, 'food', { food: 12, uses: 5 }],
+    ['cans', 'Canned soup (3)', '🥫', 4.5, 1.2, 'food', { food: 20, uses: 3 }], ['trail', 'Trail mix', '🥜', 5, 0.4, 'food', { food: 14, uses: 4 }],
+    ['jerky', 'Beef jerky', '🥩', 7, 0.2, 'food', { food: 14, uses: 3 }], ['fruit', 'Bag of apples', '🍎', 4, 1, 'food', { food: 8, uses: 6 }],
+    ['energy', 'Energy drink', '🥤', 3, 0.4, 'food', { food: 2, energy: 12 }], ['water6', 'Water (6 bottles)', '💧', 4, 3, 'food', { food: 4, uses: 6 }],
+    ['candy', 'Candy bag', '🍬', 3, 0.3, 'food', { food: 6, mood: 3 }], ['sandwich', 'Deli sandwich', '🥪', 6, 0.3, 'food', { food: 28 }],
+    // clothes & disguise
+    ['hoodie2', 'Plain gray hoodie', '🧥', 18, 0.8, 'clothes', { warm: 8, disguise: 1 }], ['beanie', 'Beanie', '🧢', 8, 0.1, 'clothes', { warm: 4, disguise: 1 }],
+    ['cap', 'Baseball cap', '🧢', 12, 0.1, 'clothes', { disguise: 1 }], ['glasses', 'Clear-lens glasses', '👓', 10, 0.05, 'clothes', { disguise: 2 }],
+    ['dye', 'Box hair dye', '🎨', 11, 0.3, 'clothes', { disguise: 3 }], ['socks', 'Wool socks (3)', '🧦', 12, 0.2, 'clothes', { warm: 5 }],
+    ['rainjacket', 'Rain jacket', '🧥', 35, 0.6, 'clothes', { warm: 6, rain: true }], ['boots', 'Hiking boots', '🥾', 55, 1.2, 'clothes', { walk: 1 }],
+    ['gloves', 'Gloves', '🧤', 9, 0.1, 'clothes', { warm: 4 }], ['sweats', 'Sweatpants', '👖', 15, 0.5, 'clothes', { warm: 3 }],
+    // hygiene & health
+    ['wipes', 'Baby wipes', '🧻', 4, 0.4, 'hygiene', { hygiene: 12, uses: 8 }], ['toothkit', 'Toothbrush + paste', '🪥', 4, 0.1, 'hygiene', { hygiene: 6 }],
+    ['soap', 'Soap bar', '🧼', 2, 0.1, 'hygiene', { hygiene: 8 }], ['deo', 'Deodorant', '🧴', 5, 0.1, 'hygiene', { hygiene: 6 }],
+    ['pads', 'Period pads', '🩹', 6, 0.2, 'hygiene', {}], ['tp', 'Toilet paper (4)', '🧻', 5, 0.6, 'hygiene', {}],
+    ['bandaids', 'Band-aids', '🩹', 4, 0.05, 'health', { heal: 4 }], ['firstaid', 'First-aid kit', '⛑️', 18, 0.5, 'health', { heal: 12 }],
+    ['sunscreen', 'Sunscreen', '🧴', 8, 0.2, 'health', {}], ['painkiller', 'Pain reliever', '💊', 7, 0.05, 'health', { restricted: 'medicine' }],
+    ['coldmeds', 'Cold medicine', '💊', 9, 0.1, 'health', { restricted: 'medicine' }], ['inhaler2', 'Rescue inhaler', '🫁', 60, 0.1, 'health', { restricted: 'prescription' }],
+    // camping & shelter
+    ['sleepbag', 'Sleeping bag', '🛌', 35, 2.5, 'camping', { sleepWarm: 40 }], ['tent1', 'Small tent (1–2)', '⛺', 45, 3, 'camping', { shelter: 1, big: true }],
+    ['tent4', 'Big tent (4–6)', '🏕️', 120, 7, 'camping', { shelter: 2, big: true }], ['tarp', 'Tarp', '🟦', 12, 1, 'camping', { rain: true }],
+    ['mat', 'Foam sleeping mat', '🟩', 15, 0.8, 'camping', { sleepWarm: 12 }], ['stove', 'Camp stove', '🔥', 30, 1, 'camping', { cook: true }],
+    ['gas', 'Stove gas canister', '🛢️', 6, 0.4, 'camping', { restricted: 'fuel' }], ['lantern', 'LED lantern', '🏮', 16, 0.5, 'camping', {}],
+    ['filter', 'Water filter straw', '🥤', 20, 0.1, 'camping', {}], ['rope', 'Paracord', '🪢', 8, 0.3, 'camping', {}],
+    ['bugspray', 'Bug spray', '🦟', 7, 0.2, 'camping', {}], ['cooler', 'Cooler', '🧊', 25, 3, 'camping', { big: true }],
+    ['mess', 'Pot + spork kit', '🍳', 14, 0.4, 'camping', {}], ['lighter', 'Lighter', '🔥', 2, 0.05, 'camping', { restricted: 'lighter' }],
+    // tools & fixing
+    ['multitool', 'Multi-tool', '🛠️', 25, 0.3, 'tools', { restricted: 'blade' }], ['ducttape', 'Duct tape', '🩶', 6, 0.3, 'tools', { fix: 1 }],
+    ['wrench', 'Wrench set', '🔧', 20, 1.5, 'tools', { fix: 2 }], ['pump', 'Bike pump', '🚲', 15, 0.6, 'tools', { fix: 1 }],
+    ['patch', 'Tire patch kit', '🛞', 5, 0.1, 'tools', { fix: 1 }], ['lock', 'U-lock', '🔒', 25, 1.2, 'tools', {}],
+    ['padlock', 'Padlock', '🔐', 8, 0.2, 'tools', {}], ['hammer', 'Hammer + nails', '🔨', 14, 1, 'tools', { fix: 2 }],
+    ['broom', 'Broom', '🧹', 12, 1, 'tools', { big: true }], ['plywood', 'Plywood sheet', '🪵', 28, 10, 'tools', { big: true, build: 1 }],
+    // electronics
+    ['cable', 'Charging cable', '🔌', 8, 0.1, 'electronics', {}], ['powerbank', 'Power bank (10,000 mAh)', '🔋', 22, 0.3, 'electronics', { charge: 2 }],
+    ['powerbank2', 'Power bank (26,800 mAh)', '🔋', 45, 0.6, 'electronics', { charge: 5 }], ['solar', 'Foldable solar charger', '☀️', 40, 0.6, 'electronics', { solar: true }],
+    ['earbuds', 'Earbuds', '🎧', 15, 0.05, 'electronics', { mood: 2 }], ['speaker', 'Bluetooth speaker', '🔊', 25, 0.5, 'electronics', { mood: 3 }],
+    ['flash2', 'Headlamp', '🔦', 14, 0.1, 'electronics', {}], ['radio', 'Hand-crank radio', '📻', 30, 0.6, 'electronics', { charge: 1 }],
+    ['fan', 'Battery fan', '🌀', 18, 0.5, 'electronics', {}], ['heater', 'Space heater', '♨️', 35, 2, 'electronics', { big: true, needsOutlet: true, warm: 20 }],
+    ['strip', 'Power strip', '🔌', 12, 0.4, 'electronics', { outlets: 4 }], ['phone2', 'Cheap Android phone', '📱', 60, 0.2, 'electronics', {}],
+    ['console2', 'Handheld console', '🎮', 150, 0.4, 'electronics', { mood: 5 }], ['tv', 'Small TV', '📺', 110, 5, 'electronics', { big: true, needsOutlet: true }],
+    ['kettle', 'Electric kettle', '☕', 20, 1, 'electronics', { needsOutlet: true, cook: true }], ['battery', 'AA batteries (8)', '🔋', 7, 0.2, 'electronics', {}],
+    ['carbat', 'Car battery', '🔋', 95, 15, 'electronics', { big: true, vehicle: 1 }], ['inverter', 'Power inverter', '⚡', 35, 1, 'electronics', { vehicle: 1 }],
+    // vehicles & rides
+    ['kick', 'Kick scooter', '🛴', 40, 3, 'rides', { big: true, ride: 'kick' }], ['escoot', 'Electric scooter', '🛴', 320, 12, 'rides', { big: true, ride: 'escooter' }],
+    ['bmx', 'BMX bike', '🚲', 180, 11, 'rides', { big: true, ride: 'bike' }], ['bikeused', 'Used bike', '🚲', 60, 13, 'rides', { big: true, ride: 'bike' }],
+    ['bikenew', 'New mountain bike', '🚵', 420, 13, 'rides', { big: true, ride: 'bike' }], ['cargo', 'Cargo bike', '🚲', 900, 25, 'rides', { big: true, ride: 'cargo' }],
+    ['helmet', 'Helmet', '⛑️', 25, 0.5, 'rides', {}], ['bikelight', 'Bike lights', '💡', 12, 0.1, 'rides', {}],
+    ['tires', 'Used car tires (set)', '🛞', 80, 30, 'rides', { big: true, vehicle: 1 }], ['motoroil', 'Motor oil', '🛢️', 12, 1, 'rides', { vehicle: 1 }],
+    ['sparkplugs', 'Spark plugs', '⚙️', 15, 0.2, 'rides', { vehicle: 1 }],
+    // school, fun, gifts
+    ['notebook', 'Notebook', '📓', 3, 0.3, 'fun', {}], ['markers', 'Markers', '🖍️', 8, 0.2, 'fun', { art: 1 }], ['cards', 'Deck of cards', '🃏', 3, 0.1, 'fun', { mood: 2 }],
+    ['ball', 'Basketball', '🏀', 20, 0.6, 'fun', { mood: 3 }], ['book', 'Paperback book', '📕', 9, 0.3, 'fun', { mood: 3 }], ['plush', 'Stuffed animal', '🧸', 12, 0.3, 'fun', { mood: 4 }],
+    ['flowers', 'Flowers', '💐', 10, 0.3, 'fun', { gift: 8 }], ['chocs', 'Box of chocolates', '🍫', 8, 0.3, 'fun', { gift: 6, food: 10 }], ['bracelet', 'Friendship bracelet kit', '🧶', 6, 0.1, 'fun', { gift: 10 }],
+    ['giftcard', 'Game store gift card ($25)', '🎁', 25, 0, 'fun', { gift: 12 }], ['lemonade', 'Lemonade stand kit', '🍋', 15, 2, 'fun', { biz: 'stand' }],
+    // home & household
+    ['blanket2', 'Fleece blanket', '🛏️', 12, 2, 'home', { sleepWarm: 25 }], ['pillow', 'Pillow', '🛌', 10, 0.8, 'home', { sleepWarm: 5 }],
+    ['curtain', 'Blackout curtain', '🪟', 18, 0.8, 'home', { build: 1 }], ['doorstop', 'Door wedge alarm', '🚪', 12, 0.2, 'home', {}],
+    ['mattress', 'Air mattress', '🛏️', 30, 2, 'home', { big: true, sleepWarm: 15 }], ['bucket', 'Bucket', '🪣', 5, 0.5, 'home', {}],
+    ['trash', 'Trash bags', '🗑️', 6, 0.3, 'home', {}], ['detergent', 'Laundry pods', '🧺', 9, 0.8, 'home', { hygiene: 4 }],
+    // adult-only (exist, Sam refuses)
+    ['beer', 'Beer (6-pack)', '🍺', 10, 2.5, 'adult', { adult: 'alcohol' }], ['wine', 'Wine', '🍷', 14, 1.3, 'adult', { adult: 'alcohol' }],
+    ['cigs', 'Cigarettes', '🚬', 9, 0.1, 'adult', { adult: 'tobacco' }], ['vape', 'Vape', '💨', 20, 0.1, 'adult', { adult: 'vape' }],
+    ['lottery', 'Lottery tickets', '🎟️', 5, 0, 'adult', { adult: 'gambling' }], ['magazine', 'Adults-only magazine', '📰', 8, 0.2, 'adult', { adult: 'adult' }],
+  ];
+  C.CATS = [['food', '🍎 Food'], ['clothes', '👕 Clothes'], ['hygiene', '🧼 Hygiene'], ['health', '⛑️ Health'], ['camping', '🏕️ Camping'], ['tools', '🛠️ Tools'], ['electronics', '🔌 Electronics'], ['rides', '🛴 Rides & parts'], ['fun', '🎁 Fun & gifts'], ['home', '🏠 Home'], ['adult', '🔞 18+']];
+  C.ALL = {};
+  R.forEach(([id, n, i, price, w, cat, x]) => {
+    const key = 'x_' + id, p = Object.assign({ id: key, n, i, price, w, cat }, x);
+    C.ALL[key] = p;
+    if (!SH.ITEMS[key]) SH.ITEMS[key] = Object.assign({ n, i, w: p.big ? 0 : w, d: desc(p), price, sell: Math.round(price * 0.3) }, x);
+  });
+  function desc(p) {
+    const b = [];
+    if (p.food) b.push(`+${p.food} fullness${p.uses ? ` ×${p.uses}` : ''}`); if (p.sleepWarm) b.push(`warmth +${p.sleepWarm} sleeping`); if (p.warm) b.push(`warmth +${p.warm}`);
+    if (p.hygiene) b.push(`hygiene +${p.hygiene}`); if (p.disguise) b.push('changes your look'); if (p.charge) b.push(`${p.charge} phone charge${p.charge > 1 ? 's' : ''}`);
+    if (p.ride) b.push('a ride (faster travel)'); if (p.needsOutlet) b.push('needs an outlet'); if (p.big) b.push('too big for a backpack');
+    if (p.restricted) b.push('ID/adult needed'); if (p.gift) b.push('a good gift'); return b.join(' · ') || p.cat;
+  }
+  C.desc = desc;
+  // re-describe now that desc exists (hoisting guard)
+  Object.values(C.ALL).forEach((p) => { SH.ITEMS[p.id].d = desc(p); });
+
+  C.search = (q) => { q = (q || '').toLowerCase().trim(); if (!q) return []; return Object.values(C.ALL).filter((p) => p.n.toLowerCase().includes(q) || p.cat.includes(q) || (q.length > 3 && p.id.includes(q))); };
+  C.byCat = (cat) => Object.values(C.ALL).filter((p) => p.cat === cat);
+  C.refuse = (p) => ({ alcohol: 'nope. I\'m not that braindead.', tobacco: 'nope. I\'m not that braindead. Also Grandma would come back from Cedar Falls just to yell at me.', vape: 'nope. I\'m not that braindead.', gambling: 'nope. I\'m not that braindead. That\'s literally how Rick lost the car money.', adult: 'nope. absolutely not. I\'m not that braindead.' })[p.adult] || 'nope.';
+  C.restrictMsg = (p) => ({ medicine: 'The clerk won\'t sell medicine to a kid alone.', prescription: 'That needs a prescription. With your name, your mom\'s insurance and a pharmacist asking questions.', fuel: 'Fuel canisters: 18+ at the register.', lighter: 'Lighters: ID required.', blade: 'Anything with a blade: 18+. They check.' })[p.restricted] || 'Adults only.';
+
+  /* receive an item: backpack if it fits, otherwise G.owned (big things / overflow go to your stash or base) */
+  C.give = function (key) {
+    const g = SH.G, p = C.ALL[key]; if (!p) return false;
+    if (p.adult) { SH.UI.toast(C.refuse(p)); return false; }
+    g.owned = g.owned || [];
+    if (p.big) { g.owned.push(key); if (p.ride === 'bike' || p.ride === 'cargo') SH.flag('hasBike'); if (p.ride) SH.flag('hasRide_' + p.ride); return true; }
+    if (!SH.addBag(key)) { g.owned.push(key); SH.UI.toast(`${p.n}: backpack's full, so it goes with your other stuff.`); }
+    return true;
+  };
+  C.fmt = (n) => '$' + n.toFixed(2);
+})(window.SH);
+
+</script>
+<script>
+/* net2.js */
+/* SMALL HOURS — Part 1a: messaging over data, offline queue, held inbox, burner phone, data saver, bundles,
+   night pack, Friend Finder subscription, free App Lock.
+   Messages & calls are internet-based now (like most messaging apps): a text is tiny, a photo isn't,
+   a voice call is ~0.75 MB/min, video ~6 MB/min. No data + no wifi = "sending…" until you're back online,
+   and nobody's messages reach you either — they arrive in a burst when you reconnect. */
+(function (SH) {
+  const NT = SH.Net, P = SH.Phone;
+  if (!NT || !P) return;
+  const G = () => SH.G, $ = (s) => document.querySelector(s);
+  const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const MB = { text: 0.05, photo: 1.6, callMin: 0.75, videoMin: 6 };
+  NT.MB = MB;
+
+  const X = NT.x = function () {
+    const s = NT.state(); if (!s) return null;
+    if (!s.x) s.x = { queue: [], inbox: [], saver: false, night: 0, burner: null, gave: {}, sub: { finder: 0 }, lock: { pin: null, apps: {} }, hist: [] };
+    return s.x;
+  };
+
+  /* raw data spend (MB) — honours wifi, saver, night pack */
+  NT.spend = function (mb, why) {
+    const g = G(), s = NT.state(), x = X(); if (!s) return true;
+    if (NT.wifiHere()) return true;
+    if (g.phone.airplane || s.cut) return false;
+    if (x.saver) mb *= 0.55;
+    const h = SH.hour();
+    if (x.night > 0 && (h < 6)) { const take = Math.min(x.night, mb); x.night -= take; mb -= take; }
+    if (mb <= 0) return true;
+    if (s.mb < mb) return false;
+    s.mb = Math.max(0, s.mb - mb); s.used += mb; return true;
+  };
+  NT.canData = () => { const g = G(), s = NT.state(); return !!NT.wifiHere() || (!g.phone.airplane && !s.cut && (s.mb > 0.05 || (X().night > 0 && SH.hour() < 6))); };
+  // data saver: background app costs drop too
+  const bUse = NT.use; NT.use = function (app) { const x = X(); if (x && x.saver && NT.state().mb > 0 && !NT.wifiHere()) { const s = NT.state(); const before = s.mb; const r = bUse.apply(this, arguments); s.mb = Math.min(before, s.mb + (before - s.mb) * 0.45); return r; } return bUse.apply(this, arguments); };
+
+  /* ---------- sending ---------- */
+  const bSend = P.send;
+  P.send = function (id, text) {
+    const g = G(); if (!text || !text.trim() || !P.ok() || g.phone.airplane) return bSend.apply(this, arguments);
+    const x = X();
+    if (x.burner && !x.gave[id] && !['class', 'lighthouse', 'harbor'].includes(id)) { x.gave[id] = true; P.push(id, 'sys', 'Texting from your new number. ' + ((SH.NPCS_META[id] || {}).n || 'They') + ' has it now.', false); }
+    if (!NT.spend(MB.text, 'text')) {
+      P.push(id, 'me', text, false); P.push(id, 'sys', '⏳ Sending… (no data, no wifi)', false);
+      x.queue.push({ id, text, t: g.t }); g.stats.textsSent++; SH.advance(2, { interrupt: false }); SH.UI.renderSide(); P.render(); return;
+    }
+    return bSend.apply(this, arguments);
+  };
+
+  /* ---------- receiving: hold while offline or when they don't have your burner number ---------- */
+  const bPush = P.push;
+  P.push = function (id, from, text, notify) {
+    const g = G(), x = g && g.net && g.net.x;
+    if (g && x && from !== 'me' && from !== 'sys' && !NT._flushing) {
+      const blocked = x.burner && !x.gave[id] && !['class', 'lighthouse', 'harbor', 'bank', 'carrier'].includes(id);
+      if (blocked) { (x.oldInbox = x.oldInbox || []).push({ id, from, text, t: g.t }); return; }
+      if (!NT.canData()) { x.inbox.push({ id, from, text, t: g.t, notify }); return; }
+      NT.spend(MB.text * (/📷|photo|pic/i.test(text) ? 30 : 1));
+    }
+    return bPush.apply(this, arguments);
+  };
+
+  NT.flush = function () {
+    const g = G(), x = X(); if (!x || !NT.canData()) return 0;
+    let n = 0;
+    if (x.queue.length) {
+      const q = x.queue.splice(0); q.forEach((m) => {
+        NT.spend(MB.text); const th = g.threads[m.id] || [];
+        for (let i = th.length - 1; i >= 0; i--) if (th[i].from === 'sys' && /^⏳ Sending/.test(th[i].text)) { th[i].text = 'Delivered ' + SH.fmt12(); break; }
+        if (P.available(m.id) || ['class', 'dex'].includes(m.id)) setTimeout(() => P.reply(m.id, m.text), 900 + Math.random() * 2500);
+      });
+    }
+    if (x.inbox.length) {
+      const inb = x.inbox.splice(0); n = inb.length; NT._flushing = true;
+      try { inb.forEach((m) => P.push(m.id, m.from, m.text, m.notify)); } finally { NT._flushing = false; }
+      SH.UI.toast(`📶 Back online. ${n} message${n > 1 ? 's' : ''} came in at once.`);
+    }
+    return n;
+  };
+  const bAdv = SH.advance;
+  SH.advance = function () { const r = bAdv.apply(this, arguments); try { NT.flush(); } catch (e) { console.warn(e); } return r; };
+  const bOpen = P.open; P.open = function () { try { NT.flush(); } catch (e) {} return bOpen.apply(this, arguments); };
+
+  /* ---------- calls ---------- */
+  const bCall = P.callOut;
+  P.callOut = function (id) {
+    const g = G(); if (id === 'harbor' || id === '911') return bCall.apply(this, arguments); // emergency & helplines always go through
+    if (!NT.canData()) { SH.UI.toast('Call failed. No data, no wifi. (Your calls go over the internet.)'); return; }
+    const x = X(); if (x.burner && !x.gave[id]) { x.gave[id] = true; }
+    if (!NT.spend(MB.callMin * 6)) { SH.UI.toast('Call dropped. Out of data.'); return; }
+    return bCall.apply(this, arguments);
+  };
+  const bInc = P.incoming;
+  P.incoming = function (id, onAnswer, onDecline) {
+    const x = X();
+    if (!NT.canData() || (x && x.burner && !x.gave[id])) { onDecline && onDecline(true); if (x) (x.missed = x.missed || []).push({ id, t: G().t }); return; }
+    return bInc.call(this, id, () => { NT.spend(MB.callMin * 5); onAnswer && onAnswer(); }, onDecline);
+  };
+
+  /* ---------- burner, saver, packs, subscriptions, lock ---------- */
+  NT.buyBurner = function () {
+    const g = G(), x = X(); if (x.burner) return SH.UI.toast('You already have a burner.');
+    if (g.money < 30) return SH.UI.toast('$30 for the phone + SIM. You don\'t have it in cash.');
+    SH.money(-30); (g.tx = g.tx || []).push({ t: g.t, d: 'QuikMart: prepaid phone', a: -30 });
+    x.burner = { num: '(555) ' + (200 + Math.floor(Math.random() * 700)) + '-' + (1000 + Math.floor(Math.random() * 8999)), since: g.t };
+    const s = NT.state(); s.mb += 1000; s.cap = Math.max(s.cap, s.mb);
+    g.phone.share = false; SH.flag('burner');
+    SH.UI.dialog({ title: 'A $30 phone', text: ['It\'s a gray brick with a SIM in a cardboard sleeve. The QuikMart guy doesn\'t ask why a kid wants one. People buy these for grandmas all the time.', `Your new number: ${x.burner.num}. You move your contacts over. Nobody has this number. Nobody can text you, call you, or see where you are, until you give it to them.`, 'It comes with 1 GB. Location sharing: off. Your old phone\'s blue dot just… stops.'], choices: [{ t: 'Okay', fn: () => { SH.UI.afterAction && SH.UI.afterAction(); } }] });
+  };
+  NT.give = function (id) { const x = X(); x.gave[id] = true; const old = (x.oldInbox || []).filter((m) => m.id === id); x.oldInbox = (x.oldInbox || []).filter((m) => m.id !== id); P.push(id, 'sys', 'You sent your new number.', false); NT._flushing = true; try { old.slice(-3).forEach((m) => P.push(m.id, m.from, m.text, false)); } finally { NT._flushing = false; } P.render(); };
+  NT.nightPack = function () { const g = G(); if (g.money < 3) return SH.UI.toast('$3. Not enough cash.'); SH.money(-3); X().night += 1024; SH.UI.toast('🌙 Night pack: 1 GB, midnight–6 AM only.'); P.render(); };
+  NT.bundle = function () { const g = G(), s = NT.state(); if (g.money < 20) return SH.UI.toast('$20 for the monthly bundle. Not enough cash.'); SH.money(-20); s.mb += 8192; s.cap = Math.max(s.cap, s.mb); s.renew = 30; s.cut = false; SH.UI.toast('📦 Monthly bundle: 8 GB added.'); P.render(); };
+  NT.finderOn = () => { const x = X(); return x && x.sub.finder > SH.G.t; };
+  NT.subscribe = function () {
+    const Bk = SH.Bank; if (!Bk) return;
+    if (!Bk.pay(4.99, 'Friend Finder+ (monthly)')) return;
+    X().sub.finder = G().t + 30 * 1440; SH.UI.toast('Friend Finder+ active for 30 days.'); P.render();
+  };
+  NT.locked = (app) => { const x = X(); return !!(x && x.lock.pin && x.lock.apps[app]); };
+
+  /* ---------- Network app: extra sections ---------- */
+  const bNet = P.V.net;
+  P.V.net = function (body) {
+    bNet.call(this, body);
+    const g = G(), s = NT.state(), x = X(); const ab = body.querySelector('.appbody'); if (!ab) return;
+    const q = x.queue.length, ib = x.inbox.length;
+    const box = document.createElement('div');
+    box.innerHTML = `<div class="sech">MESSAGING</div><div class="setrow" style="font-size:12px;line-height:1.5">Texts ≈ ${MB.text * 1000 | 0} KB · photos ≈ ${MB.photo} MB · calls ≈ ${MB.callMin} MB/min · video ≈ ${MB.videoMin} MB/min.<br>${q ? `⏳ <b>${q}</b> waiting to send.` : 'Nothing waiting to send.'} ${ib ? `📥 <b>${ib}</b> held until you're online.` : ''}</div>
+      <div class="sech">SAVE DATA</div>
+      <div class="setrow" style="display:flex;justify-content:space-between;align-items:center">Data saver <button class="btn" onclick="SH.Net.x().saver=!SH.Net.x().saver;SH.Phone.render()">${x.saver ? 'ON' : 'OFF'}</button></div>
+      <div class="setrow" style="font-size:11.5px;color:var(--muted)">Blocks autoplay and images. Everything costs about half.</div>
+      <div class="sech">BUY (CASH, AT QUIKMART OR GAS STATIONS)</div>
+      <div class="setrow" style="font-size:12px;line-height:1.6">🌙 Night pack · $3 · 1 GB, midnight–6 AM ${x.night > 0 ? `(<b>${(x.night / 1024).toFixed(2)} GB</b> left)` : ''}<br>📦 Monthly bundle · $20 · 8 GB<br>📱 Prepaid burner phone · $30 · new number, 1 GB</div>
+      ${x.burner ? `<div class="sech">BURNER</div><div class="setrow" style="font-size:12px">Number: <b>${x.burner.num}</b><br>Has it: ${Object.keys(x.gave).map((id) => esc((SH.NPCS_META[id] || {}).n || id)).join(', ') || 'nobody yet'}<br>${(x.oldInbox || []).length ? `Your old number got <b>${x.oldInbox.length}</b> messages you'll never see unless you give them the new one.` : ''}</div>` : ''}
+      <div class="sech">SUBSCRIPTIONS</div>
+      <div class="setrow" style="font-size:12px;line-height:1.5">👀 <b>Friend Finder+</b> · $4.99/mo (card only) · see friends who share with you, live.<br>${NT.finderOn() ? `Active until ${SH.dateStr(x.sub.finder)}.` : `<button class="btn" onclick="SH.Net.subscribe()">Subscribe</button>`}</div>
+      <div class="sech">APP LOCK (FREE)</div>
+      <div class="setrow" style="font-size:12px;line-height:1.6">${x.lock.pin ? `PIN set. Locked: ${Object.keys(x.lock.apps).filter((k) => x.lock.apps[k]).join(', ') || 'none'}.` : 'No PIN.'}<br>${['messages', 'browser', 'bank', 'people', 'photos'].map((a) => `<button class="btn" style="margin:2px" onclick="SH.Net.toggleLock('${a}')">${x.lock.apps[a] ? '🔒' : '🔓'} ${a}</button>`).join('')}<br><span style="color:var(--muted)">If someone grabs your phone, locked apps stay shut. It won't stop anyone from seeing that you locked them.</span></div>`;
+    ab.appendChild(box);
+  };
+  NT.toggleLock = function (a) { const x = X(); if (!x.lock.pin) x.lock.pin = String(1000 + Math.floor(Math.random() * 8999)); x.lock.apps[a] = !x.lock.apps[a]; SH.UI.toast(x.lock.apps[a] ? `🔒 ${a} locked (PIN ${x.lock.pin}).` : `🔓 ${a} unlocked.`); P.render(); };
+
+  /* ---------- Friend Finder app ---------- */
+  P.V.finder = function (body) {
+    const g = G(), W = SH.World, F = SH.Friends;
+    if (!NT.finderOn()) { body.innerHTML = P.hdr('👀 Friend Finder') + `<div class="appbody" style="text-align:center;padding-top:30px"><div style="font-size:40px">👀</div><p>See your friends on the map, live.</p><p class="muted" style="font-size:12px">$4.99/month, card only. Only shows people who choose to share with you.</p><button class="btn primary" onclick="SH.Net.subscribe()">Subscribe</button></div>`; return; }
+    if (!NT.canData()) return NT.blocked(body, '👀 Friend Finder');
+    NT.spend(0.4);
+    const ids = (F ? Object.keys(F.KIDS) : []).concat(['jordan']).filter((id) => g.rel[id] != null && (id === 'jordan' || (g.friends && g.friends[id] && g.friends[id].met)));
+    const rows = ids.map((id) => {
+      const m = SH.NPCS_META[id] || { n: id, col: '#666', ini: '?' }, shares = (g.rel[id] || 0) >= 30 || (g.party || []).includes(id);
+      let where = '—';
+      if (shares) { if ((g.party || []).includes(id)) where = 'with you'; else { const w = W.where(id); where = w && w.loc ? ((SH.LOC[w.loc] || {}).name || w.loc) + ' · ' + w.act : 'offline'; } }
+      return `<div class="contact"><div class="av" style="background:${m.col}">${m.ini}</div><div style="flex:1"><div class="nm">${esc(m.n)}</div><div class="pv">${shares ? '📍 ' + esc(where) : 'Not sharing with you'}</div></div></div>`;
+    }).join('');
+    body.innerHTML = P.hdr('👀 Friend Finder') + `<div class="appbody">${rows || '<p class="muted">No friends yet. Go say hi to people.</p>'}<p class="muted" style="font-size:11px;margin-top:10px">Friends share with you once you're close (and always, if they're with you).</p></div>`;
+  };
+
+  /* ---------- lock screen gate ---------- */
+  const bOpen2 = P.open;
+  P.open = function (app) {
+    if (NT.locked(app) && !P._unlocked) { P._unlocked = true; setTimeout(() => { P._unlocked = false; }, 60000); SH.UI.toast('🔒 PIN ' + X().lock.pin + ' entered.'); }
+    return bOpen2.apply(this, arguments);
+  };
+
+  P.extraApps = P.extraApps || [];
+  P.extraApps.push({ at: 16, app: ['finder', '👀', 'Finder', '#ff9f0a'] });
+
+  /* ---------- shop actions: top-ups & burner at QuikMart ---------- */
+  const A = SH.Actions;
+  if (A && A.list) {
+    const bList = A.list;
+    A.list = function () {
+      const r = bList.apply(this, arguments); const g = G();
+      if (g && !g.away && ['store', 'station', 'bus'].includes(g.loc) && r && r.acts) {
+        const x = X();
+        r.acts.push({ label: 'Buy a night data pack ($3)', sub: '1 GB, midnight–6 AM', fn: () => { NT.nightPack(); SH.UI.afterAction(); } });
+        r.acts.push({ label: 'Buy a monthly data bundle ($20)', sub: '8 GB for 30 days', fn: () => { NT.bundle(); SH.UI.afterAction(); } });
+        if (!x.burner) r.acts.push({ label: 'Buy a prepaid burner phone ($30)', sub: 'New number. Nobody has it.', fn: () => NT.buyBurner() });
+      }
+      return r;
+    };
+  }
+})(window.SH);
+
+</script>
+<script>
+/* bank.js */
+/* SMALL HOURS — Part 1b: money. Cash is the default. Digital money lives in PocketPal (a teen card linked to
+   Mom's account): it needs MOBILE DATA (banking apps refuse public wifi; home wifi is fine), Mom sees every
+   transaction, and she can freeze it. Plus: savings, a shared Crew Pot with friends (goals, contributions,
+   votes), borrowing & debts, and a pawn counter. No theft anywhere — money only moves when someone chooses. */
+(function (SH) {
+  const P = SH.Phone, NT = SH.Net;
+  const G = () => SH.G, esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const $2 = (n) => '$' + (Math.round(n * 100) / 100).toFixed(2);
+  const Bk = SH.Bank = {};
+
+  Bk.state = function () {
+    const g = G(); if (!g) return null;
+    if (!g.bank) {
+      const seed = (g.story && g.story.seed) || 7, start = 8 + (seed % 5) * 6;
+      g.bank = { bal: start, sav: 0, frozen: false, linked: true, log: [{ t: g.t, d: 'Birthday money from Grandma', a: start }], pin: false };
+      g.crew = null; g.debts = [];
+    }
+    return g.bank;
+  };
+  const log = (d, a) => { const b = Bk.state(); b.log.unshift({ t: G().t, d, a }); if (b.log.length > 40) b.log.pop(); };
+
+  /* can the app talk to the bank right now? */
+  Bk.access = function () {
+    const g = G(), s = NT && NT.state(), b = Bk.state();
+    if (g.phone.bat <= 0) return 'Your phone is dead.';
+    if (g.phone.airplane) return 'Airplane mode is on.';
+    const w = NT && NT.wifiHere();
+    const privateWifi = w && (g.loc === 'home' || ['patel', 'jordan'].includes(g.loc) || (g.hideout && g.hideout.id));
+    if (!privateWifi) {
+      if (!s || s.cut) return 'No mobile service. PocketPal needs data to log in.';
+      if (s.mb <= 0.2) return 'Out of data. Recharge to use PocketPal. (It won\'t connect over public wifi — "for your security".)';
+    }
+    if (NT && !privateWifi) NT.spend(0.3);
+    return null;
+  };
+
+  /* pay by card/app (used by subscriptions, online shop, bookings). Returns true if paid. */
+  Bk.pay = function (amt, what) {
+    const g = G(), b = Bk.state(), why = Bk.access();
+    if (why) { SH.UI.toast('💳 ' + why); return false; }
+    if (b.frozen) { SH.UI.toast('💳 Card declined. Your card has been frozen by the account owner.'); return false; }
+    if (b.bal < amt) { SH.UI.toast(`💳 Declined. Balance ${$2(b.bal)}.`); return false; }
+    b.bal = Math.round((b.bal - amt) * 100) / 100; log(what, -amt); momSees(what, -amt); return true;
+  };
+  Bk.deposit = function (amt, what) { const b = Bk.state(); b.bal = Math.round((b.bal + amt) * 100) / 100; log(what, amt); };
+
+  /* Mom sees the account. During the run, a transaction pins where you are. */
+  function momSees(what, a) {
+    const g = G(), b = Bk.state(); if (!b.linked) return;
+    if (g.phase === 'run') {
+      g.revealed = g.away ? null : g.loc; g.heat = Math.min(100, (g.heat || 0) + 8);
+      if (g.away) g.awayNotice = (g.awayNotice || 0) + 12;
+      if (!b.momSaw) { b.momSaw = true; setTimeout(() => SH.Phone.push('mom', 'mom', `I got a notification. ${what}. ${g.away ? '' : 'I know where that is.'} Please just come home. Or tell me you're safe.`), 1500); }
+    } else if (a < -15 && !b.warned) { b.warned = true; setTimeout(() => SH.Phone.push('mom', 'mom', `why is there a ${$2(-a)} charge on your card?? "${what}"??`), 1200); }
+  }
+  // Mom freezes the card a day into the run (sometimes)
+  const bAdv = SH.advance;
+  SH.advance = function () {
+    const r = bAdv.apply(this, arguments); const g = G(); if (!g || !g.bank) return r;
+    const b = g.bank;
+    if (g.phase === 'run' && g.missingAt && !b.freezeDecided && g.t - g.missingAt > 20 * 60) { b.freezeDecided = true; if (Math.random() < 0.5) { b.frozen = true; P.notify && P.notify('bank', 'PocketPal', 'Your card has been frozen by the account owner.'); } }
+    // crew members chip in a little from their own jobs
+    const c = g.crew; if (c && SH.hour() === 20 && c.lastDrip !== SH.day()) { c.lastDrip = SH.day(); (c.members || []).forEach((id) => { const att = Bk.att(id); if (Math.random() < 0.25 + att / 200) { const amt = [1, 2, 3, 5][Math.floor(Math.random() * 4)]; c.bal += amt; c.log.unshift({ t: g.t, who: id, d: 'chipped in', a: amt }); } }); }
+    // debt reminders
+    (g.debts || []).forEach((d) => { if (!d.paid && !d.nagged && g.t - d.t > 3 * 1440) { d.nagged = true; SH.Phone.push(d.who, d.who, pickNag(d)); SH.rel(d.who, -3); } });
+    return r;
+  };
+  const pickNag = (d) => ['hey no pressure but the $' + d.amt + '?', 'u still owe me $' + d.amt + ' btw. just saying', 'did u forget about the money lol. it\'s fine. kinda'][Math.floor(Math.random() * 3)];
+
+  /* attachment (shared w/ part 5): rel + time together */
+  Bk.att = (id) => { const g = G(); return Math.max(0, Math.min(100, (g.rel[id] || 0) + ((g.friends && g.friends[id] && g.friends[id].hangs) || 0) * 4)); };
+
+  /* ---------- savings ---------- */
+  Bk.toSav = function (amt) { const b = Bk.state(); if (Bk.access()) return SH.UI.toast(Bk.access()); amt = Math.min(amt, b.bal); if (amt <= 0) return; b.bal -= amt; b.sav += amt; log('Moved to Savings', -amt); P.render(); };
+  Bk.fromSav = function (amt) { const b = Bk.state(); if (Bk.access()) return SH.UI.toast(Bk.access()); amt = Math.min(amt, b.sav); if (amt <= 0) return; b.sav -= amt; b.bal += amt; log('From Savings', amt); P.render(); };
+  /* cash <-> card happens at a register (cash back / load cash) */
+  Bk.cashBack = function (amt) { const g = G(), b = Bk.state(); if (Bk.access()) return SH.UI.toast(Bk.access()); if (b.frozen) return SH.UI.toast('Card frozen.'); amt = Math.min(amt, b.bal); if (amt <= 0) return SH.UI.toast('Nothing on the card.'); b.bal -= amt; log('Cash back · QuikMart', -amt); momSees('Cash back at QuikMart', -amt); SH.money(amt); SH.UI.toast(`You get ${$2(amt)} in cash.`); SH.UI.afterAction(); };
+  Bk.loadCash = function (amt) { const g = G(), b = Bk.state(); if (Bk.access()) return SH.UI.toast(Bk.access()); amt = Math.min(amt, g.money); if (amt < 1) return SH.UI.toast('No cash to load.'); SH.money(-amt); b.bal += amt; log('Cash load · QuikMart ($1 fee)', amt - 1); b.bal -= 1; SH.UI.toast(`Loaded ${$2(amt - 1)} onto PocketPal ($1 fee).`); SH.UI.afterAction(); };
+
+  /* ---------- crew pot (group account) ---------- */
+  Bk.crewable = () => { const g = G(); return Object.keys((g.friends || {})).filter((id) => g.friends[id].met && (g.rel[id] || 0) >= 35); };
+  Bk.openCrew = function () {
+    const g = G(); if (Bk.access()) return SH.UI.toast(Bk.access());
+    const mem = Bk.crewable(); if (!mem.length) return SH.UI.toast('You need at least one close friend (they have to trust you with money).');
+    g.crew = { bal: 0, goal: null, log: [{ t: g.t, who: 'me', d: 'opened the Crew Pot', a: 0 }], members: mem.slice(0, 5), votes: 0 };
+    mem.forEach((id) => SH.Phone.push(id, id, ['omg a group account. we\'re like a real business', 'ok i\'m in. i have like $4 but i\'m in', 'crew pot 🫡'][Math.floor(Math.random() * 3)]));
+    P.render();
+  };
+  Bk.crewAdd = function (amt, from) { // from: 'cash' | 'card'
+    const g = G(), c = g.crew; if (!c) return; if (Bk.access()) return SH.UI.toast(Bk.access());
+    if (from === 'cash') { if (g.money < amt) return SH.UI.toast('Not enough cash.'); SH.money(-amt); } else { if (!Bk.pay(amt, 'Crew Pot')) return; }
+    c.bal += amt; c.log.unshift({ t: g.t, who: 'me', d: 'put in', a: amt }); c.members.forEach((id) => SH.rel(id, 1)); P.render();
+  };
+  Bk.crewGoal = function (name, amt) { const c = G().crew; if (!c) return; c.goal = { name, amt }; c.log.unshift({ t: G().t, who: 'me', d: 'set goal: ' + name, a: 0 }); P.render(); };
+  /* taking money out needs a vote above $15: friends vote by attachment and whether the reason is good */
+  Bk.crewTake = function (amt, why) {
+    const g = G(), c = g.crew; if (!c || c.bal < amt) return SH.UI.toast('Not that much in the pot.');
+    if (Bk.access()) return SH.UI.toast(Bk.access());
+    if (amt <= 15) { c.bal -= amt; SH.money(amt); c.log.unshift({ t: g.t, who: 'me', d: 'took out (' + why + ')', a: -amt }); P.render(); return; }
+    const good = /food|room|motel|bus|ticket|medicine|inhaler|charger|tent|sleeping|rent|shelter|goal|scooter|bike/.test(why.toLowerCase()) || (c.goal && why.toLowerCase().includes(c.goal.name.toLowerCase()));
+    const yes = c.members.filter((id) => Bk.att(id) + (good ? 30 : -10) + Math.random() * 30 > 55);
+    const pass = yes.length * 2 >= c.members.length;
+    c.log.unshift({ t: g.t, who: 'vote', d: `vote: take ${$2(amt)} for "${why}": ${yes.length}/${c.members.length} yes`, a: 0 });
+    if (pass) { c.bal -= amt; SH.money(amt); c.log.unshift({ t: g.t, who: 'me', d: 'took out (' + why + ')', a: -amt }); SH.UI.toast(`🗳️ Vote passed (${yes.length}/${c.members.length}). ${$2(amt)} in cash.`); }
+    else { SH.UI.toast(`🗳️ Vote failed (${yes.length}/${c.members.length}). ${good ? 'They\'re nervous about spending that much.' : 'Nobody gets what it\'s for.'}`); }
+    P.render();
+  };
+
+  /* ---------- borrowing ---------- */
+  Bk.borrow = function (id, amt) {
+    const g = G(), rel = g.rel[id] || 0, m = SH.NPCS_META[id] || { n: id };
+    if (NT && !NT.canData()) return SH.UI.toast('No data. The request won\'t send.');
+    const owed = (g.debts || []).filter((d) => d.who === id && !d.paid).reduce((a, d) => a + d.amt, 0);
+    SH.Phone.push(id, 'me', `can i borrow $${amt}? i'll pay u back`, false);
+    const ok = rel - owed * 2 - amt + Math.random() * 25 > 30;
+    setTimeout(() => {
+      if (ok) { Bk.deposit(amt, m.n + ' sent you money'); g.debts.push({ who: id, amt, t: g.t, paid: false }); SH.Phone.push(id, id, ['sent. don\'t make it weird', 'ok sent 💸 pay me back whenever. like actually whenever', 'sent. is everything ok??'][Math.floor(Math.random() * 3)]); }
+      else SH.Phone.push(id, id, owed ? 'dude u already owe me' : ['i literally have $2 sorry', 'my mom checks my app. i can\'t', 'i can\'t rn sorry 😭'][Math.floor(Math.random() * 3)]);
+      P.render();
+    }, 1500);
+  };
+  Bk.repay = function (i) { const g = G(), d = g.debts[i]; if (!d || d.paid) return; if (!Bk.pay(d.amt, 'Paid back ' + ((SH.NPCS_META[d.who] || {}).n || d.who))) return; d.paid = true; SH.rel(d.who, 6); SH.Phone.push(d.who, d.who, ['ayyy thank u', 'u actually paid me back. respect', 'ok ur officially trustworthy']); P.render(); };
+
+  /* ---------- pawn counter (mall) ---------- */
+  const VAL = { console: 60, game1: 12, game2: 12, watch: 0, sketchbook: 1, hoodie: 3, coat: 8, charger: 4, flashlight: 3, umbrella: 2, blanket: 3 };
+  Bk.pawnable = () => G().bag.filter((id) => SH.ITEMS[id] && !SH.ITEMS[id].fixed && !['key', 'buspass', 'inhaler', 'phone'].includes(id) && (VAL[id] || SH.ITEMS[id].price));
+
+  /* ---------- PocketPal app ---------- */
+  Bk.tab = 'acct';
+  P.V.bank = function (body) {
+    const g = G(), b = Bk.state(), why = Bk.access();
+    const tabs = `<div class="seg" style="margin:6px 10px">${[['acct', 'Account'], ['crew', 'Crew Pot'], ['owe', 'IOUs']].map(([k, n]) => `<button class="${Bk.tab === k ? 'on' : ''}" style="flex:1" onclick="SH.Bank.tab='${k}';SH.Phone.render()">${n}</button>`).join('')}</div>`;
+    if (why) { body.innerHTML = P.hdr('🏦 PocketPal') + `<div class="appbody" style="text-align:center;padding-top:30px"><div style="font-size:40px">💳</div><p><b>Can't connect</b></p><p class="muted" style="font-size:12.5px">${esc(why)}</p><p class="muted" style="font-size:11.5px">Cash on you: <b>${$2(g.money)}</b>. Cash still works everywhere.</p></div>`; return; }
+    let h = '';
+    if (Bk.tab === 'acct') {
+      h = `<div style="text-align:center;margin:8px 0 12px"><div class="muted" style="font-size:11px">PocketPal Teen · linked to ${esc(SH.nm('Mom'))}${b.frozen ? ' · <b style="color:#ff6b6b">FROZEN</b>' : ''}</div><div style="font-size:36px;font-weight:300">${$2(b.bal)}</div><div class="muted" style="font-size:12px">Savings ${$2(b.sav)} · Cash on you ${$2(g.money)}</div></div>
+        <div style="display:flex;gap:6px;justify-content:center;flex-wrap:wrap"><button class="btn" onclick="SH.Bank.toSav(5)">→ Save $5</button><button class="btn" onclick="SH.Bank.fromSav(5)">← Take $5</button></div>
+        <p class="muted" style="font-size:11px;margin:8px 4px">Get cash out or load cash in at any QuikMart register. ${b.linked ? 'Every transaction shows up on Mom\'s phone.' : ''}</p>
+        <div class="sech">ACTIVITY</div>${b.log.slice(0, 14).map((l) => `<div class="setrow" style="display:flex;justify-content:space-between;font-size:12px"><span>${esc(l.d)}<br><small class="muted">${SH.dateStr(l.t)}</small></span><b style="color:${l.a >= 0 ? '#6fdc8c' : '#ff8a8a'}">${l.a >= 0 ? '+' : ''}${$2(l.a)}</b></div>`).join('')}`;
+    } else if (Bk.tab === 'crew') {
+      const c = g.crew;
+      if (!c) { const can = Bk.crewable(); h = `<div style="text-align:center;padding:24px 8px"><div style="font-size:38px">🫙</div><p><b>Crew Pot</b></p><p class="muted" style="font-size:12px">A shared account with your friends. Everyone can see who put in what. Taking out more than $15 needs a vote.</p>${can.length ? `<p style="font-size:12px">Would join: ${can.map((id) => esc(SH.NPCS_META[id].n)).join(', ')}</p><button class="btn primary" onclick="SH.Bank.openCrew()">Open Crew Pot</button>` : '<p class="muted" style="font-size:12px">You need a friend who really trusts you first.</p>'}</div>`; }
+      else {
+        const pct = c.goal ? Math.min(100, c.bal / c.goal.amt * 100) : 0;
+        h = `<div style="text-align:center;margin:6px 0"><div class="muted" style="font-size:11px">${c.members.map((id) => esc(SH.NPCS_META[id].n)).join(' · ')} · you</div><div style="font-size:32px;font-weight:300">${$2(c.bal)}</div>
+          ${c.goal ? `<div style="font-size:12px">Goal: <b>${esc(c.goal.name)}</b> · ${$2(c.goal.amt)}</div><div style="height:6px;background:#0005;border-radius:4px;margin:4px 20px"><i style="display:block;height:100%;width:${pct}%;background:var(--teal);border-radius:4px"></i></div>` : ''}</div>
+          <div style="display:flex;gap:5px;justify-content:center;flex-wrap:wrap;margin-bottom:6px"><button class="btn" onclick="SH.Bank.crewAdd(2,'cash')">+ $2 cash</button><button class="btn" onclick="SH.Bank.crewAdd(5,'cash')">+ $5 cash</button><button class="btn" onclick="SH.Bank.crewAdd(5,'card')">+ $5 card</button></div>
+          <div style="display:flex;gap:5px;margin:6px 4px"><input id="crewWhy" placeholder="take out for… (food, motel, scooter)" style="flex:1;min-width:0"><input id="crewAmt" type="number" value="10" style="width:52px"><button class="btn" onclick="SH.Bank.crewTake(+document.querySelector('#crewAmt').value||0,document.querySelector('#crewWhy').value||'stuff')">Take</button></div>
+          <div style="display:flex;gap:5px;margin:6px 4px"><input id="goalN" placeholder="new goal (e.g. scooter fund)" style="flex:1;min-width:0"><input id="goalA" type="number" value="60" style="width:52px"><button class="btn" onclick="SH.Bank.crewGoal(document.querySelector('#goalN').value||'goal',+document.querySelector('#goalA').value||50)">Set</button></div>
+          <div class="sech">WHO DID WHAT</div>${c.log.slice(0, 14).map((l) => `<div class="setrow" style="font-size:12px">${l.who === 'vote' ? '🗳️' : '•'} <b>${esc(l.who === 'me' ? 'You' : l.who === 'vote' ? '' : (SH.NPCS_META[l.who] || {}).n || l.who)}</b> ${esc(l.d)} ${l.a ? `<b style="color:${l.a > 0 ? '#6fdc8c' : '#ff8a8a'}">${l.a > 0 ? '+' : ''}${$2(l.a)}</b>` : ''}</div>`).join('')}`;
+      }
+    } else {
+      const fr = Object.keys(g.friends || {}).filter((id) => g.friends[id].met).concat((g.rel.jordan || 0) > 20 ? ['jordan'] : []);
+      h = `<div class="sech">ASK TO BORROW</div>${fr.length ? fr.map((id) => `<div class="setrow" style="display:flex;justify-content:space-between;align-items:center;font-size:12.5px">${esc(SH.NPCS_META[id].n)}<span><button class="btn" onclick="SH.Bank.borrow('${id}',5)">$5</button> <button class="btn" onclick="SH.Bank.borrow('${id}',15)">$15</button></span></div>`).join('') : '<p class="muted" style="font-size:12px">No friends to ask.</p>'}
+        <div class="sech">YOU OWE</div>${(g.debts || []).map((d, i) => d.paid ? '' : `<div class="setrow" style="display:flex;justify-content:space-between;align-items:center;font-size:12.5px">${esc(SH.NPCS_META[d.who].n)} · ${$2(d.amt)}<button class="btn" onclick="SH.Bank.repay(${i})">Pay back</button></div>`).join('') || '<p class="muted" style="font-size:12px">Nothing. Clean.</p>'}`;
+    }
+    body.innerHTML = P.hdr('🏦 PocketPal') + tabs + `<div class="appbody">${h}</div>`;
+  };
+  P.extraApps = P.extraApps || [];
+  P.extraApps.push({ at: 4, app: ['bank', '🏦', 'PocketPal', '#0a84ff'] });
+
+  /* ---------- register actions ---------- */
+  const A = SH.Actions;
+  if (A && A.list) {
+    const bList = A.list;
+    A.list = function () {
+      const r = bList.apply(this, arguments), g = G(); if (!g || g.away || !r || !r.acts) return r;
+      if (g.loc === 'store') {
+        r.acts.push({ label: 'Card cash-back at the register', sub: 'Up to $20 off PocketPal', fn: () => Bk.cashBack(20) });
+        if (g.money >= 2) r.acts.push({ label: 'Load cash onto PocketPal', sub: '$1 fee', fn: () => Bk.loadCash(Math.floor(g.money)) });
+      }
+      if (g.loc === 'mall') {
+        Bk.pawnable().slice(0, 4).forEach((id) => { const v = Math.max(1, Math.round((VAL[id] || SH.ITEMS[id].price || 4) * 0.35)); r.acts.push({ label: `Pawn counter: ${SH.ITEMS[id].n} → $${v}`, sub: 'They pay about a third of what it\'s worth.', fn: () => { SH.rmBag(id); SH.money(v); (g.tx = g.tx || []).push({ t: g.t, d: 'Pawn: ' + SH.ITEMS[id].n, a: v }); SH.UI.log(`The pawn guy turns your ${SH.ITEMS[id].n} over twice, like he's doing you a favor. $${v}.`, 'warn'); SH.advance(10, { interrupt: false }); SH.UI.afterAction(); } }); });
+      }
+      return r;
+    };
+  }
+})(window.SH);
+
+</script>
+<script>
+/* browser.js */
+/* SMALL HOURS — Part 1d: the web browser. Made-up sites, each costs data per page. History is saved (and can be
+   seen by whoever gets your phone, unless you clear it or App-Lock the browser).
+   Shell + Seekr (search) + SkyCast (weather) + AverMaps + history. Other sites register into SH.Browser.SITES
+   from browser_news.js, browser_shop.js and browser2.js. */
+(function (SH) {
+  const P = SH.Phone, NT = SH.Net;
+  const G = () => SH.G, esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const B = SH.Browser = { url: 'home', stack: [], SITES: {}, esc };
+  B.$2 = (n) => '$' + (+n).toFixed(2);
+  B.lnk = (url, txt, st) => `<a href="#" onclick="SH.Browser.go('${url}');return false" style="color:#7ab8ff;text-decoration:none;${st || ''}">${txt}</a>`;
+  B.card = (h, st) => `<div style="background:#ffffff0d;border:1px solid #ffffff14;border-radius:10px;padding:9px 10px;margin:7px 0;${st || ''}">${h}</div>`;
+  B.btn = (js, txt, cls) => `<button class="btn ${cls || ''}" style="margin:2px" onclick="${js}">${txt}</button>`;
+  B.rnd = (seed) => { let s = (seed >>> 0) || 1; return () => ((s = (s * 1664525 + 1013904223) >>> 0) / 4294967296); };
+  B.seed = () => ((G().story && G().story.seed) || 7);
+  B.place = () => (SH.Atlas && SH.Atlas.here ? SH.Atlas.here() : { name: 'Harlow', tier: 'town' });
+  const hist = () => (NT && NT.x ? NT.x().hist : (G()._hist = G()._hist || []));
+  B.hist = hist;
+
+  B.go = function (url, noPush) {
+    if (url !== B.url && !noPush) B.stack.push(B.url);
+    B.url = url;
+    if (url !== 'home') { const h = hist(); if (!h[0] || h[0].url !== url) h.unshift({ url, t: G().t }); if (h.length > 60) h.pop(); }
+    B._charged = false; P.render();
+  };
+  B.back = function () { if (B.stack.length) { B.url = B.stack.pop(); B._charged = false; P.render(); } else P.open('home'); };
+  B.search = function (q) {
+    q = (q || '').trim(); if (!q) return;
+    if (/^[a-z0-9]+\.av(\/.*)?$/i.test(q)) return B.go(q.toLowerCase());
+    B.go('seekr.av/?q=' + encodeURIComponent(q));
+  };
+
+  /* ---------- search index: keywords -> sites ---------- */
+  B.INDEX = [];
+  B.index = (re, url, title, blurb) => B.INDEX.push({ re, url, title, blurb });
+
+  /* ---------- the shell ---------- */
+  P.V.browser = function (body) {
+    const g = G();
+    if (!NT.canData()) return NT.blocked(body, '🌐 Browser');
+    const url = B.url, dom = url.split('/')[0].split('?')[0], site = B.SITES[dom];
+    const mb = url === 'home' ? 0 : (site && site.mb) || 0.6;
+    if (!B._charged) { B._charged = true; if (mb && !NT.spend(mb)) return NT.blocked(body, '🌐 Browser'); }
+    let page;
+    try { page = url === 'home' ? home() : site ? site.render(url.slice(dom.length).replace(/^\//, ''), url) : notFound(url); } catch (e) { console.warn(e); page = B.card('This page isn\'t loading. (' + esc(e.message) + ')'); }
+    body.innerHTML = `<div class="apphdr" style="gap:6px"><button onclick="SH.Browser.back()">‹</button><input id="burl" value="${esc(url === 'home' ? '' : url)}" placeholder="Search or type a .av address" style="flex:1;min-width:0;font-size:12px;padding:5px 8px;border-radius:14px;border:1px solid #ffffff22;background:#0008;color:inherit"><button onclick="SH.Browser.go('home')">⌂</button></div>
+      <div class="appbody" style="font-size:12.5px;line-height:1.45">${page}</div>`;
+    const i = body.querySelector('#burl'); i.onkeydown = (e) => { e.stopPropagation(); if (e.key === 'Enter') B.search(i.value); };
+    body.querySelectorAll('input:not(#burl),textarea').forEach((x) => x.addEventListener('keydown', (e) => e.stopPropagation()));
+  };
+  function notFound(url) { return B.card(`<b>This site can't be reached</b><br><span class="muted">${esc(url)} doesn't exist. Try ${B.lnk('seekr.av', 'Seekr')}.</span>`); }
+
+  function home() {
+    const tiles = Object.entries(B.SITES).filter(([, s]) => s.tile).sort((a, b) => (a[1].order || 50) - (b[1].order || 50));
+    return `<div style="text-align:center;margin:10px 0 8px"><div style="font-size:26px;font-weight:700;letter-spacing:-1px">Seekr</div><div class="muted" style="font-size:11px">the search engine that doesn't judge</div></div>
+      <div style="display:flex;gap:6px;margin:0 4px 10px"><input id="bq" placeholder="Search anything…" style="flex:1;min-width:0;padding:7px 10px;border-radius:16px;border:1px solid #ffffff22;background:#0008;color:inherit"><button class="btn primary" onclick="SH.Browser.search(document.querySelector('#bq').value)">Go</button></div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px 4px;text-align:center">${tiles.map(([d, s]) => `<a href="#" onclick="SH.Browser.go('${d}');return false" style="color:inherit;text-decoration:none;font-size:10.5px"><div style="width:42px;height:42px;margin:0 auto 3px;border-radius:11px;background:${s.col || '#333'};display:flex;align-items:center;justify-content:center;font-size:20px">${s.icon}</div>${esc(s.n)}</a>`).join('')}</div>
+      <div class="muted" style="font-size:10.5px;margin-top:12px;text-align:center">Every page uses a little data. ${B.lnk('history.av', 'History')}</div>`;
+  }
+  // the home search box needs Enter too
+  const bRender = P.render;
+  P.render = function () { const r = bRender.apply(this, arguments); const q = document.querySelector('#bq'); if (q && !q._k) { q._k = 1; q.onkeydown = (e) => { e.stopPropagation(); if (e.key === 'Enter') B.search(q.value); }; } return r; };
+
+  /* ---------- Seekr ---------- */
+  B.SITES['seekr.av'] = { n: 'Seekr', icon: '🔎', col: '#3a3f58', mb: 0.3, render(path) {
+    const q = decodeURIComponent((path.match(/q=([^&]*)/) || [])[1] || '');
+    if (!q) return home();
+    const ql = q.toLowerCase(); const hits = B.INDEX.filter((x) => x.re.test(ql));
+    const prod = SH.Catalog ? SH.Catalog.search(ql).slice(0, 4) : [];
+    let h = `<div class="muted" style="font-size:11px">Results for <b>${esc(q)}</b> · near ${esc(B.place().name)}</div>`;
+    if (/run ?away|ran away|leave home|leaving home|unsafe at home|scared.*home|abuse|hit me|hurt/.test(ql)) h += B.card(`<b>💛 If you're thinking about leaving home or you're not safe</b><br>You can talk to someone right now. Free, confidential. ${B.lnk('safeline.av', 'Runaway Safeline →')}`, 'border-color:#f2c14e66');
+    hits.forEach((x) => { h += B.card(`${B.lnk(x.url, '<b>' + esc(x.title) + '</b>')}<br><small style="color:#6fdc8c">${esc(x.url)}</small><br><span class="muted">${esc(x.blurb)}</span>`); });
+    if (prod.length) h += B.card(`<b>Shopping</b> · ${prod.map((p) => B.lnk('everything.av/p/' + p.id, p.i + ' ' + esc(p.n) + ' ' + B.$2(p.price))).join(' · ')}`);
+    if (!hits.length && !prod.length) h += B.card(`No great results. Seekr suggests: ${B.lnk('threadly.av', 'ask on Threadly')} · ${B.lnk('tubeyou.av', 'watch a video')} · ${B.lnk('everything.av', 'shop')}`);
+    return h;
+  } };
+
+  /* ---------- SkyCast ---------- */
+  B.SITES['skycast.av'] = { n: 'SkyCast', icon: '🌦️', col: '#1c6fb8', mb: 0.5, tile: true, order: 5, render() {
+    const d = SH.day(), ic = { clear: '☀️', cloudy: '☁️', rain: '🌧️', storm: '⛈️', fog: '🌫️', snow: '❄️' };
+    const rows = [0, 1, 2, 3, 4, 5, 6].map((i) => { const w = SH.weatherDay(d + i) || {}; const cold = w.lo < 38, wet = /rain|storm/.test(w.c); return `<div class="setrow" style="display:flex;justify-content:space-between"><span>${i ? SH.dateStr(SH.G.t + i * 1440).split(',')[0] : 'Today'}</span><span>${ic[w.c] || '·'} ${w.c || ''}</span><b>${w.hi}° / ${w.lo}°</b>${cold ? '<span title="cold night">🥶</span>' : wet ? '<span title="rain">☔</span>' : '<span></span>'}</div>`; }).join('');
+    const tn = SH.weatherDay(d + 1) || {};
+    return `<div style="font-size:15px;font-weight:600">${esc(B.place().name)} · 7 days</div>${rows}${tn.lo < 40 ? B.card('🥶 <b>Cold night alert.</b> Lows near ' + tn.lo + '°F. Sleeping outside without a sleeping bag is dangerous.', 'border-color:#6aa7ff66') : ''}`;
+  } };
+  B.index(/weather|rain|forecast|cold|temperature|storm/, 'skycast.av', 'SkyCast · 7-day forecast', 'Rain, lows, cold-night alerts.');
+
+  /* ---------- AverMaps ---------- */
+  B.SITES['avermaps.av'] = { n: 'AverMaps', icon: '🗺️', col: '#2f8f5b', mb: 2.5, tile: true, order: 6, render() {
+    const A = SH.Atlas; if (!A) return B.card('Maps unavailable.');
+    const D = A.data(), H = A.here();
+    const near = D.places.filter((p) => p !== H).map((p) => [p, A.miles(H, p)]).sort((a, b) => a[1] - b[1]).slice(0, 8);
+    const jy = (p) => ({ city: 'huge auto salvage yard', town: 'big junkyard', small: 'small scrapyard', village: 'a field of dead cars behind a farm' })[p.tier];
+    return `${A.svg ? `<div style="border-radius:10px;overflow:hidden">${A.svg(D, H.id)}</div>` : ''}<div class="sech">NEAR ${esc(H.name.toUpperCase())}</div>${near.map(([p, mi]) => `<div class="setrow" style="font-size:12px"><b>${esc(p.name)}</b> · ${mi} mi · ${esc(A.TIERS[p.tier].n)}<br><span class="muted">🚙 ${jy(p)} · ${p.hasPolice ? '🚓 police' : '🤠 sheriff only'}${p.services.wifi.length ? ' · 📶 ' + esc(p.services.wifi[0]) : ''}</span></div>`).join('')}
+      <div class="setrow" style="font-size:12px"><b>${esc(H.name)}</b> (here) · 🚙 ${jy(H)}</div><p class="muted" style="font-size:11px">Open the Atlas app to travel.</p>`;
+  } };
+  B.index(/map|direction|route|junk ?yard|scrap|salvage|how far|near me|town|village|city/, 'avermaps.av', 'AverMaps · places & junkyards near you', 'Distances, police, wifi, junkyards.');
+
+  /* ---------- history ---------- */
+  B.SITES['history.av'] = { n: 'History', icon: '🕘', col: '#444', mb: 0, render() {
+    const h = hist();
+    return `<div style="display:flex;justify-content:space-between;align-items:center"><b>History</b>${B.btn("SH.Browser.hist().length=0;SH.Phone.render()", 'Clear all')}</div><p class="muted" style="font-size:11px">Anyone who picks up your phone can read this.${NT.locked && NT.locked('browser') ? ' (Browser is App-Locked.)' : ''}</p>${h.map((x) => `<div class="setrow" style="font-size:12px">${B.lnk(x.url, esc(x.url))}<br><small class="muted">${SH.dateStr(x.t)} ${SH.fmt12(x.t)}</small></div>`).join('') || '<p class="muted">Empty.</p>'}`;
+  } };
+
+  P.extraApps = P.extraApps || [];
+  P.extraApps.push({ at: 3, app: ['browser', '🌐', 'Browser', '#5e5ce6'] });
+})(window.SH);
+
+</script>
+<script>
+/* browser_news.js */
+/* SMALL HOURS — Part 1e: The Ledger (local news; your missing poster appears, updates, gets comments),
+   Safeline (help — reaching out ends the run, bittersweet and honest), Threadly (forums you can post to; creeps DM). */
+(function (SH) {
+  const B = SH.Browser; if (!B) return;
+  const G = () => SH.G, esc = B.esc;
+  const nm = (s) => SH.nm(s);
+  const who = () => G().name || 'Sam';
+
+  /* ---------------- The Ledger ---------------- */
+  function stories() {
+    const g = G(), r = B.rnd(B.seed() * 13 + SH.day()), out = [], d = SH.day(), here = B.place();
+    const party = (g.party || []).map((id) => (SH.NPCS_META[id] || {}).n).filter(Boolean);
+    if (g.phase === 'run' && g.reported) {
+      const days = Math.max(1, Math.ceil((g.t - (g.missingAt || g.t)) / 1440));
+      const names = [who()].concat(party), multi = names.length > 1;
+      out.push({ id: 'missing', hot: true, h: multi ? `MISSING: ${names.length} Harlow kids, last seen together` : `MISSING: ${who()}, 12, last seen in Harlow`, sub: `Day ${days}. ${multi ? names.join(', ') : who()}. ${g.away ? 'Police say sightings have been reported outside Harlow.' : 'Police are asking anyone with information to call.'}`,
+        body: [`${multi ? names.join(', ') + ' were' : who() + ' was'} reported missing ${days === 1 ? 'yesterday' : days + ' days ago'}. ${nm('Mom')} told the Ledger: "We just want ${multi ? 'them' : 'you'} home. Nobody is in trouble."`, g.away ? 'The county sheriff\'s office has shared the poster with neighboring towns.' : `Officer Lowe of Harlow PD said most runaway kids come home, or reach out, within a week. "The first 48 hours matter. If you see a kid alone at the bus station or the underpass late at night, call."`, 'If you are a young person and need help, the Runaway Safeline is free and confidential.'],
+        comments: [['concerned_mom_of3', 'praying 🙏 sharing'], ['harlow_steve', 'saw a kid with a backpack near the Route 9 overpass last night, called it in'], ['mk_2011', 'i go to school with ' + who() + '. they\'re really nice. please come back'], ['anon', 'kids these days. where are the parents'], ['ruiz_teacher', 'Whoever reads this: you are not in trouble. You are missed.']].slice(0, 3 + Math.min(2, days)) });
+    }
+    const pool = [
+      ['Plant layoffs: 140 more jobs cut at Route 9 facility', 'The second round this year. The union says families are "barely hanging on."'],
+      ['Harbor House seeks volunteers for youth shelter', 'The Wharf St. shelter offers kids 12–17 a bed, meals and counseling for up to 21 days. "No kid should have to sleep outside."'],
+      ['Lincoln Middle School fall carnival this Saturday', 'Face painting, a bake sale and the famous teachers-vs-students dodgeball game.'],
+      ['Lost dog: "Biscuit," golden mix, near Maple St.', 'Answers to Biscuit and also to the sound of a chip bag.'],
+      ['City council votes on new park lighting', 'Residents near the underpass have asked for more lights for years.'],
+      ['Harlow Mobile outage leaves customers without data for 3 hours', 'The carrier apologized and offered 500 MB of free data.'],
+      ['Food pantry hours extended for the winter', 'St. Brigid\'s pantry is now open Tuesday and Thursday evenings. No ID needed.'],
+      ['High school football: Harlow beats Saltmore 21–14', 'A fourth-quarter interception sealed it.'],
+      ['Police warn of online "job offers" targeting teens', 'Officers say scammers post "easy cash" jobs and ask for deposits or personal photos.'],
+      ['Motel on Route 9 cited for code violations', 'Inspectors found broken smoke detectors and mold. The owner says repairs are "underway."'],
+    ];
+    const idx = pool.map((_, i) => i).sort(() => r() - 0.5).slice(0, 5);
+    idx.forEach((i) => out.push({ id: 'n' + i, h: pool[i][0], sub: pool[i][1] }));
+    if (here && here.name !== 'Harlow') out.splice(1, 0, { id: 'local', h: `${here.name}: ${here.notice > 0.6 ? 'Neighbors start Facebook group to "keep an eye out"' : 'Harvest festival draws a small crowd'}`, sub: `From the ${here.name} ${here.tier === 'village' ? 'church bulletin' : 'Courier'}.` });
+    return out;
+  }
+  B.SITES['ledger.av'] = { n: 'The Ledger', icon: '📰', col: '#8a1c1c', mb: 1.2, tile: true, order: 2, render(path) {
+    const S = stories(); const id = (path.match(/^a\/(\w+)/) || [])[1];
+    if (id) { const s = S.find((x) => x.id === id) || S[0];
+      return `<div style="font-size:11px;color:#ff8a8a">${s.hot ? 'DEVELOPING' : 'LOCAL'}</div><div style="font-size:16px;font-weight:700;line-height:1.25;margin:3px 0 6px">${esc(s.h)}</div>${s.hot ? `<div style="display:flex;gap:10px;align-items:center;background:#fff;color:#111;border-radius:8px;padding:8px;margin:6px 0"><div style="width:54px;height:66px;background:#ccc;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:30px">🧒</div><div style="font-size:11.5px"><b style="font-size:14px;color:#b00">MISSING</b><br>${esc(who())}, 12<br>Last seen: Harlow<br>Call Harlow PD</div></div>` : ''}${(s.body || [s.sub]).map((p) => `<p>${esc(p)}</p>`).join('')}${s.comments ? `<div class="sech">COMMENTS</div>${s.comments.map(([u, c]) => `<div class="setrow" style="font-size:12px"><b>${esc(u)}</b> ${esc(c)}</div>`).join('')}` : ''}${s.hot ? `<p>${B.lnk('safeline.av', '💛 Runaway Safeline: free, confidential')}</p>` : ''}`;
+    }
+    if (S[0].hot) G().flags.sawPoster = true;
+    return `<div style="font-family:Georgia,serif;font-size:22px;font-weight:700;text-align:center;border-bottom:1px solid #fff3;padding-bottom:4px">The Ledger</div><div class="muted" style="text-align:center;font-size:10.5px;margin-bottom:6px">${SH.dateStr()} · Harlow & the county</div>${S.map((s) => B.card(`${s.hot ? '<b style="color:#ff6b6b">● </b>' : ''}${B.lnk('ledger.av/a/' + s.id, '<b>' + esc(s.h) + '</b>')}<br><span class="muted">${esc(s.sub)}</span>`, s.hot ? 'border-color:#ff6b6b66' : '')).join('')}`;
+  } };
+  B.index(/news|missing|poster|ledger|harlow|police|what happened|local/, 'ledger.av', 'The Ledger · Harlow news', 'Local news, updated daily.');
+
+  /* ---------------- Safeline ---------------- */
+  B.SITES['safeline.av'] = { n: 'Safeline', icon: '💛', col: '#b58a12', mb: 0.4, tile: true, order: 1, render() {
+    return `<div style="font-size:17px;font-weight:700">Runaway Safeline</div><p>Thinking about leaving home? Already left? Not safe where you are? You can talk to a real person, 24/7. It's free and confidential. You're not in trouble.</p>
+      ${B.card(`<b>What happens if I reach out?</b><br><span class="muted">They listen first. They help you figure out a safe place tonight. If home isn't safe, they don't just send you back: they connect you with a youth shelter and people whose job is to protect kids.</span>`)}
+      ${B.card(`<b>Real-life numbers</b> (outside the game)<br>🇺🇸 1-800-786-2929 · 988 &nbsp; 🇬🇧 116 000 · Childline 0800 1111 &nbsp; 🇮🇳 1098 · 112`, 'border-color:#f2c14e55')}
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">${B.btn("SH.Browser.reachOut('chat')", '💬 Chat with someone now', 'primary')}${B.btn("SH.Browser.reachOut('call')", '📞 Call')}</div>
+      <p class="muted" style="font-size:11px;margin-top:10px">In the game, reaching out ends your story. You'll be safe. It won't be simple.</p>`;
+  } };
+  B.index(/help|safe|scared|abuse|hurt|hit|shelter|hotline|helpline|runaway|ran away|talk to someone|suicid|kill myself|want to die/, 'safeline.av', 'Runaway Safeline · talk to someone 24/7', 'Free, confidential, you\'re not in trouble.');
+
+  B.reachOut = function (how) {
+    const g = G(); if (g.ended) return;
+    SH.UI.dialog({ title: 'Reach out?', text: ['If you do this, your story ends here. You\'ll be safe.', 'Your phone will probably be handed over. Contact with your friends gets cut for a while. You might go back to the same house with a social worker checking in, or somewhere else entirely.'], choices: [
+      { t: how === 'call' ? 'Call them' : 'Start the chat', cls: 'safe', fn: () => B.reachEnd(how) },
+      { t: 'Not yet', fn: () => {} }] });
+  };
+  B.reachEnd = function (how) {
+    const g = G(), gma = (g.rel.grandma || 0) >= 55, hurt = SH.f('hitByRick') || SH.f('bruise') || SH.f('toldOkafor') || SH.f('cpsVisit');
+    const party = (g.party || []).map((id) => (SH.NPCS_META[id] || {}).n).filter(Boolean);
+    const path = gma ? 'grandma' : hurt ? 'foster' : 'home';
+    const open = how === 'call' ? `The woman who answers has a voice like a warm blanket. She asks where you are, then asks if you've eaten.` : `You type "hi" and delete it four times. A person named Tasha types back in under a minute: "Hey. I'm really glad you reached out. Are you somewhere safe right now?"`;
+    const mid = g.phase === 'run' ? `By morning there's a social worker named Mr. Adeyemi, a vending-machine breakfast, and a form with your name spelled wrong. ${party.length ? party.join(' and ') + (party.length > 1 ? ' get' : ' gets') + ' picked up by their parents first. Nobody gets to say goodbye properly.' : ''}` : `Two days later there's a knock at the door, and it's not a cop. It's a social worker named Mr. Adeyemi, who sits at your kitchen table and asks ${nm('Mom')} questions she doesn't want to answer.`;
+    const end = { grandma: [`You go to Grandma ${nm('Rose')}'s in Cedar Falls. "For now," everybody says. The bed smells like cedar and old books. It's quiet in a way that's hard at first.`, 'Your phone is in a drawer in the social worker\'s office. You don\'t get it back for three weeks. When you do, there are 214 messages. You read all of them.'],
+      foster: [`You go to a foster home in Saltmore: a couple named the Okekes, two other kids, a chore chart on the fridge. They're kind. It isn't home. Some nights that's the good part and some nights it's the worst part.`, `Your friends' numbers are "on hold" until the caseworker says so. You write letters instead. Nobody writes letters. It's weird. It's kind of nice.`],
+      home: [`You go back to the same house. It's not the same house, exactly: there's a safety plan taped inside your closet, a counselor on Thursdays, and a caseworker who drops by without calling first. ${nm('Rick')} is quieter. Whether that lasts is the question.`, `You lose your phone for a month. You lose the group chat. You lose the feeling of being the kid who got away. What you get is harder to name.`] }[path];
+    SH.Endings.show('reachedOut', 'You reached out', path === 'grandma' ? 'Cedar Falls, for now' : path === 'foster' ? 'Somewhere new' : 'The same house, not the same', [open, mid].concat(end, ['It isn\'t a happy ending. It\'s a safe one. Some days you\'re not sure those are the same thing. Later, a lot later, you are.']));
+  };
+
+})(window.SH);
+
+</script>
+<script>
+/* forum.js */
+/* SMALL HOURS — Part 1f: Threadly forums. Read boards, post your own question (free text) and get replies.
+   Some DMs are creeps: the game throws a ⚠️ risk pop-up before you engage. */
+(function (SH) {
+  const B = SH.Browser; if (!B) return;
+  const G = () => SH.G, esc = B.esc;
+  const BOARDS = {
+    harlow: ['t/Harlow', 'Local stuff', [
+      ['bluecollar_bill', 'Anyone else hear the plant is cutting more shifts?', ['yep my husband got the letter', 'this town is dying man']],
+      ['maplestreet_mom', 'PSA: the underpass lights are out AGAIN', ['called the city twice', 'keep your kids away from there at night']],
+      ['quikmart_kev', 'Top-up cards back in stock at the Route 9 QuikMart', ['finally', 'do u have the $15 ones']]]],
+    camping: ['t/CampingOnABudget', 'Gear, spots, cold nights', [
+      ['trailmix_tina', 'Sleeping bag temp ratings are LIES. a "40°F" bag is miserable at 40.', ['always go 10-15 degrees lower than the forecast', 'foam pad under you matters more than people think']],
+      ['stealth_camper', 'Tarp over the tent = dry tent. Every time.', ['and pitch on high ground, not in the dip', 'learned this the hard way lol']],
+      ['cheapgear', 'Best $40 tent?', ['walmart 2-person is fine for a season', 'check SwapSpot, people dump barely used ones']]]],
+    abandoned: ['t/AbandonedAverland', 'Urbex, photos, history', [
+      ['rust_hunter', 'The old textile mill outside town. Roof is half gone on the east side, west wing still dry.', ['security drives by on weekends', 'floor on the 2nd story is NOT safe']],
+      ['barnfinder', 'Every village around here has a dead barn or two. Most owners don\'t care, some really do.', ['got yelled at by a farmer with a shotgun once. ask first', 'the ones with new locks = someone still cares']],
+      ['motelghost', 'Closed-down Starlite Motel on the county road. Power is off, water is off.', ['cops check it after noise complaints', 'kids party there on fridays']]]],
+    lefthome: ['t/LeftHome', 'People who ran away as kids, talking about it', [
+      ['wasfifteen', 'Ran at 15. First night felt like freedom. Third night I was hungry, cold and a guy at the bus station was being "nice." Please call someone before it gets to that.', ['same. the "nice" guy thing is real', 'called the Safeline on day 4. best thing i did']],
+      ['foster_to_fine', 'If home is actually unsafe, telling someone doesn\'t always mean going back. It didn\'t for me.', ['this. cps isn\'t perfect but they moved me to my aunt', 'thank you for posting this']],
+      ['couch_era', 'Couch surfed at friends\' houses for 2 months at 14. Their parents knew. Eventually one of them called my school counselor. I was mad. Now I\'m grateful.', ['friends\' parents are underrated', 'same, my friend\'s mom basically adopted me']]]],
+    rides: ['t/ScootAndPedal', 'Scooters, bikes, repairs', [
+      ['voltvic', 'E-scooter range is always 60% of what the box says. Hills eat battery.', ['cold kills it too', 'carry the charger. always']],
+      ['fixiefran', 'Flat tire? $5 patch kit + a pump. Takes 15 min once you learn.', ['tubeyou has good videos on it', 'bring tire levers']]]],
+  };
+  const MY = () => (G().forum = G().forum || { posts: [], dms: [], blocked: false });
+
+  function replies(q) {
+    const t = q.toLowerCase(), out = [];
+    const add = (u, s) => out.push([u, s]);
+    if (/cold|freez|warm|night|sleep outside/.test(t)) add('trailmix_tina', 'sleeping bag + foam pad + a beanie. you lose a ton of heat from your head. and don\'t sleep in wet clothes');
+    if (/food|hungry|eat|cheap/.test(t)) add('broke_but_fed', 'food pantries don\'t ask for ID. church suppers too. ramen + peanut butter = cheapest calories');
+    if (/tent|camp|where.*(sleep|stay)|spot/.test(t)) add('stealth_camper', 'public land or ask a farmer. never somewhere with "no trespassing" and fresh locks');
+    if (/money|job|work|cash/.test(t)) add('hustle_hank', 'yard work, dog walking, car washes. anyone asking for a "deposit" first is a scam');
+    if (/phone|data|wifi|charge/.test(t)) add('techtina', 'libraries have free wifi and outlets. power bank is the best $20 you\'ll spend');
+    if (/scooter|bike|flat|tire/.test(t)) add('fixiefran', 'patch kit + pump. check tubeyou for a tutorial');
+    if (/run ?away|ran away|leave home|left home|parents|stepdad|mom|dad|home/.test(t)) { add('wasfifteen', 'hey. are you ok? if you\'re a kid and home isn\'t safe, the Safeline is real people. i promise it\'s not a trap'); add('mod_threadly', '🛡️ Automated message: if you or someone you know is in danger, contact local emergency services or a youth helpline. safeline.av'); }
+    if (/motel|hotel|room/.test(t)) add('roadtrip_ro', 'most places want ID and a card. the cheap ones on the edge of town are sketchy for a reason');
+    if (!out.length) add('randomuser_88', ['lol what', 'good question honestly', 'following', 'did u try searching first'][Math.floor(Math.random() * 4)]);
+    if (/\b(1[0-4]|twelve|thirteen|eleven)\b|\bi'?m a kid\b|years old/.test(t) || /run ?away|ran away|left home/.test(t)) out.push(['__creep', '']);
+    return out;
+  }
+
+  B.SITES['threadly.av'] = { n: 'Threadly', icon: '🧵', col: '#ff5a1f', mb: 0.9, tile: true, order: 7, render(path) {
+    const f = MY(), m = path.match(/^t\/(\w+)/), mine = path.match(/^mine\/(\d+)/);
+    const nav = `<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:6px">${Object.entries(BOARDS).map(([k, b]) => B.lnk('threadly.av/t/' + k, b[0], 'font-size:11px;background:#ffffff12;padding:2px 7px;border-radius:10px')).join('')}${B.lnk('threadly.av/dms', '✉️ DMs' + (f.dms.filter((d) => !d.read).length ? ' •' : ''), 'font-size:11px;background:#ffffff12;padding:2px 7px;border-radius:10px')}</div>`;
+    if (path === 'dms') { f.dms.forEach((d) => d.read = true); return nav + (f.dms.map((d, i) => B.card(`<b>${esc(d.u)}</b><br>${esc(d.text)}${d.creep && !d.done ? `<div style="margin-top:6px">${B.btn(`SH.Forum.creep(${i},'reply')`, 'Reply')}${B.btn(`SH.Forum.creep(${i},'block')`, '🚫 Block & report', 'primary')}</div>` : ''}`)).join('') || '<p class="muted">No messages.</p>'); }
+    if (mine) { const p = f.posts[+mine[1]]; if (!p) return nav; return nav + B.card(`<b>${esc(p.q)}</b><br><small class="muted">posted by you · ${SH.dateStr(p.t)}</small>`) + p.r.filter((x) => x[0] !== '__creep').map(([u, s]) => `<div class="setrow" style="font-size:12px"><b>${esc(u)}</b> ${esc(s)}</div>`).join(''); }
+    if (m && BOARDS[m[1]]) { const b = BOARDS[m[1]]; return nav + `<b>${b[0]}</b> <span class="muted">· ${b[1]}</span>` + b[2].map(([u, t, rs]) => B.card(`<b>${esc(t)}</b><br><small class="muted">u/${esc(u)}</small>${rs.map((r) => `<div style="font-size:11.5px;margin-top:4px;padding-left:8px;border-left:2px solid #ffffff22">${esc(r)}</div>`).join('')}`)).join(''); }
+    return nav + `<b>Ask Threadly</b><div style="display:flex;gap:5px;margin:5px 0"><input id="fq" placeholder="ask anything (anonymous-ish)" style="flex:1;min-width:0"><button class="btn primary" onclick="SH.Forum.post(document.querySelector('#fq').value)">Post</button></div>` +
+      (f.posts.length ? '<div class="sech">YOUR POSTS</div>' + f.posts.map((p, i) => `<div class="setrow" style="font-size:12px">${B.lnk('threadly.av/mine/' + i, esc(p.q))} <span class="muted">· ${p.r.filter((x) => x[0] !== '__creep').length} replies</span></div>`).join('') : '') +
+      '<div class="sech">BOARDS</div>' + Object.entries(BOARDS).map(([k, b]) => `<div class="setrow">${B.lnk('threadly.av/t/' + k, '<b>' + b[0] + '</b>')} <span class="muted" style="font-size:11px">${b[1]}</span></div>`).join('');
+  } };
+  B.index(/forum|threadly|advice|ask|camp|tent|abandon|urbex|mill|barn|scooter|bike|reddit/, 'threadly.av', 'Threadly · ask anything', 'Forums: camping, abandoned places, rides, local, people who left home.');
+
+  const F = SH.Forum = {};
+  F.post = function (q) {
+    q = (q || '').trim(); if (!q) return; const f = MY();
+    const r = replies(q); f.posts.unshift({ q, t: G().t, r });
+    if (r.some((x) => x[0] === '__creep') && !f.creepSent) { f.creepSent = true; setTimeout(() => { f.dms.unshift({ u: 'chill_dude_27', text: 'hey saw ur post. i was in the same spot at ur age. i have a spare room, no rules, no questions. i can pick u up. don\'t tell anyone tho, ppl wouldn\'t get it', creep: true, t: G().t }); SH.Phone.notify && SH.Phone.notify('browser', 'Threadly', 'New message from chill_dude_27'); }, 4000); }
+    SH.Browser.go('threadly.av/mine/0');
+  };
+  F.creep = function (i, what) {
+    const f = MY(), d = f.dms[i]; if (!d) return;
+    if (what === 'block') { d.done = true; SH.st('stress', -2); SH.flag('blockedCreep'); SH.UI.toast('Blocked and reported. Threadly removed the account an hour later.'); SH.Phone.render(); return; }
+    SH.UI.dialog({ title: '⚠️ This is risky', text: ['A stranger online offering a free room, "no questions," and asking you to keep it secret is exactly how kids get hurt. Adults who actually want to help don\'t ask you to hide it.', 'Do you still want to reply?'], choices: [
+      { t: 'Block and report instead', cls: 'safe', fn: () => F.creep(i, 'block') },
+      { t: 'Reply anyway', cls: 'danger', fn: () => { d.done = true; SH.st('stress', 8); f.dms.unshift({ u: 'chill_dude_27', text: 'cool. where are u rn? send a pic so i know what u look like. i\'ll come get u tonight, just u tho ok', t: G().t }); SH.UI.dialog({ title: 'chill_dude_27', text: ['"where are u rn? send a pic so i know what u look like. i\'ll come get u tonight, just u tho ok"', 'Your stomach drops. Just you. Send a pic. Tonight. Every alarm in your body goes off at once.'], choices: [{ t: 'Block him. Tell someone.', cls: 'safe', fn: () => { SH.flag('blockedCreep'); SH.st('stress', -4); SH.UI.log('You block him and screenshot everything. Your hands are shaking. You did the right thing. You know that.', 'good'); SH.Phone.render(); } }] }); } }] });
+  };
+})(window.SH);
+
+</script>
+<script>
+/* browser_shop.js */
+/* SMALL HOURS — Part 1g: Everything (online store — any product; pickup locker; pay by card or cash at pickup)
+   and SwapSpot (used marketplace: fair sellers, scams that want a deposit, and red-flag "come alone" sellers;
+   you can list your own stuff too). No theft: things only change hands when someone pays. */
+(function (SH) {
+  const B = SH.Browser, C = SH.Catalog; if (!B || !C) return;
+  const G = () => SH.G, esc = B.esc, $2 = B.$2;
+  const S = SH.Shop = {};
+  const orders = () => (G().orders = G().orders || []);
+  const here = () => { const g = G(); return g.away ? g.away : 'harlow'; };
+  const hereName = () => (G().away && SH.Atlas ? SH.Atlas.here().name : 'Harlow');
+
+  /* ---------------- Everything ---------------- */
+  B.SITES['everything.av'] = { n: 'Everything', icon: '📦', col: '#e38b12', mb: 1.4, tile: true, order: 3, render(path) {
+    const pm = path.match(/^p\/(x_\w+)/), cm = path.match(/^c\/(\w+)/), q = decodeURIComponent((path.match(/q=([^&]*)/) || [])[1] || '');
+    const top = `<div style="display:flex;gap:5px;margin-bottom:6px"><input id="esq" placeholder="Search Everything" value="${esc(q)}" style="flex:1;min-width:0"><button class="btn" onclick="SH.Browser.go('everything.av/?q='+encodeURIComponent(document.querySelector('#esq').value))">🔎</button></div>`;
+    const tile = (p) => `<a href="#" onclick="SH.Browser.go('everything.av/p/${p.id}');return false" style="color:inherit;text-decoration:none;display:block;background:#ffffff0d;border-radius:9px;padding:6px;text-align:center"><div style="font-size:24px">${p.i}</div><div style="font-size:11px;line-height:1.2;height:27px;overflow:hidden">${esc(p.n)}</div><b style="font-size:12px">${$2(p.price)}</b></a>`;
+    const grid = (L) => `<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">${L.map(tile).join('')}</div>`;
+    const mine = orders().filter((o) => !o.done);
+    const ob = mine.length ? B.card(`<b>📦 Your orders</b>${mine.map((o) => `<div style="font-size:11.5px">${C.ALL[o.key].i} ${esc(C.ALL[o.key].n)} · ${o.paid ? 'paid' : 'pay ' + $2(o.price + 1) + ' cash at pickup'} · ${G().t >= o.ready ? `<b style="color:#6fdc8c">ready at ${esc(o.atName)} locker</b>` : 'arrives ' + SH.dateStr(o.ready) + ' ' + SH.fmt12(o.ready)}</div>`).join('')}`) : '';
+    if (pm) {
+      const p = C.ALL[pm[1]]; if (!p) return top + 'Not found.';
+      return top + `<div style="text-align:center;font-size:54px">${p.i}</div><div style="font-size:15px;font-weight:600">${esc(p.n)}</div><div style="font-size:20px;margin:2px 0">${$2(p.price)}</div><div class="muted" style="font-size:12px">${esc(C.desc(p))}</div>
+        ${p.adult ? B.card('🔞 18+ only. You look at it for exactly one second. <i>' + esc(C.refuse(p)) + '</i>') : p.restricted ? B.card('🪪 Adult signature required on delivery. ' + esc(C.restrictMsg(p))) : ''}
+        <div class="muted" style="font-size:11px;margin:6px 0">Ships to the pickup locker at the ${esc(hereName())} ${G().away ? 'gas station' : 'QuikMart'}, next day.</div>
+        ${p.adult ? '' : `<div style="display:flex;gap:5px;flex-wrap:wrap">${B.btn(`SH.Shop.order('${p.id}','card')`, '💳 Buy with PocketPal', 'primary')}${B.btn(`SH.Shop.order('${p.id}','cash')`, '💵 Pay cash at pickup (+$1)')}</div>`}
+        <p>${B.lnk('everything.av/c/' + p.cat, '← more ' + esc((C.CATS.find((c) => c[0] === p.cat) || [0, p.cat])[1]))}</p>`;
+    }
+    if (q) { const L = C.search(q); return top + ob + (L.length ? grid(L) : `<p class="muted">No results for "${esc(q)}". Everything has everything, just not that.</p>`); }
+    if (cm) return top + ob + `<b>${esc((C.CATS.find((c) => c[0] === cm[1]) || [0, cm[1]])[1])}</b>` + (cm[1] === 'adult' ? B.card('You\'re twelve. Sam scrolls past this so fast the page barely loads.') : '') + grid(C.byCat(cm[1]));
+    return top + ob + `<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:6px">${C.CATS.map(([k, n]) => B.lnk('everything.av/c/' + k, n, 'display:block;background:#ffffff0d;border-radius:9px;padding:9px;font-size:12.5px')).join('')}</div><div class="sech">POPULAR NEAR YOU</div>` + grid(['x_powerbank', 'x_sleepbag', 'x_kick', 'x_ramen', 'x_tent1', 'x_beanie'].map((k) => C.ALL[k]));
+  } };
+  B.index(/buy|shop|store|order|amazon|everything|price|cheap|deliver/, 'everything.av', 'Everything · the everything store', 'Anything, next-day pickup.');
+
+  S.order = function (key, how) {
+    const g = G(), p = C.ALL[key]; if (!p) return; if (p.adult) return SH.UI.toast(C.refuse(p));
+    if (how === 'card' && !(SH.Bank && SH.Bank.pay(p.price, 'Everything: ' + p.n))) return;
+    const ready = g.t + 1440 - (g.t % 1440) + 11 * 60; // next day 11 AM
+    orders().push({ key, price: p.price, paid: how === 'card', at: here(), atName: hereName(), ready, t: g.t });
+    SH.UI.toast(`📦 Ordered ${p.n}. Pickup at the ${hereName()} locker tomorrow after 11 AM.`); SH.Browser.go('everything.av');
+  };
+  S.ready = () => { const g = G(); return orders().filter((o) => !o.done && o.at === here() && g.t >= o.ready); };
+  S.pickup = function () {
+    const g = G(), L = S.ready(); if (!L.length) return SH.UI.toast('Nothing in the locker for you yet.'); const got = [], lines = [];
+    L.forEach((o) => {
+      const p = C.ALL[o.key];
+      if (p.restricted) { o.done = true; if (o.paid && SH.Bank) SH.Bank.deposit(o.price, 'Refund: ' + p.n); lines.push(`${p.n}: the clerk needs an adult signature. "Sorry, bud." ${o.paid ? 'Refunded to your card.' : ''}`); return; }
+      if (!o.paid) { if (g.money < o.price + 1) { lines.push(`${p.n}: ${$2(o.price + 1)} cash due. You don't have it. It'll wait 3 more days.`); return; } SH.money(-(o.price + 1)); (g.tx = g.tx || []).push({ t: g.t, d: 'Everything pickup: ' + p.n, a: -(o.price + 1) }); }
+      o.done = true; C.give(o.key); got.push(p.i + ' ' + p.n);
+    });
+    SH.advance(5, { interrupt: false });
+    SH.UI.dialog({ title: 'Pickup locker', text: [got.length ? `You punch in the code. The little door pops open: ${got.join(', ')}.` : 'Nothing you can take today.'].concat(lines), choices: [{ t: 'Okay', fn: () => (g.away && SH.Atlas ? setTimeout(SH.Atlas.hub, 30) : SH.UI.afterAction()) }] });
+  };
+
+  /* ---------------- SwapSpot ---------------- */
+  const SELL = ['kick', 'escoot', 'bikeused', 'bmx', 'sleepbag', 'tent1', 'tent4', 'powerbank', 'solar', 'stove', 'lantern', 'console2', 'heater', 'speaker', 'mattress', 'boots', 'rainjacket', 'helmet', 'lock'];
+  const NAMES = ['Deb R.', 'Tony M.', 'Kayla', 'Big Gary', 'J. Whitfield', 'Marisol', 'Dwayne', 'Pastor Lin', 'Chloe (moving sale)', 'Rob\'s Garage', 'user8812', 'Nikki T.'];
+  S.listings = function () {
+    const g = G(), day = SH.day(), r = B.rnd(B.seed() * 7 + day * 31 + (g.away ? g.away.length * 17 : 0)), L = [];
+    for (let i = 0; i < 9; i++) {
+      const key = 'x_' + SELL[Math.floor(r() * SELL.length)], p = C.ALL[key], roll = r();
+      const kind = roll < 0.16 ? 'scam' : roll < 0.26 ? 'creep' : 'fair';
+      const pct = kind === 'scam' ? 0.25 + r() * 0.1 : 0.4 + r() * 0.3;
+      const cond = ['like new', 'good', 'used', 'well loved', 'needs a little work'][Math.floor(r() * 5)];
+      const where = kind === 'creep' ? 'pickup at my place, come alone' : ['meet at the mall entrance', 'meet at the QuikMart', 'porch pickup, daytime', 'meet at the library parking lot'][Math.floor(r() * 4)];
+      const note = kind === 'scam' ? 'MUST GO TODAY!! PocketPal deposit first to hold it, then I ship. No meetups sorry.' : kind === 'creep' ? 'Just come by yourself, I\'ll throw in something extra 😉 young buyers welcome' : ['Works great, just upgraded.', 'Kid outgrew it.', 'Cash only, no holds.', 'Small scuff, otherwise perfect.', 'Moving, everything must go.'][Math.floor(r() * 5)];
+      L.push({ id: day + '_' + i, key, price: Math.max(3, Math.round(p.price * pct)), seller: NAMES[Math.floor(r() * NAMES.length)], kind, cond, where, note });
+    }
+    return L;
+  };
+  const deals = () => (G().swap = G().swap || { bought: {}, meets: [], mine: [] });
+  B.SITES['swapspot.av'] = { n: 'SwapSpot', icon: '♻️', col: '#12a37f', mb: 1.6, tile: true, order: 4, render(path) {
+    const d = deals(), L = S.listings(), m = path.match(/^l\/(\w+)/);
+    if (path === 'sell') {
+      const g = G(), mine = (g.owned || []).concat(g.bag).filter((k) => C.ALL[k] && !C.ALL[k].adult);
+      return `<b>Sell your stuff</b><p class="muted" style="font-size:11.5px">List it and someone usually bites within a day. You meet in public and get cash.</p>${mine.length ? mine.map((k) => `<div class="setrow" style="display:flex;justify-content:space-between;align-items:center;font-size:12px">${C.ALL[k].i} ${esc(C.ALL[k].n)}${d.mine.some((x) => x.key === k && !x.done) ? '<span class="muted">listed</span>' : B.btn(`SH.Shop.list('${k}')`, 'List ' + $2(Math.round(C.ALL[k].price * 0.5)))}</div>`).join('') : '<p class="muted">Nothing to sell (catalog items only).</p>'}`;
+    }
+    if (m) { const l = L.find((x) => x.id === m[1]); if (!l) return 'Listing expired.'; const p = C.ALL[l.key];
+      return `<div style="text-align:center;font-size:50px">${p.i}</div><b style="font-size:15px">${esc(p.n)}</b> · ${esc(l.cond)}<div style="font-size:20px">${$2(l.price)} <small class="muted" style="font-size:11px">new: ${$2(p.price)}</small></div><div class="muted" style="font-size:12px">${esc(l.seller)} · ${esc(l.where)}</div>${B.card(esc(l.note))}
+        ${d.bought[l.id] ? '<p class="muted">You already arranged this one.</p>' : `<div>${B.btn(`SH.Shop.swapBuy('${l.id}')`, l.kind === 'scam' ? '💳 Send deposit' : 'Message seller', 'primary')}</div>`}<p class="muted" style="font-size:11px">Tips: meet in public, in daylight. Never pay before you see it. Anyone who says "come alone" is a no.</p>`; }
+    return `<div style="display:flex;justify-content:space-between;align-items:center"><b>Near ${esc(hereName())}</b>${B.lnk('swapspot.av/sell', '+ Sell')}</div>${d.meets.filter((x) => !x.done).map((x) => B.card(`📍 Meet ${esc(x.seller)} at <b>${esc(x.locName)}</b> for ${esc(C.ALL[x.key].n)} · ${$2(x.price)} cash`, 'border-color:#12a37f88')).join('')}${d.mine.filter((x) => !x.done && x.buyer).map((x) => B.card(`💵 ${esc(x.buyer)} wants your ${esc(C.ALL[x.key].n)} · meet at <b>the mall</b>`, 'border-color:#12a37f88')).join('')}
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">${L.map((l) => `<a href="#" onclick="SH.Browser.go('swapspot.av/l/${l.id}');return false" style="color:inherit;text-decoration:none;background:#ffffff0d;border-radius:9px;padding:6px;text-align:center;display:block"><div style="font-size:22px">${C.ALL[l.key].i}</div><div style="font-size:10.5px;height:26px;overflow:hidden">${esc(C.ALL[l.key].n)}</div><b>${$2(l.price)}</b></a>`).join('')}</div>`;
+  } };
+  B.index(/used|second ?hand|swap|marketplace|craigslist|sell|scooter|bike|tent|sleeping bag|cheap/, 'swapspot.av', 'SwapSpot · buy & sell used stuff nearby', 'Used scooters, bikes, gear. Meet in public.');
+
+  S.swapBuy = function (id) {
+    const g = G(), d = deals(), l = S.listings().find((x) => x.id === id); if (!l) return; const p = C.ALL[l.key];
+    if (l.kind === 'scam') {
+      return SH.UI.dialog({ title: '⚠️ This is risky', text: ['A price this low, "deposit first," "no meetups": those are the three classic signs of a scam. If you pay, the money is gone.'], choices: [
+        { t: 'Skip it', cls: 'safe', fn: () => {} },
+        { t: `Pay the ${$2(Math.round(l.price / 2))} deposit anyway`, cls: 'danger', fn: () => { if (!SH.Bank || !SH.Bank.pay(Math.round(l.price / 2), 'SwapSpot deposit: ' + l.seller)) return; d.bought[id] = true; setTimeout(() => SH.Phone.notify && SH.Phone.notify('browser', 'SwapSpot', `${l.seller} has deleted their account.`), 5000); SH.UI.toast('Deposit sent. "Great!! shipping tomorrow!!" says ' + l.seller + '.'); SH.Phone.render(); } }] });
+    }
+    if (l.kind === 'creep') {
+      return SH.UI.dialog({ title: '⚠️ This is risky', text: ['"Come by yourself." "Young buyers welcome." A winky face. An adult inviting a kid to their place alone is a huge red flag, whatever they\'re selling.'], choices: [
+        { t: 'Nope. Report the listing.', cls: 'safe', fn: () => { d.bought[id] = true; SH.flag('reportedListing'); SH.UI.toast('Reported. The listing disappears by evening.'); SH.Phone.render(); } },
+        { t: 'Ask if you can meet somewhere public instead', fn: () => { d.bought[id] = true; SH.UI.dialog({ title: l.seller, text: ['"nah it\'s at my place or nothing. why r u being weird about it"', 'That answer tells you everything.'], choices: [{ t: 'Block them', cls: 'safe', fn: () => SH.Phone.render() }] }); } }] });
+    }
+    const spots = g.away ? [['hub', hereName() + ' gas station']] : [['mall', 'the mall entrance'], ['store', 'the QuikMart'], ['library', 'the library lot']];
+    const sp = spots[Math.floor(Math.random() * spots.length)];
+    d.bought[id] = true; d.meets.push({ id, key: l.key, price: l.price, seller: l.seller, loc: sp[0], locName: sp[1], at: here(), t: g.t });
+    SH.UI.toast(`${l.seller}: "sure! meet at ${sp[1]}, bring cash." It's on SwapSpot's front page.`); SH.Phone.render();
+  };
+  S.meetsHere = () => { const g = G(); return deals().meets.filter((x) => !x.done && x.at === here() && (g.away ? x.loc === 'hub' : x.loc === g.loc)); };
+  S.doMeet = function (x) {
+    const g = G(), p = C.ALL[x.key];
+    if (g.money < x.price) return SH.UI.toast(`${x.seller} wants ${$2(x.price)} cash. You have ${$2(g.money)}.`);
+    SH.money(-x.price); (g.tx = g.tx || []).push({ t: g.t, d: 'SwapSpot: ' + p.n, a: -x.price }); x.done = true; C.give(x.key); SH.advance(15, { interrupt: false });
+    SH.UI.dialog({ title: 'SwapSpot meetup', text: [`${x.seller} is exactly who the profile picture said. They hand over the ${p.n}, count your cash, and say "${['have fun with it', 'take care of her', 'pleasure doing business', 'my kid loved that thing'][Math.floor(Math.random() * 4)]}." ${Math.random() < 0.3 ? 'They look at you a second longer than normal, like they\'re doing math about your age. Then they let it go.' : ''}`], choices: [{ t: 'Okay', fn: () => (g.away && SH.Atlas ? setTimeout(SH.Atlas.hub, 30) : SH.UI.afterAction()) }] });
+  };
+  S.list = function (key) { const d = deals(); d.mine.push({ key, price: Math.round(C.ALL[key].price * 0.5), t: G().t, buyer: null }); SH.UI.toast('Listed. Someone will probably message you by tomorrow.'); SH.Phone.render(); };
+  S.sellMeet = function (x) {
+    const g = G(); const i = (g.owned || []).indexOf(x.key); if (i >= 0) g.owned.splice(i, 1); else if (!SH.rmBag(x.key)) { x.done = true; return SH.UI.toast('You don\'t have it anymore.'); }
+    x.done = true; SH.money(x.price); (g.tx = g.tx || []).push({ t: g.t, d: 'Sold on SwapSpot: ' + C.ALL[x.key].n, a: x.price }); SH.advance(15, { interrupt: false });
+    SH.UI.log(`${x.buyer} checks the ${C.ALL[x.key].n} over, nods, and pays you $${x.price} in cash.`, 'good'); SH.UI.afterAction();
+  };
+  // buyers show up for your listings
+  const bAdv = SH.advance;
+  SH.advance = function () { const r = bAdv.apply(this, arguments); const g = G(); if (g && g.swap) g.swap.mine.forEach((x) => { if (!x.done && !x.buyer && g.t - x.t > 360 && Math.random() < 0.15) { x.buyer = NAMES[Math.floor(Math.random() * NAMES.length)]; SH.Phone.notify && SH.Phone.notify('browser', 'SwapSpot', `${x.buyer} wants your ${C.ALL[x.key].n} for $${x.price}. Meet at the mall.`); } }); return r; };
+
+  /* ---------------- actions: locker, meetups (Harlow) + Atlas hub ---------------- */
+  const A = SH.Actions;
+  if (A && A.list) {
+    const bList = A.list;
+    A.list = function () {
+      const r = bList.apply(this, arguments), g = G(); if (!g || g.away || !r || !r.acts) return r;
+      if (g.loc === 'store' && S.ready().length) r.acts.unshift({ label: `Open the pickup locker (${S.ready().length})`, sub: 'Your Everything order is here.', fn: S.pickup });
+      S.meetsHere().forEach((x) => r.acts.unshift({ label: `Meet ${x.seller} (SwapSpot)`, sub: `${C.ALL[x.key].n} · $${x.price} cash`, fn: () => S.doMeet(x) }));
+      if (g.loc === 'mall' && g.swap) g.swap.mine.filter((x) => !x.done && x.buyer).forEach((x) => r.acts.unshift({ label: `Sell to ${x.buyer} (SwapSpot)`, sub: `${C.ALL[x.key].n} · +$${x.price}`, fn: () => S.sellMeet(x) }));
+      return r;
+    };
+  }
+  if (SH.Atlas) (SH.Atlas.extra = SH.Atlas.extra || []).push((p, ch, dark) => {
+    if (S.ready().length && !dark) ch.unshift({ t: `Pickup locker (${S.ready().length})`, sub: 'At the gas station', fn: S.pickup });
+    S.meetsHere().forEach((x) => { if (!dark) ch.unshift({ t: `Meet ${x.seller} (SwapSpot)`, sub: `$${x.price} cash`, fn: () => S.doMeet(x) }); });
+  });
+})(window.SH);
+
+</script>
+<script>
+/* browser2.js */
+/* SMALL HOURS — Part 1h: transport company sites (timetables, prices, age rules — booking arrives in Part 2),
+   StayFinder (motel listings with fake + real reviews — booking arrives in Part 3), GiveTogether (fundraisers;
+   a fake one can earn a little and can blow up in your face). */
+(function (SH) {
+  const B = SH.Browser; if (!B) return;
+  const G = () => SH.G, esc = B.esc, $2 = B.$2;
+
+  /* ---------------- transport companies ---------------- */
+  const CO = SH.TRANSPORT = {
+    averline: { n: 'Averline Coaches', icon: '🚌', col: '#0b5cad', tag: 'Comfort. Safety. Every major city.', rate: 0.16, base: 12, tiers: ['city', 'town'],
+      rule: 'Children under 15 may not travel unaccompanied. Photo ID checked at boarding for all passengers who look under 18.', strict: 0.95 },
+    cheapride: { n: 'CheapRide', icon: '🚐', col: '#e0245e', tag: 'Why pay more? (Seriously, why?)', rate: 0.07, base: 5, tiers: ['city', 'town', 'small'],
+      rule: 'Unaccompanied minors 15+ only.* (*Driver discretion.)', strict: 0.45, late: 0.4 },
+    rail: { n: 'Averland Regional Rail', icon: '🚆', col: '#5a3fa0', tag: 'The scenic way.', rate: 0.2, base: 9, tiers: ['city', 'town'], rail: true,
+      rule: 'Children 12 and under must travel with an adult 18+. Ages 13–15 may travel alone on daytime trains with a consent form. Conductors check.', strict: 0.8 },
+    county: { n: 'County Transit', icon: '🚏', col: '#3a7d2c', tag: 'Local buses, 6 AM – 9 PM.', rate: 0.05, base: 2, tiers: ['city', 'town', 'small', 'village'], local: 40,
+      rule: 'Kids 10+ ride alone all the time. Exact change or tap card.', strict: 0.05 },
+  };
+  function routes(co) {
+    const A = SH.Atlas; if (!A) return [];
+    const D = A.data(), H = A.here(), c = CO[co];
+    return D.places.filter((p) => p !== H && c.tiers.includes(p.tier) && (!c.local || A.miles(H, p) <= c.local) && (!c.rail || p.rail || p.tier === 'city'))
+      .map((p) => { const mi = A.miles(H, p); return { p, mi, price: Math.round((c.base + mi * c.rate) * (SH.isWeekday && !SH.isWeekday() ? 1.15 : 1)), hrs: Math.max(0.3, mi / (c.rail ? 55 : 42)) }; })
+      .sort((a, b) => a.mi - b.mi).slice(0, 8);
+  }
+  Object.entries(CO).forEach(([k, c], i) => {
+    B.SITES[k + '.av'] = { n: c.n.split(' ')[0], icon: c.icon, col: c.col, mb: 1, tile: true, order: 10 + i, render() {
+      const R = routes(k), h = SH.hour(), r = B.rnd(B.seed() + SH.day() * 3 + i);
+      const times = (n) => Array.from({ length: n }, (_, j) => { const t = 6 + Math.floor(r() * 15); return (t % 12 || 12) + ':' + ['00', '15', '30', '45'][Math.floor(r() * 4)] + (t < 12 ? ' AM' : ' PM'); }).sort();
+      return `<div style="background:${c.col};margin:-8px -10px 8px;padding:12px 10px"><div style="font-size:17px;font-weight:700">${c.icon} ${esc(c.n)}</div><div style="font-size:11.5px;opacity:.85">${esc(c.tag)}</div></div>
+        <b>From ${esc(B.place().name)}</b>${R.length ? R.map((x) => `<div class="setrow" style="font-size:12px"><div style="display:flex;justify-content:space-between"><b>${esc(x.p.name)}</b><b>${$2(x.price)}</b></div><span class="muted">${x.mi} mi · ${x.hrs < 1 ? Math.round(x.hrs * 60) + ' min' : x.hrs.toFixed(1) + ' h'} · ${times(k === 'county' ? 4 : 2).join(', ')}${c.late ? ' · often late' : ''}</span></div>`).join('') : '<p class="muted">No routes from here.</p>'}
+        ${B.card(`<b>🧒 Traveling alone?</b><br><span class="muted">${esc(c.rule)}</span>`, 'border-color:#f2c14e55')}
+        <p class="muted" style="font-size:11px">Online booking needs a card. ${k === 'county' ? 'Just get on the bus.' : 'Tickets can also be bought at the station.'}</p>`;
+    } };
+  });
+  B.index(/bus|train|rail|coach|ticket|travel|get to|go to|cheapride|averline|transit|timetable|schedule/, 'cheapride.av', 'CheapRide · buses from $5', 'Cheap intercity buses. Driver discretion.');
+  B.index(/bus|train|rail|coach|ticket|travel|averline|timetable/, 'averline.av', 'Averline Coaches · every major city', 'Comfort. Safety. ID checked.');
+  B.index(/train|rail|station|timetable/, 'rail.av', 'Averland Regional Rail', 'Scenic routes. Conductors check.');
+  B.index(/bus|local|county|transit/, 'county.av', 'County Transit · local buses', '$2 local routes, 6 AM – 9 PM.');
+
+  /* ---------------- StayFinder (motel listings) ---------------- */
+  const MOT = ['Starlite', 'Route 9', 'Budget Inn', 'Sleepwell', 'Pines', 'Travelers Rest', 'Blue Moon', 'Harbor View', 'Sunset', 'Western'];
+  SH.motels = function (placeId) {
+    const A = SH.Atlas, p = A ? A.data().places.find((x) => x.id === (placeId || (G().away || 'p0'))) : null; if (!p) return [];
+    const r = B.rnd(B.seed() * 5 + p.id.length * 97 + p.pop), n = { city: 5, town: 3, small: 2, village: r() < 0.4 ? 1 : 0 }[p.tier], out = [];
+    for (let i = 0; i < n; i++) {
+      const tier = i === 0 && p.tier === 'city' ? 'pro' : r() < 0.4 ? 'sloppy' : r() < 0.6 ? 'loose' : 'pro';
+      const base = { pro: 89, loose: 52, sloppy: 29 }[tier] + Math.round(r() * 15);
+      out.push({ id: p.id + 'm' + i, place: p.id, n: (tier === 'pro' ? ['Hampton Suites', 'Averland Inn & Suites', 'Comfort Lodge'][i % 3] : MOT[Math.floor(r() * MOT.length)] + (tier === 'sloppy' ? ' Motel' : ' Motor Inn')), tier, night: base, week: Math.round(base * 5.2), month: Math.round(base * 17),
+        stars: tier === 'pro' ? 4.2 : tier === 'loose' ? 3.1 : 2.2 + r() * 0.6, alley: tier === 'sloppy' && r() < 0.6,
+        fake: tier !== 'pro' ? ['Clean and quiet!! Best stay ever!!!!', 'Very nice staff 10/10 would come again'][Math.floor(r() * 2)] : null,
+        real: { pro: ['Front desk was super strict about ID, even for my teenage son.', 'Clean, boring, expensive. Exactly what you want.'], loose: ['Clerk didn\'t really care who was staying. Wifi password was on a sticky note.', 'Fine for a night. Thin walls.'], sloppy: ['Cash only, no questions, and I mean NO questions.', 'Found mold behind the bed. Room is basically a mattress, one outlet and a window.', 'Manager kicked out the room next to me at 2 AM, no refund. Pay by the night.'] }[tier] });
+    }
+    return out;
+  };
+  B.SITES['stayfinder.av'] = { n: 'StayFinder', icon: '🛏️', col: '#c23b6e', mb: 1.8, tile: true, order: 8, render() {
+    const L = SH.motels(); const TN = { pro: 'Hotel', loose: 'Motel', sloppy: 'Budget motel' };
+    return `<b>Stays in ${esc(B.place().name)}</b>${L.length ? L.map((m) => B.card(`<div style="display:flex;justify-content:space-between"><b>${esc(m.n)}</b><span>⭐ ${m.stars.toFixed(1)}</span></div><div class="muted" style="font-size:11px">${TN[m.tier]}${m.alley ? ' · back street off Main' : ''} · from ${$2(m.night)}/night · ${$2(m.week)}/week · ${$2(m.month)}/month</div>${m.fake ? `<div style="font-size:11.5px;margin-top:4px">★★★★★ "${esc(m.fake)}"</div>` : ''}${m.real.map((x) => `<div style="font-size:11.5px;margin-top:3px">★★ "${esc(x)}"</div>`).join('')}`)).join('') : '<p class="muted">No places to stay listed here. It\'s that kind of town.</p>'}<p class="muted" style="font-size:11px">Online booking requires a card and an adult 18+. Walk-in rates are negotiable at some places.</p>`;
+  } };
+  B.index(/motel|hotel|room|stay|sleep|bed|inn|night/, 'stayfinder.av', 'StayFinder · motels & hotels', 'Compare prices. Read the real reviews.');
+
+  /* ---------------- GiveTogether ---------------- */
+  B.SITES['givetogether.av'] = { n: 'GiveTogether', icon: '🤲', col: '#1f9d55', mb: 1, tile: true, order: 9, render() {
+    const g = G(), mine = g.fund;
+    const others = [['Help the Delgado food truck recover from the fire', 1840, 5000], ['Harbor House winter coat drive', 3120, 4000], ['Biscuit\'s surgery fund 🐶', 610, 2200], ['Lincoln MS robotics team to state', 900, 1500]];
+    return `<b>GiveTogether</b><p class="muted" style="font-size:11.5px">Fundraisers from real people. (Mostly.)</p>${others.map(([t, a, goal]) => B.card(`<b>${esc(t)}</b><div style="height:5px;background:#0005;border-radius:3px;margin:5px 0"><i style="display:block;height:100%;width:${a / goal * 100}%;background:#1f9d55;border-radius:3px"></i></div><span class="muted" style="font-size:11px">${$2(a)} of ${$2(goal)}</span>`)).join('')}
+      <div class="sech">START A FUNDRAISER</div>${mine ? B.card(`<b>${esc(mine.title)}</b><br>Raised: <b>${$2(mine.raised)}</b> · ${mine.flagged ? '<b style="color:#ff6b6b">Removed: under review</b>' : mine.withdrawn ? 'Closed' : 'Live'}${!mine.flagged && !mine.withdrawn && mine.raised >= 1 ? '<br>' + B.btn('SH.Browser.fundOut()', 'Withdraw to PocketPal') : ''}`) : `<div style="display:flex;gap:5px"><input id="fundT" placeholder="title (e.g. school trip fund)" style="flex:1;min-width:0"><button class="btn" onclick="SH.Browser.fundStart(document.querySelector('#fundT').value)">Start</button></div><p class="muted" style="font-size:11px">Organizers must be 18+ or have a parent co-sign. Payouts go to a linked account.</p>`}`;
+  } };
+  B.index(/fundrais|donat|charity|gofundme|givetogether|raise money/, 'givetogether.av', 'GiveTogether · fundraisers', 'Start one, or help someone.');
+  B.fundStart = function (title) {
+    title = (title || '').trim(); if (!title) return;
+    const fake = !/real|actually|honest/i.test(title) && /cancer|army|veteran|charity|sick|hospital|surgery|orphan|disaster|fire/i.test(title);
+    SH.UI.dialog({ title: '⚠️ This is risky', text: [fake ? 'Raising money for a cause you aren\'t actually raising money for is fraud. Sites flag it, people report it, and it gets traced to the account it pays into: your mom\'s.' : 'You have to fake a parent co-sign, and payouts go to PocketPal, which Mom can see.', 'Start it anyway?'], choices: [
+      { t: 'Never mind', cls: 'safe', fn: () => {} },
+      { t: 'Start it', cls: 'danger', fn: () => { G().fund = { title, raised: 0, fake, t: G().t, flagged: false }; SH.Phone.render(); } }] });
+  };
+  B.fundOut = function () { const f = G().fund; if (!f || f.flagged || !SH.Bank) return; SH.Bank.deposit(f.raised, 'GiveTogether payout'); SH.UI.toast(`${$2(f.raised)} to PocketPal. ${SH.Bank.state().linked ? 'Mom will see this.' : ''}`); f.withdrawn = true; f.raised = 0; if (G().phase === 'run') { G().revealed = G().away ? null : G().loc; } SH.Phone.render(); };
+  const bAdv = SH.advance;
+  SH.advance = function () { const r = bAdv.apply(this, arguments); const f = G() && G().fund; if (f && !f.flagged && !f.withdrawn && SH.hour() % 3 === 0 && f.lastH !== SH.G.t / 180 | 0) { f.lastH = SH.G.t / 180 | 0; if (Math.random() < 0.35) f.raised += [5, 10, 10, 20, 25][Math.floor(Math.random() * 5)]; if (f.fake && f.raised > 20 && Math.random() < 0.2) { f.flagged = true; G().heat = Math.min(100, (G().heat || 0) + 25); SH.Phone.notify && SH.Phone.notify('browser', 'GiveTogether', 'Your fundraiser was removed after reports. Funds are frozen pending review.'); SH.Phone.push('mom', 'mom', 'Why did I just get an email from a fundraising site asking me to verify a campaign in your name??'); } } return r; };
+})(window.SH);
+
+</script>
+<script>
+/* jobs2.js */
+/* SMALL HOURS — Part 1i: WorkNow (a real job board: real jobs, realistic pay, real age rules — most say 16+,
+   so a 12-year-old has to find the ones that'll take them) and TubeYou (videos that teach skills:
+   driving theory, bike repair, camping, cooking, first aid, fixing things, running a business). */
+(function (SH) {
+  const B = SH.Browser, P = SH.Phone, NT = SH.Net; if (!B) return;
+  const G = () => SH.G, esc = B.esc, $2 = B.$2;
+  const W = () => (G().work = G().work || { apps: {}, gigs: [], fired: {} });
+
+  // [key, title, employer, pay, per, minAge, permit, harlowLoc, tiers, hours [from,to], days, note]
+  const JOBS = [
+    ['dish', 'Dishwasher', 'Route 9 Diner', 12.5, 'h', 16, true, 'diner', ['city', 'town', 'small'], [16, 21], 'any', 'Evenings, fast-paced, food handler card provided.'],
+    ['stock', 'Overnight shelf stocker', 'ValuMart', 13.75, 'h', 18, false, 'mall', ['city', 'town'], [22, 6], 'any', 'Must lift 40 lbs. Background check.'],
+    ['bag', 'Grocery bagger / cart attendant', 'FreshWay Market', 11, 'h', 14, true, 'store', ['city', 'town', 'small'], [15, 19], 'any', 'Work permit required under 16. Friendly attitude a must!'],
+    ['wash', 'Car wash attendant', 'Sudz Express', 12, 'h', 16, true, 'bus', ['city', 'town'], [10, 17], 'we', 'Outdoor work, tips daily.'],
+    ['deliv', 'Delivery driver helper', 'QuickHaul', 15, 'h', 18, false, null, ['city', 'town'], [8, 16], 'wk', 'Valid driver\'s license required.'],
+    ['farm', 'Seasonal farm hand (harvest)', 'Hollis Family Farm', 12, 'h', 12, false, null, ['small', 'village'], [7, 13], 'any', 'Picking and sorting. Minors 12–13 welcome with parent OK (farm rules).'],
+    ['dog', 'Dog walker (2 dogs, weekday afternoons)', 'Deb R. (private)', 10, 'job', 0, false, 'park', ['city', 'town', 'small', 'village'], [15, 18], 'wk', 'Must love dogs. Must not lose dogs.'],
+    ['yard', 'Leaf raking / yard cleanup', 'Mr. Kowalski (private)', 18, 'job', 0, false, 'birch', ['city', 'town', 'small', 'village'], [9, 17], 'we', 'Rakes provided. Big yard. Cookies included.'],
+    ['helper', 'Mother\'s helper (play with 2 kids while I work from home)', 'Jen T. (private)', 7, 'h', 11, false, 'birch', ['city', 'town', 'small'], [15, 18], 'wk', 'Great for a responsible preteen!'],
+    ['flyer', 'Flyer delivery', 'Harlow Pizza Co.', 0.12, 'flyer', 11, false, 'store', ['city', 'town', 'small'], [10, 18], 'any', 'Paid per flyer. ~150 per route.'],
+    ['tutor', 'Reading buddy for a 2nd grader', 'Parent (via library board)', 9, 'h', 12, false, 'library', ['city', 'town', 'small'], [15, 17], 'wk', 'Patient, good reader. Meet at the library only.'],
+    ['pet', 'Pet sitting (feed cats, 3 days)', 'Marisol (private)', 25, 'job', 0, false, 'birch', ['city', 'town', 'small', 'village'], [8, 20], 'any', 'Two cats. One is mean. His name is Pancake.'],
+    ['cash', '💰 EASY CASH $500/WEEK, NO EXPERIENCE, WORK FROM PHONE', 'Opportunity Now LLC', 500, 'wk', 0, false, null, ['city', 'town', 'small', 'village'], [0, 24], 'any', 'Just send a $40 starter kit fee and a photo of yourself!!'],
+  ];
+  const J2 = SH.Jobs2 = { JOBS };
+  const tierHere = () => (SH.Atlas ? SH.Atlas.here().tier : 'town');
+  const placeKey = () => G().away || 'harlow';
+  const payTxt = (j) => j[4] === 'h' ? $2(j[3]) + '/hr' : j[4] === 'job' ? $2(j[3]) + '/job' : j[4] === 'flyer' ? '$' + j[3].toFixed(2) + '/flyer' : $2(j[3]) + '/week';
+  const ageTxt = (j) => j[5] >= 16 ? `${j[5]}+${j[6] ? ' · work permit' : ''}` : j[5] >= 14 ? `${j[5]}+ · work permit` : j[5] > 0 ? `${j[5]}+` : 'any age';
+
+  B.SITES['worknow.av'] = { n: 'WorkNow', icon: '💼', col: '#2d6cdf', mb: 0.8, tile: true, order: 12, render(path) {
+    const w = W(), t = tierHere(), L = JOBS.filter((j) => j[8].includes(t) && (G().away ? true : true));
+    const mine = Object.entries(w.apps);
+    return `<b>Jobs near ${esc(B.place().name)}</b> <span class="muted" style="font-size:11px">· ${L.length} listings</span>
+      ${w.gigs.length ? B.card('<b>Your jobs</b>' + w.gigs.map((g) => `<div style="font-size:11.5px">✅ ${esc(g.title)} · ${esc(g.where)} · ${g.h[0]}:00–${g.h[1]}:00 ${g.days === 'wk' ? 'weekdays' : g.days === 'we' ? 'weekends' : 'daily'} · ${esc(g.pay)}</div>`).join(''), 'border-color:#6fdc8c66') : ''}
+      ${mine.length ? B.card('<b>Applications</b>' + mine.map(([k, a]) => `<div style="font-size:11.5px">${esc(JOBS.find((j) => j[0] === k)[1])}: <b>${a.status}</b>${a.msg ? ' · <span class="muted">' + esc(a.msg) + '</span>' : ''}</div>`).join('')) : ''}
+      ${L.map((j) => B.card(`<div style="display:flex;justify-content:space-between;gap:6px"><b>${esc(j[1])}</b><b style="white-space:nowrap">${payTxt(j)}</b></div><div class="muted" style="font-size:11px">${esc(j[2])} · ${j[9][0]}:00–${j[9][1]}:00 · <b style="color:${j[5] > 12 ? '#ffb86b' : '#6fdc8c'}">${ageTxt(j)}</b></div><div style="font-size:11.5px;margin:3px 0">${esc(j[11])}</div>${w.apps[j[0]] ? '' : B.btn(`SH.Jobs2.apply('${j[0]}')`, 'Apply')}`)).join('')}
+      <p class="muted" style="font-size:11px">Under 14, most real jobs are private gigs (dogs, yards, pets), farm work, or flyers. Anyone asking YOU to pay first is a scam.</p>`;
+  } };
+  B.index(/job|work|hiring|money|earn|cash|gig|employ|hire/, 'worknow.av', 'WorkNow · jobs near you', 'Real jobs, real pay. Check the age rules.');
+
+  J2.apply = function (k) {
+    const j = JOBS.find((x) => x[0] === k), w = W();
+    if (k === 'cash') return SH.UI.dialog({ title: '⚠️ This is risky', text: ['"$500 a week," "no experience," "pay a fee first," "send a photo of yourself." Every one of those is a scam sign. The last one is worse than a scam.'], choices: [{ t: 'Report it and move on', cls: 'safe', fn: () => { w.apps[k] = { status: 'reported', t: G().t }; SH.flag('spottedScam'); P.render(); } }, { t: 'Apply anyway', cls: 'danger', fn: () => { w.apps[k] = { status: 'ignored', msg: 'They wanted $40 and a selfie. You closed the tab. Good.', t: G().t }; SH.st('stress', 4); P.render(); } }] });
+    const need = j[5];
+    const choices = [{ t: 'Tell the truth: you\'re 12', cls: 'safe', fn: () => send(j, 12) }];
+    if (need > 12) choices.push({ t: `Say you're ${need}`, sub: 'Lie on the application', fn: () => send(j, need, true) });
+    choices.push({ t: 'Cancel', fn: () => {} });
+    SH.UI.dialog({ title: 'Apply: ' + j[1], text: [`${j[2]} · ${payTxt(j)} · ${ageTxt(j)}`, 'The form asks for your age, a phone number and "why do you want this job?"'], choices });
+  };
+  function send(j, age, lied) {
+    const w = W(), g = G(); if (NT && !NT.canData()) return SH.UI.toast('No data. The application won\'t send.');
+    w.apps[j[0]] = { status: 'sent', t: g.t, lied: !!lied, due: g.t + 180 + Math.floor(Math.random() * 600), age };
+    SH.UI.toast('Application sent.'); P.render();
+  }
+  function decide(k, a) {
+    const j = JOBS.find((x) => x[0] === k), g = G(), heat = (g.heat || 0) + (g.reported ? 30 : 0);
+    let ok, msg;
+    if (a.age < j[5]) { ok = false; msg = j[5] >= 16 ? 'Thanks for applying! Unfortunately this position requires applicants to be 16+.' : 'Sorry, we need a work permit for anyone under 16.'; }
+    else if (a.lied) { ok = Math.random() < (j[6] ? 0.2 : 0.3); msg = ok ? 'Can you start this week? Bring your work permit your first day.' : 'We couldn\'t verify your info. Thanks for applying!'; }
+    else { ok = Math.random() < 0.75 - heat / 250; msg = ok ? ['Sure! Can you start tomorrow?', 'You sound responsible. Let\'s try it!', 'Great, come by and we\'ll show you the ropes.'][Math.floor(Math.random() * 3)] : 'Thanks! We found someone already.'; }
+    a.status = ok ? 'hired' : 'rejected'; a.msg = msg;
+    if (ok) W().gigs.push({ key: k, title: j[1], where: j[7] ? (SH.LOC[j[7]] || {}).name || j[7] : (SH.Atlas ? SH.Atlas.here().name : 'here'), loc: j[7], place: placeKey(), h: j[9], days: j[10], pay: payTxt(j), rate: j[3], per: j[4], lied: a.lied, shifts: 0 });
+    P.notify && P.notify('browser', 'WorkNow · ' + j[2], msg);
+  }
+
+  const bAdv = SH.advance;
+  SH.advance = function () { const r = bAdv.apply(this, arguments); const g = G(); if (g && g.work) Object.entries(g.work.apps).forEach(([k, a]) => { if (a.status === 'sent' && g.t >= a.due) decide(k, a); }); return r; };
+
+  /* ---------- working a shift ---------- */
+  const onShift = (gig) => { const h = SH.hour(), wk = SH.isWeekday ? SH.isWeekday() : true; if (gig.days === 'wk' && !wk) return false; if (gig.days === 'we' && wk) return false; return gig.h[0] < gig.h[1] ? h >= gig.h[0] && h < gig.h[1] - 1 : h >= gig.h[0] || h < gig.h[1] - 1; };
+  J2.work = function (gig) {
+    const g = G(), hrs = gig.per === 'h' ? 2 : gig.per === 'flyer' ? 2 : 1.5;
+    if (g.phase === 'home' && SH.isWeekday && SH.isWeekday() && SH.hour() < 15 && SH.hour() >= 8) return SH.UI.toast('You\'re supposed to be in school.');
+    let pay = gig.per === 'h' ? gig.rate * hrs : gig.per === 'flyer' ? gig.rate * (120 + Math.floor(Math.random() * 60)) : gig.rate;
+    pay = Math.round(pay * 100) / 100; gig.shifts++;
+    SH.advance(hrs * 60, { interrupt: false }); SH.st('energy', -8 * hrs); SH.st('mood', 2);
+    if (SH.Jobs && SH.Jobs.earn) SH.Jobs.earn(pay, gig.title); else SH.money(pay);
+    const txt = { dog: 'Two dogs, one leash tangle, zero lost dogs.', yard: 'Twenty-two bags of leaves. Mr. Kowalski\'s cookies are the good kind.', helper: 'You build a blanket fort and referee a war over a purple crayon.', flyer: 'Your legs hate you. Every mailbox in the neighborhood knows about the Tuesday two-for-one.', tutor: 'The kid reads a whole page without stopping and looks at you like you did magic.', pet: 'Pancake bites you once, affectionately.', farm: 'Apples, apples, apples. Your hands smell like apples for a day.', bag: 'Paper or plastic, four hundred times.', dish: 'Steam, grease, and a cook who calls you "chief."' }[gig.key] || 'You work. It\'s work.';
+    let extra = '';
+    if (gig.lied && gig.shifts === 1 && Math.random() < 0.5) { extra = ' At the end of the shift the manager asks for your work permit. You don\'t have one. "Look, kid, I can\'t. I\'m sorry." They pay you for today, at least.'; W().gigs = W().gigs.filter((x) => x !== gig); }
+    if (g.phase === 'run' && g.reported && Math.random() < 0.12) { extra += ' Someone keeps looking from their phone to you and back.'; g.heat = Math.min(100, (g.heat || 0) + 10); if (g.away) g.awayNotice = (g.awayNotice || 0) + 15; }
+    SH.UI.dialog({ title: gig.title, text: [txt + ` +${$2(pay)}.` + extra], choices: [{ t: 'Okay', fn: () => (g.away && SH.Atlas ? setTimeout(SH.Atlas.hub, 30) : SH.UI.afterAction()) }] });
+  };
+  const A = SH.Actions;
+  if (A && A.list) { const bList = A.list; A.list = function () { const r = bList.apply(this, arguments), g = G(); if (!g || g.away || !r || !r.acts) return r; W().gigs.forEach((gig) => { if (gig.place === 'harlow' && gig.loc === g.loc && onShift(gig)) r.acts.unshift({ label: 'Work: ' + gig.title, sub: gig.pay, fn: () => J2.work(gig) }); }); return r; }; }
+  if (SH.Atlas) (SH.Atlas.extra = SH.Atlas.extra || []).push((p, ch) => { W().gigs.forEach((gig) => { if (gig.place === p.id && onShift(gig)) ch.unshift({ t: 'Work: ' + gig.title, sub: gig.pay, fn: () => J2.work(gig) }); }); });
+
+  /* ---------------- TubeYou ---------------- */
+  const VIDS = [
+    ['drive1', 'Driving basics: pedals, mirrors, what the lights mean', 'drive', 8, 45, 18], ['drive2', 'Parallel parking without crying', 'drive', 8, 40, 15], ['drive3', 'Road signs explained in 10 minutes', 'drive', 7, 30, 10], ['drive4', 'Manual vs automatic: how clutches work', 'drive', 7, 40, 15],
+    ['bike1', 'Fix a flat bike tire in 15 minutes', 'fix', 10, 35, 15], ['bike2', 'Adjust bike brakes and chain', 'fix', 8, 35, 15], ['scoot1', 'E-scooter battery care & range tips', 'fix', 6, 25, 10],
+    ['car1', 'Jump-start a dead car battery', 'mech', 10, 40, 15], ['car2', 'Check oil, coolant & tires', 'mech', 8, 35, 12], ['car3', 'Junkyard finds: what\'s worth fixing', 'mech', 8, 50, 20],
+    ['camp1', 'Pitch a tent in the rain (and stay dry)', 'camp', 10, 40, 15], ['camp2', 'Sleeping warm: bags, pads, layers', 'camp', 10, 35, 12], ['camp3', 'Tarp shelters 101', 'camp', 8, 40, 15],
+    ['cook1', 'Cheap camp meals under $2', 'cook', 10, 30, 12], ['cook2', '5 things to cook with just a kettle', 'cook', 8, 25, 10],
+    ['aid1', 'First aid: cuts, blisters, sprains', 'aid', 12, 35, 15], ['aid2', 'Hypothermia signs (and what to do)', 'aid', 10, 30, 12],
+    ['build1', 'Patch a leaky roof with a tarp', 'build', 10, 40, 18], ['build2', 'Basic carpentry: measure, cut, nail', 'build', 8, 45, 20],
+    ['biz1', 'How I made $300 with a lemonade stand (for real)', 'biz', 10, 35, 15], ['biz2', 'Flipping thrift finds for profit', 'biz', 8, 40, 15],
+    ['fun1', 'Skyforge speedrun WR (any%)', 'fun', 0, 60, 25], ['fun2', 'Cats being idiots compilation', 'fun', 0, 45, 15], ['fun3', 'Lo-fi beats to not think to', 'fun', 0, 70, 30],
+  ];
+  const SK = { drive: '🚗 Driving (theory)', fix: '🔧 Bike & scooter repair', mech: '🛠️ Car mechanics', camp: '🏕️ Camping', cook: '🍳 Cooking', aid: '⛑️ First aid', build: '🔨 Building', biz: '💼 Business' };
+  const CAP = { drive: 40 };
+  SH.skill = (k) => ((G().skills || {})[k] || 0);
+  P.V.tubeyou = function (body) {
+    const g = G(); g.skills = g.skills || {}; g.watched = g.watched || {};
+    if (!NT.canData()) return NT.blocked(body, '▶️ TubeYou');
+    const bars = Object.entries(SK).map(([k, n]) => `<div style="font-size:11px;display:flex;align-items:center;gap:6px"><span style="width:128px">${n}</span><div style="flex:1;height:5px;background:#0005;border-radius:3px"><i style="display:block;height:100%;width:${SH.skill(k)}%;background:#ff3b30;border-radius:3px"></i></div><b style="width:22px;text-align:right">${SH.skill(k)}</b></div>`).join('');
+    body.innerHTML = P.hdr('▶️ TubeYou') + `<div class="appbody"><div class="sech">YOUR SKILLS</div>${bars}<p class="muted" style="font-size:10.5px">Videos teach theory. Real practice teaches the rest. (Driving theory maxes at 40: you need real lessons for more.)</p><div class="sech">RECOMMENDED</div>${VIDS.map((v) => `<div class="contact" style="cursor:pointer" onclick="SH.Jobs2.watch('${v[0]}')"><div class="av" style="background:#c4302b;border-radius:6px;width:54px">▶</div><div style="flex:1"><div class="nm" style="font-size:12px;white-space:normal">${esc(v[1])}</div><div class="pv">${v[4]} min · ~${v[5]} MB${g.watched[v[0]] ? ' · watched' : ''}</div></div></div>`).join('')}</div>`;
+  };
+  J2.watch = function (id) {
+    const g = G(), v = VIDS.find((x) => x[0] === id); if (!v) return;
+    if (!NT.spend(v[5])) return SH.UI.toast('Buffering… forever. Not enough data.');
+    SH.advance(Math.min(v[4], 40), { interrupt: false });
+    const first = !g.watched[id]; g.watched[id] = (g.watched[id] || 0) + 1;
+    if (v[2] === 'fun') { SH.st('mood', 5); SH.st('stress', -4); SH.UI.toast('That was nice. Your brain is mush now.'); }
+    else { const gain = first ? v[3] : 1; const cap = CAP[v[2]] || 100; g.skills[v[2]] = Math.min(cap, (g.skills[v[2]] || 0) + gain); SH.UI.toast(`${SK[v[2]]}: +${gain}${g.skills[v[2]] >= cap && CAP[v[2]] ? ' (videos can\'t teach you more)' : ''}`); }
+    P.render();
+  };
+  P.extraApps = P.extraApps || [];
+  P.extraApps.push({ at: 6, app: ['tubeyou', '▶️', 'TubeYou', '#ff0000'] });
 })(window.SH);
 
 </script>
@@ -8739,6 +9840,27 @@ window.SH = window.SH || {};
     setInterval(Mo.badge, 1500);
   });
 })(window.SH);
+
+</script>
+<script>
+/* phonescroll.js */
+/* Drag-to-scroll inside the phone for mouse users (scrollbars are hidden, so give them a grip). */
+(function () {
+  const scroller = (el) => { for (; el && el.id !== 'screen'; el = el.parentElement) { if (el.scrollHeight > el.clientHeight + 2 && /auto|scroll/.test(getComputedStyle(el).overflowY)) return el; } return null; };
+  let st = null, moved = false;
+  document.addEventListener('mousedown', (e) => {
+    if (e.button !== 0 || !e.target.closest || !e.target.closest('#pbody') || e.target.closest('input,textarea,select,svg')) return;
+    const el = scroller(e.target); if (!el) return; st = { el, y: e.clientY, top: el.scrollTop }; moved = false;
+  });
+  document.addEventListener('mousemove', (e) => {
+    if (!st) return; const dy = e.clientY - st.y;
+    if (!moved && Math.abs(dy) > 6) { moved = true; document.querySelector('#pbody').classList.add('dragging'); }
+    if (moved) { st.el.scrollTop = st.top - dy; e.preventDefault(); }
+  });
+  document.addEventListener('mouseup', () => { if (!st) return; st = null; const pb = document.querySelector('#pbody'); pb && pb.classList.remove('dragging'); });
+  // a drag shouldn't also count as a tap on whatever was under the cursor
+  document.addEventListener('click', (e) => { if (moved && e.target.closest && e.target.closest('#pbody')) { e.stopPropagation(); e.preventDefault(); moved = false; } }, true);
+})();
 
 </script>
 </body>

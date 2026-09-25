@@ -62,7 +62,7 @@
       <div class="sech">MOBILE DATA · Harlow Mobile prepaid</div>
       <div class="setrow"><span>${s.cut ? '⛔ Line suspended' : (s.mb / 1000).toFixed(2) + ' GB left of ' + (s.cap / 1000).toFixed(0) + ' GB'}</span></div>
       <div style="height:8px;background:#333;border-radius:5px;overflow:hidden;margin:4px 0 8px"><div style="height:100%;width:${pct}%;background:${pct < 15 ? '#ff453a' : pct < 35 ? '#ffd60a' : '#30d158'}"></div></div>
-      <div class="muted" style="font-size:11.5px">${renewIn > 0 ? `Mom's plan renews in ${renewIn} day${renewIn === 1 ? '' : 's'}${g.phase === 'run' ? ' (if she doesn\'t cancel it)' : ''}.` : 'Plan renewal overdue.'} Used so far: ${(s.used / 1000).toFixed(2)} GB. Texts and calls don't use data.</div>
+      <div class="muted" style="font-size:11.5px">${renewIn > 0 ? `Mom's plan renews in ${renewIn} day${renewIn === 1 ? '' : 's'}${g.phase === 'run' ? ' (if she doesn\'t cancel it)' : ''}.` : 'Plan renewal overdue.'} Used so far: ${(s.used / 1000).toFixed(2)} GB. Texts, photos and calls go over data too.</div>
       <div class="sech">TOP-UP CARDS</div>
       ${s.cards.length ? s.cards.map((c, i) => `<div class="setrow"><span>🎫 ${c} GB card</span><button class="btn small" onclick="SH.Net.redeem(${i})">Redeem</button></div>`).join('') : '<p class="muted" style="font-size:12px">None. QuikMart sells them by the register: $10 = 2 GB · $15 = 5 GB · $25 = 15 GB.</p>'}
       <div class="sech">LOCATION</div>

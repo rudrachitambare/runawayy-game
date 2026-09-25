@@ -5,7 +5,7 @@ const scripts = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
   const b = await chromium.launch({ executablePath: '/usr/bin/chromium', args: ['--no-sandbox'] });
   const p = await b.newPage({ viewport: { width: 1366, height: 768 } });
   const errs = []; p.on('pageerror', (e) => errs.push(e.message + ' @ ' + (e.stack || '').split('\n')[1]));
-  await p.goto('file:///home/user/smallhours/SmallHours.html'); await p.waitForTimeout(300);
+  await p.goto('file:///home/user/smallhours/src/index.html'); await p.waitForTimeout(300);
   await p.fill('#seedIn', process.env.SEED || 'convo'); await p.click('#startBtn'); await p.waitForTimeout(500);
   for (const s of scripts) {
     await p.evaluate(() => { document.querySelector('#daycard') && document.querySelector('#daycard').remove(); const m = document.querySelector('#modal'); m.classList.add('hidden'); m.innerHTML = ''; });

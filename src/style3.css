@@ -125,3 +125,11 @@ body.v3 #left .need .trk{display:none}
 .hs.flipy .hc{top:auto;bottom:-6px;transform:translateX(-4px)}.hs.flipy.flipx .hc{transform:translateX(4px)}
 @media (hover:hover){.hs:hover .hc{opacity:1;transform:translateY(-50%)}.hs.flipy:hover .hc{transform:none}.hs:hover .hl{opacity:0!important}}
 @media (hover:none){.hs .hc{display:none}}
+
+/* phone: every app view scrolls (home grid, lists, cards) — touch, wheel and drag */
+#pbody{overflow-y:auto!important;overflow-x:hidden;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;touch-action:pan-y}
+#pbody .appbody,#pbody .msgs{min-height:0;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;touch-action:pan-y}
+#pbody.dragging,#pbody.dragging *{cursor:grabbing!important;user-select:none!important}
+#pbody input[type=text],#pbody input:not([type]),#pbody input[type=number],#pbody textarea{background:#0009;color:inherit;border:1px solid #ffffff22;border-radius:10px;padding:6px 9px;font:inherit;font-size:12.5px;outline:none}
+#pbody input:focus,#pbody textarea:focus{border-color:#7ab8ff88}
+#pbody .seg button.on{background:#ffffff1f}

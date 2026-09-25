@@ -194,3 +194,17 @@ Vanilla JS + canvas (no React). Entertainment, **not** a guide for real runaways
 
 ## 5. Real resources (shown in credits)
 US: National Runaway Safeline 1-800-786-2929 · 988 · UK: 116 000 · Childline 0800 1111 · India: Childline 1098 · 112
+
+---
+
+## 6. Progress log
+- **Part 1 DONE** (phone, data, browser, money & banking):
+  - Messages/calls over data, offline "sending…" queue, held inbox, burner phone, data saver, night pack, monthly bundle
+  - Friend Finder+ subscription, free App Lock
+  - PocketPal bank (needs mobile data, refuses public wifi, Mom sees every transaction and may freeze it), savings, cash-back / cash-load at QuikMart
+  - Crew Pot group account (goals, contribution log, votes over $15), borrowing & IOUs, pawn counter (mall)
+  - Browser with 22 sites: Seekr, The Ledger (missing poster + comments), SkyCast, AverMaps (junkyards), Everything (any product, locker pickup, card or cash), SwapSpot (fair / scam / creep listings, selling), Threadly (forums, posting, creep DMs), Safeline (bittersweet "reachedOut" ending), Averline / CheapRide / Regional Rail / County Transit, StayFinder, GiveTogether, WorkNow (real jobs + age rules), History
+  - TubeYou app (skills: driving theory capped at 40, repair, mechanics, camping, cooking, first aid, building, business)
+  - Catalog of ~110 products across 11 categories (adult items exist; Sam refuses)
+  - Phone scrolling fixed (touch, wheel, mouse drag)
+- Next: Part 2 (shopping in physical stores, transport booking, scooters/bikes riding, junkyard vehicles, driving lessons)
