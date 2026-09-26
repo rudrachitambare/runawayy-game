@@ -5,7 +5,7 @@ const { chromium } = require('playwright-core');
   const errs = []; p.on('pageerror', (e) => errs.push(e.message + ' @ ' + (e.stack || '').split('\n')[1]));
   p.on('console', (m) => { if (m.type() === 'warning' || m.type() === 'error') errs.push('console: ' + m.text().slice(0, 200)); });
   await p.goto('file:///home/user/runawayy-game/src/index.html'); await p.waitForTimeout(500);
-  await p.click('#startBtn'); await p.waitForTimeout(500);
+  await p.click('#startBtn'); await p.waitForTimeout(500); await p.evaluate(() => { SH.Net.instant = true; });
   const hide = () => p.evaluate(() => { document.querySelector('#daycard') && document.querySelector('#daycard').remove(); const m = document.querySelector('#modal'); m.classList.add('hidden'); m.innerHTML = ''; });
   await hide();
   const body = () => p.evaluate(() => document.querySelector('#pbody').innerText.replace(/\n+/g, ' | ').slice(0, 260));

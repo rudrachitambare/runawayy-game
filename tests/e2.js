@@ -5,7 +5,7 @@ const ROOT = 'file://' + require('path').resolve(__dirname, '../src/index.html')
   const b = await chromium.launch({ executablePath: '/usr/bin/chromium', args: ['--no-sandbox'] });
   const p = await b.newPage({ viewport: { width: 1400, height: 900 } }); const errs = [];
   p.on('pageerror', (e) => errs.push(e.message)); p.on('console', (m) => { if (m.type() === 'error' || /EndX: no ending/.test(m.text())) errs.push('console: ' + m.text()); });
-  await p.goto(ROOT); await p.waitForTimeout(500); await p.click('#startBtn'); await p.waitForTimeout(400);
+  await p.goto(ROOT); await p.waitForTimeout(500); await p.click('#startBtn'); await p.waitForTimeout(400); await p.evaluate(() => { SH.Net.instant = true; });
   const hide = () => p.evaluate(() => { const d = document.querySelector('#daycard'); d && d.remove(); document.querySelector('#modal').classList.add('hidden'); });
   await hide();
   console.log(await p.evaluate(() => { const D = SH.Atlas.data(), N = SH.Routes.net(), c = {}; D.places.forEach((x) => c[x.tier] = (c[x.tier] || 0) + 1);

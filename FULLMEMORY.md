@@ -66,6 +66,7 @@ A deep, fun narrative life-sim for **16+** players. Vanilla JS / canvas (anythin
 17. New session: re-read the memory, read the repo, ran a health check (found the drive bug).
 18. Add to the md: 7 more randomized travel companies (tempo traveller, minivan, car, bus, train rarer), each professional / unprofessional / sketchy-but-safe, with times etc.; many more towns and villages in the Atlas; transport must actually go to specific cities (routes). → planned as E2.
 19. "go" + villages must NOT cluster around market towns; transport goes to different places; along with the county intercity train (Regional Rail) add an UNPROFESSIONAL train company; buses a bit more common and most stop along the way to their destination. → E2 built.
+20. Villages must have cell service, but the signal and speed (loading speed) change; most villagers don't have internet, and some who do don't care about missing kids. → `cell.js` built.
 
 ---
 
@@ -171,6 +172,7 @@ The ending is a years-later time skip showing adulthood with friends: happy, hea
 ## 7. TECHNICAL FACTS
 
 - Global `SH`; town "Harlow"; map 1000×650; country "Averland" (~112 places since E2; atlas map is 900×600 units, 0.35 mi/unit).
+- **cell.js APIs:** `SH.Net.cell(place)` → {gen, base, spot, online, care}; `SH.Net.signal()` → {bars, gen, mbps, spot}; `SH.Net.person(place, local)` → 'none' | 'online' | 'cares'; `SH.Net.posterMult(place)`; `G.sigBoost` {at, until, b}; `SH.Net.instant` (tests). It wraps NT.canData / NT.online / NT.blocked, P.V.browser / tubeyou / atlas / net, P.render (status bar), A.card, SH.Brain.local.
 - **E2 APIs:**
   - `SH.Routes`: net() → {ops, routes, at[placeId] = [[route, idx]], P}; journeys(from, to, t, max); board(place, t); next(rt, i, t); price(rt, i, j); seats; delay; byKey; fmt; take(jr, dest); boardView(place).
   - Route = {id, op, stops, cmi, off, deps}; ids look like `op:pA-pB:dir`. Journey mode keys are `rt:<routeId>/<i>/<j>/<dep>|…`.

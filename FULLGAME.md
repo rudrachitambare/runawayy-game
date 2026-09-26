@@ -282,6 +282,7 @@ Open `src/index.html` to play. CSS: `style.css, style2.css, style3.css`. Tests l
 | `routes_web.js` | 4 KB | E2d: a website per operator + AverRides hub |
 | `routes_end.js` | 8 KB | E2c: endings for transport incidents |
 | `atlas_map.js` | 5 KB | E2e: Atlas phone view with zoom / pan / pinch / search / route highlight |
+| `cell.js` | 9 KB | cell signal per place (bars, 5G/LTE/3G/EDGE, hourly flicker, weather), loading times & timeouts, No service, signal hunting, villagers' internet (none / online / cares) and poster recognition |
 | `endx_core.js` | 5 KB | ending engine. Sits in front of SH.Endings.show: whenever the story reaches an ending, the engine builds a context (who's with you, where, weather, vehicle, money, days g |
 | `okafor.js` | 18 KB | Ms. Okafor v2: an actual counselor. She tracks what you've told her (this visit AND past visits), reflects your specifics back, asks the NEXT question instead of the same |
 | `lex.js` | 18 KB | lexicon v3. A deeper parse of whatever the player types: - ~350 more slang / shorthand / misspelling mappings and multi-word phrase rewrites - more ways to say every feel |
@@ -342,6 +343,17 @@ US: National Runaway Safeline 1-800-786-2929 · 988 · UK: 116 000 · Childline 
   - **New endings:** conductor (group + solo), oldTrain, kindDriver, posterDriver, busAgent, nightbus, tempoBreak, railCapital, cheapDriver/cheaprideCity.
   - **Drive bug fixed** (the car and Sam now always arrive together).
   - Test `tests/e2.js`. Tests now use the `/home/user/runawayy-game` path.
+- **Cell signal & village internet DONE** (turn 20, `cell.js`):
+  - **Coverage by size:** cities 5G, towns LTE (some 5G), small towns LTE/3G, villages 3G/LTE/EDGE.
+  - **Villages have service, but it's patchy:** 1–3 bars that change by the hour, rain −1 bar, storm −2. Each village/small town has a "best signal spot" (water tower hill, church steps…): **📶 Look for better signal** in the hub gives +1–2 bars for 90 min.
+  - **Loading speed:** browser pages and data apps (TubeYou, Atlas) show a loading bar lasting as long as the connection says: size × 8 / Mbps, scaled, 0.15–7 s. 1 bar of EDGE/3G can **time out** (Try again). Wi-Fi loads fast.
+  - **Zero bars = No service:** data blocked, messages queue on "sending…", calls fail, location stops updating.
+  - The status bar shows bars + generation. The Network app has a CELL SIGNAL section.
+  - **Villagers:** only ~12–37% of a village is online; of those, only some care about missing-kid posts (the rest use it for weather and church groups). In small towns most are online.
+  - Each local is tagged no-internet / online-doesn't-care / online-reads-the-news. The Atlas card lists them. Asking a local about wifi/internet/news gets an answer that fits.
+  - **Only "reads the news" locals can recognize you** from a poster (a chance on turn 2+ if you're reported).
+  - The poster multiplier on notice in villages is 0.8 + 2 × online × care (≈1.05 on average vs 1.6 in towns). A new kid still stands out in a village, though.
+  - Tests: `tests/cell.js`. `SH.Net.instant = true` skips load times in tests.
 - **Part 2 TODO:** driving lessons (farmer + go-kart), physical shops, ~100 new endings + never-found endings, ending text for all new trigger keys (they fall back to "found by police" for now)
 
 ---
