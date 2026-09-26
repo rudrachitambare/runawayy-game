@@ -17,6 +17,17 @@
   K.days = () => (SH.G.missingAt ? (SH.G.t - SH.G.missingAt) / 1440 : 0);
   K.npc = (id, n, full, col) => { SH.NPCS_META[id] = Object.assign(SH.NPCS_META[id] || {}, { n, full: full || n, col: col || '#8a8f98', ini: n.replace(/^(Ms\.|Mrs\.|Mr\.|Dr\.|Officer|Deputy) /, '')[0], ph: false }); };
   K.say = (say, x) => Object.assign({ say, fx: {} }, x || {});
+  /* free-text input dialog: K.ask(title, lines, placeholder, cb(text), big) */
+  K.ask = (title, lines, ph, cb, big) => {
+    const md = document.querySelector('#modal'); md.classList.remove('hidden'); const esc = (x) => String(x).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    md.innerHTML = `<div class="mbox dlg"><div class="mhead"><div><h3>${esc(title)}</h3><small>${SH.fmt12()} · ${SH.dateStr()}</small></div></div><div class="mtext">${[].concat(lines).map((l) => `<p>${esc(l)}</p>`).join('')}</div>
+      <div style="padding:0 18px 16px">${big ? `<textarea id="kask" rows="5" style="width:100%;box-sizing:border-box" placeholder="${esc(ph)}"></textarea>` : `<input id="kask" style="width:100%;box-sizing:border-box" placeholder="${esc(ph)}">`}
+      <div style="display:flex;gap:8px;margin-top:10px;justify-content:flex-end"><button class="btn" id="kaskNo">Cancel</button><button class="btn primary" id="kaskOk">Done</button></div></div></div>`;
+    const i = md.querySelector('#kask'); i.addEventListener('keydown', (e) => { e.stopPropagation(); if (e.key === 'Enter' && !big) ok(); }); setTimeout(() => i.focus(), 30);
+    const close = () => { md.classList.add('hidden'); md.innerHTML = ''; };
+    const ok = () => { const v = i.value.trim(); if (!v) return; close(); cb(v); if (!SH.UI.modalOpen()) SH.UI.afterAction(); };
+    md.querySelector('#kaskOk').onclick = ok; md.querySelector('#kaskNo').onclick = () => { close(); K.back(); };
+  };
   /* per-day hook without touching state.js again */
   K.daily = []; K.hourly = [];
   const bAdv = SH.advance;
@@ -29,5 +40,9 @@
   };
   /* hub hook helper: add a choice before "Find somewhere to sleep" */
   K.hub = (f) => (SH.Atlas.extra = SH.Atlas.extra || []).push(f);
+  /* "You & your group" submenu in the town hub (keeps the main menu short) */
+  K.meList = []; K.me = (f) => K.meList.push(f);
+  K.meOpen = (p) => { const ch = []; const dark = SH.hour() >= 20 || SH.hour() < 6; K.meList.forEach((f) => { try { f(p, ch, dark); } catch (e) { console.warn(e); } }); ch.push({ t: 'Back', fn: K.back }); K.D('You & your group', [`$${Math.floor(SH.G.money)} · ${K.grp() > 1 ? K.grp() + ' of you' : 'just you'} · day ${Math.max(1, Math.ceil(K.days()))} away`], ch); };
+  K.hub((p, ch) => { if (K.meList.length) ch.push({ t: '🎒 You & your group', sub: 'Your story, your look, your people', fn: () => K.meOpen(p) }); });
   K.acts = (f) => { const AC = SH.Actions; if (!AC || !AC.list) return; const bl = AC.list; AC.list = function () { const r = bl.apply(this, arguments); try { if (r && r.acts && SH.G) f(r.acts); } catch (e) { console.warn(e); } return r; }; };
 })(window.SH);
