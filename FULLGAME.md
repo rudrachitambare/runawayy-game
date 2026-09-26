@@ -457,3 +457,24 @@ t, phase, loc, s{full,energy,hyg,mood,stress,health,warmth}, money, rel, bag, ph
 
 ### Tests
 `tests/p1.js`, `p1b.js` (Part 1), `p2.js` (rides + junkyard), `bot.js` / `convo.js` (random-play and conversation bots), `mshot.js` (mobile screenshots).
+
+---
+## ✅ PARTS 2–7 BUILT (request #21: "make all the parts")
+Shared helpers: `src/kit.js` (`SH.K`: dialogs `K.D`, `K.pay`, `K.ask` free-text input, `K.hub`/`K.me` menu hooks, `K.daily`/`K.hourly` time hooks, `K.party()` = friends + runaway kids). Town-hub notice formula is pluggable: `SH.Atlas.mods` (multipliers) + `SH.Atlas.noticed(p,k)`.
+| Part | File | What it does |
+|---|---|---|
+| 2a | lessons.js | Farm driving lessons in villages/farm small towns (2h chores → +15, learner = you or a friend; "ask to stay" → **farm** never-found ending). Go-karts in towns/cities ($15, +6, max 60). Group's best driver counts. |
+| 2b | shops.js | Stores by size: village general store → small town +hardware/pharmacy → town supermarket/sporting/electronics → city mall. Restricted items refused; adult items: "nope. I'm not that braindead." Buying raises notice (less in cities). |
+| 2c | endx_road.js | Endings for every road incident (crash ×2, ditch, hurt, driveStop ×2, gas, van, dog, storm, woods, river, scooter, e-scooter, bike, highway) + farm. |
+| 3a | motels.js | pro / loose / sloppy motels. Free-text clerk: haggling (numbers), stories (mom in the car, tournament), week/month prepay discount, fake-ID checks. Room: sleep, shower, charge. Kick-outs: late payment, noise, spooked manager, police drive-by, new clerk. **Never crowding.** Groups: one room +$5/head or separate rooms. |
+| 3b | alley.js | Side streets: diner (food, rumors, tips), alley stall (used), pawn shop (sell YOUR stuff), fake-ID guy ($60 bad / $150 ok; needs street rep or a city), ⚠️ creep encounters with safe exits. Street rep `G.street`. |
+| 4a | parents.js | Friends' parents' worry `G.pw` (warm/strict/away), texts on host_<id> threads (textable: real replies), call your mom, Chirp post. Note on the bed (free text; tone matters). Nightly "I'm safe" text (slows worry, may ping a tower). |
+| 4b | identity.js | Cover name + story per town (`G.cover`); locals notice a changed name. Disguises: haircut, dye, glasses, clothes (`G.look`; −12% poster effect each). |
+| 4c | police.js | Cop stops by your work/business: free-text excuses (school project, charity, family, church) remembered per town; fake charities may get checked → heat. Truth → safe ending. |
+| 5a | runaways.js | Other runaway kids in some towns (free-text, earn trust): invite into group (`G.rkids`) or walk them to a safe adult. |
+| 5b | attach.js | Attachment `G.att`; groups safer under 5 days in one place, riskier after (`G.stay`, `SH.Group.mult`). Homesick comfort talk. Crush can join. |
+| 5c | bases.js | Forest camp / abandoned building / barn; 10 upgrades from real store items; nightly threats (raccoons, storm, cold, teens, being found). |
+| 5d | business.js | Group business: 6 kinds, name it, roles (make/sell/lookout), 3h shifts, problems, cop visits, group jar. |
+| 6 | worldsys.js | Real calendar past November, seasons, winter nights, Halloween (trick-or-treat, costume = best disguise). Town reputation (derived, never a number). Health: colds, blisters, sleep debt, clinics; fever/exhaustion endings. 20 achievements (localStorage). |
+| 7 | notfound.js, endx_gone.js, endx_found.js, endx_more.js | **Disappear for good** (after 21 days: low heat + 3 of 4 pillars: a place to sleep, a way to eat, a believable story, people who'd vouch). 35 never-found endings incl. **The House on the Edge of Town**; 37 context "found" endings; health endings. ~96 new ending defs total. |
+Tests: `tests/parts.js` (runs `tests/part2.js`…`part7.js`, fresh page each).

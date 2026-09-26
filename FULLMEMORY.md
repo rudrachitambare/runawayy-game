@@ -249,3 +249,8 @@ The ending is a years-later time skip showing adulthood with friends: happy, hea
 
 ## 11. HOW TO RESUME IN A NEW CHAT
 Say: *"Continue Small Hours from FULLMEMORY.md and FULLGAME.md."* Then: read both files → `bash tests/setup.sh` → re-set git identity and remote → follow section 1 "Immediate next steps" in small files (≤ 8KB each) → test → commit → ask for a token to push.
+
+## Request #21 — "make all the parts" ✅ DONE
+Built Parts 2 (rest) through 7; see FULLGAME.md "PARTS 2–7 BUILT" table. Key APIs: `SH.K` (kit.js), `SH.Atlas.mods[]` + `SH.Atlas.noticed`, `SH.Lessons`, `SH.Stores`, `SH.Motels`, `SH.Alley`, `SH.Parents`, `SH.Identity`, `SH.Police`, `SH.Runaways`, `SH.Group`, `SH.Bases`, `SH.Biz`, `SH.World2` (cal/season/halloween/rep/ACH), `SH.NotFound`. State: G.lessons, G.room, G.roomEvt, G.fakeId, G.street, G.pw, G.cover, G.look, G.excuse, G.watch, G.rk, G.rkids (NOT G.crew: that's the bank crew), G.att, G.stay, G.base, G.biz, G.hp, G.helped. Flags used by endings: clerkCalled, fakeCaught, toldParentPlace, charityExposed, creepDiner, goneOffered, goneForGood, trickOrTreat, disguise.
+Tests: `node tests/parts.js [n…]` + p1, p1b, p2, e2, bot, cell all pass. (e2 can rarely flake when a random incoming call screen covers a click.)
+Next ideas (not started, need "go"): two-change trip planning; balance pass on money and notice numbers after real playtesting.

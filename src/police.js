@@ -46,7 +46,7 @@
       then ? then(c) : K.back();
     } });
   }
-  K.daily.push(() => { const g = G(), cc = g.flags && g.flags.charityCheck; if (!cc || SH.day() < cc.day) return; g.flags.charityCheck = null; g.heat = Math.min(100, (g.heat || 0) + 15); SH.UI.log(`The officer in town called around about "${cc.n}". Nobody's ever heard of it. Now he's asking about you.`, 'bad'); if (g.away === cc.pid) g.awayNotice = (g.awayNotice || 0) + 30; });
-  const bAct = A.act; A.act = function (k) { const p = A.here(); if (k === 'work' && p.tier !== 'village' && K.chance(0.1 + (G().heat || 0) / 500)) { const r = bAct.apply(this, arguments); if (!G().ended) setTimeout(() => stop(p, 'work'), 60); return r; } return bAct.apply(this, arguments); };
+  K.daily.push(() => { const g = G(), cc = g.flags && g.flags.charityCheck; if (!cc || SH.day() < cc.day) return; g.flags.charityCheck = null; g.flags.charityExposed = cc.n; g.heat = Math.min(100, (g.heat || 0) + 15); SH.UI.log(`The officer in town called around about "${cc.n}". Nobody's ever heard of it. Now he's asking about you.`, 'bad'); if (g.away === cc.pid) g.awayNotice = (g.awayNotice || 0) + 30; });
+  const bAct = A.act; A.act = function (k) { const p = A.here(); if (k === 'work' && p.tier !== 'village' && K.chance(0.1 + (G().heat || 0) / 500)) { const r = bAct.apply(this, arguments); if (!G().ended) setTimeout(() => SH.Police.stop(p, 'work'), 60); return r; } return bAct.apply(this, arguments); };
   SH.Police = { stop, STORY };
 })(window.SH);

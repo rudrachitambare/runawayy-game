@@ -69,8 +69,8 @@
   }
   function endDesk(p, m, c) {
     const g = G(), r = c.result;
-    if (r === 'call') { g.awayNotice = (g.awayNotice || 0) + 70; g.heat = (g.heat || 0) + 10; if (A.noticed(p, 0.3)) return; return K.D(m.n, 'You don\'t wait to find out who she\'s calling. You walk out fast, not running, and around the corner, and then you run.'); }
-    if (r === 'fake') { g.fakeId = null; g.heat = (g.heat || 0) + 20; g.awayNotice = (g.awayNotice || 0) + (m.k === 'pro' ? 50 : 20); if (A.noticed(p, 0.2)) return; return K.D(m.n, 'You leave the ID on the counter. Sixty dollars, gone. Your face is hot all the way down the block.'); }
+    if (r === 'call') { g.flags.clerkCalled = m.n; g.awayNotice = (g.awayNotice || 0) + 70; g.heat = (g.heat || 0) + 10; if (A.noticed(p, 0.3)) return; return K.D(m.n, 'You don\'t wait to find out who she\'s calling. You walk out fast, not running, and around the corner, and then you run.'); }
+    if (r === 'fake') { g.flags.fakeCaught = m.n; g.fakeId = null; g.heat = (g.heat || 0) + 20; g.awayNotice = (g.awayNotice || 0) + (m.k === 'pro' ? 50 : 20); if (A.noticed(p, 0.2)) return; return K.D(m.n, 'You leave the ID on the counter. Sixty dollars, gone. Your face is hot all the way down the block.'); }
     if (r !== 'deal') return K.D(m.n, 'You leave without a room.', K.ok());
     const nights = LEN[c.mem.len], price = c.mem.deal, grp = K.grp();
     const one = price + (grp - 1) * 5 * nights, sep = price * Math.ceil(grp / 2);
