@@ -328,3 +328,9 @@ Next ideas (not started, need "go"): two-change trip planning; balance pass on m
   - TubeYou how-to videos; StayFinder booking note ("walk in at the desk").
   - PIP answers "where do I board / my ticket".
 - Tests: `tests/part14.js` (booking, boarding from home, a full ride to Cedar Falls, card, age rule, cash-only, missed, cancel, AverMaps, Seekr, company sites, PIP).
+
+## Request #29: "why can't u scroll? I'm on mobile" (`src/mobscroll.js`, tests/mobscroll_test.js)
+- Cause: on phones `#center` was a fixed box with a 378px scene plus `#log` squeezed into about 200px. Swiping on the scene or buttons did nothing.
+- Fix (CSS ≤760px): `#center` is the scroll container, and `#stage` and `#log` no longer flex, so the scene scrolls away. New lines only scroll into view when they're below the fold (never pushing the line's top off-screen). A "⬆ Scene" pill (`#toScene`) appears after scrolling past 60% of the scene. The title screen also scrolls (`align-items:safe center`).
+- Testing touch scroll: `Input.synthesizeScrollGesture` does NOT work in this headless Chromium. Use CDP `Input.dispatchTouchEvent` touchStart/touchMove/touchEnd (see mobscroll_test.js). Note: #daycard covers everything for 4.2s after a new day.
+- GitHub Pages is live from branch arena/01a0dd5d-runawayy-game: https://rudrachitambare.github.io/runawayy-game/ (root index.html redirects to SmallHours.html). It can't be reached from the sandbox (TLS error), so test SmallHours.html locally.
