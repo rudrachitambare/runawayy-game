@@ -189,8 +189,70 @@ Vanilla JS + canvas (no React). Entertainment, **not** a guide for real runaways
 5. Runaway kids, group life & attachment, bases, business (L, M, N)
 6. World systems (O)
 
-## 4. Code map (src/)
-`data, state, engine, nlp, npcs, phone, memory, world, rumors, talk, events, subplots, story, ambient, props, run, endings, actions, actions2, scene, portraits, scene2, map, map2, ui, phone2, city, rail, jobs, hustle, vocab, friends, atlas, net, okafor, lex, mind, converse, ui2, stage, saves, fixes, family, main, mobile` (+ `style.css, style2.css, style3.css`). Tests: `tests/` (Playwright bots).
+## 4. Code map (src/, in load order)
+Open `src/index.html` to play. CSS: `style.css, style2.css, style3.css`. Tests live in `tests/` (Playwright + /usr/bin/chromium, run `bash tests/setup.sh` first).
+
+| File | Size | What it does |
+|---|---|---|
+| `data.js` | 15 KB | static world data |
+| `state.js` | 18 KB | core state & simulation |
+| `engine.js` | 8 KB | data-driven event engine. Events, props, rumor reactions and ambient life are plain data: { id, pool, when: ["rel.jordan < 40", "hour > 17", "weather in rain,storm"], cha |
+| `nlp.js` | 33 KB | local natural-language engine + PIP, the smartass assistant |
+| `npcs.js` | 37 KB | character brains. Each returns {say, fx:{rel,stress,mood}, end, narr, flags} |
+| `phone.js` | 28 KB | the phone |
+| `memory.js` | 18 KB | NPC memory, conversation logs, and tone reading. NPCs remember specific things you said (quoted, dated), notice contradictions and repeats, and every conversation — in pe |
+| `world.js` | 8 KB | living world: NPC routines, weather effects, discovery. |
+| `rumors.js` | 10 KB | rumor system. Tell one person something; it travels a social graph, mutating as it goes, and people react to the version *they* heard. |
+| `talk.js` | 5 KB | free-text conversations |
+| `events.js` | 28 KB | scripted & random events |
+| `subplots.js` | 18 KB | side stories. Each run the Story director picks 3–4 and schedules them. Beat format: { off: days after the rolled day, h: [from, to], c: condition, run, interrupt } |
+| `story.js` | 17 KB | procedural story director. Every new game rolls a seed that decides: beat timing, which beats happen at all, the breaking point ("catalyst"), 3–4 side stories, Sam's trai |
+| `ambient.js` | 13 KB | ambient life, all data. Pools: mundane (things that just happen), notify (phone buzzes), run (street life while you're gone), story (world reactions like rumor fallout). |
+| `props.js` | 18 KB | small interactions: sit, inspect, read signs, vending machines, browse, eavesdrop. Everything is data: { id, ic, l, when, min, texts|text(fn), fx, cost } keyed by locatio |
+| `run.js` | 26 KB | the run |
+| `endings.js` | 31 KB | endings, epilogues, journal, snapshots |
+| `actions.js` | 14 KB | what you can do, where (part 1: locations) |
+| `actions2.js` | 16 KB | actions part 2: home, school day, computer, packing, items |
+| `scene.js` | 12 KB | animated location vignette |
+| `portraits.js` | 16 KB | procedural SVG portraits. Every character has a look; faces shift with mood (neutral · warm · sad · angry · worried · guarded · tired). dex_19 never gets a face. |
+| `scene2.js` | 46 KB | scene renderer v2: layered, detailed, alive. Static layers are cached per (place, room, size, 10-min slot, weather); life (people, cars, weather, flicker) is drawn every  |
+| `map.js` | 11 KB | the town map |
+| `map2.js` | 10 KB | map upgrades: zoom/pan/pinch, fog of war, learned routines (people dots), weather layers, route preview, richer info sheet. |
+| `ui.js` | 16 KB | UI |
+| `phone2.js` | 17 KB | phone OS layer: notification centre, People (memory + transcripts + rumors), camera & gallery, calendar, clock/alarm. Wraps the base phone renderer. |
+| `city.js` | 11 KB | procedural Harlow. Every story seed builds a different town: river side, street grid, rail line, where you live and where everything else ends up. Saved in G.city so a pl |
+| `rail.js` | 18 KB | the railway. Harlow Station on the Northline, the freight yard, and why a twelve-year-old can't just buy a ticket. (Real-world basis: on Amtrak-style railroads, children  |
+| `jobs.js` | 15 KB | work before the run: odd jobs (gigs) and little businesses with stock, prices, demand and risk. Money is the one number the game shows plainly — because a kid counting do |
+| `hustle.js` | 11 KB | how you find work, how the world reacts to your money, and the Hustle app. All events are engine data. |
+| `vocab.js` | 21 KB | bigger vocabulary for the text AI: texting slang, typos (fuzzy matching), emoji, negation, ~20 new intents, and new replies for every main character when they'd otherwise |
+| `friends.js` | 35 KB | more people, real friendships, crushes. Six new kids around Harlow with their own personalities, routines, families and opinions. Friendship grows by talking, hanging out |
+| `atlas.js` | 29 KB | Atlas: a whole (fictional) country in your pocket. Seeded per story: cities, towns, small towns, villages. Each place has its own size, economy, jobs, people, services an |
+| `net.js` | 10 KB | mobile data, wifi, top-ups. Your phone is on Mom's prepaid plan: a few GB a month, which runs out faster than you'd think. Texts and calls don't need data; Chirp, Atlas,  |
+| `catalog.js` | 11 KB | Part 1c: the product catalog ("buy ANY product"). Every category exists. Items register into SH.ITEMS as x_<id> so the bag/stash/pawn systems understand them. Big things  |
+| `net2.js` | 14 KB | Part 1a: messaging over data, offline queue, held inbox, burner phone, data saver, bundles, night pack, Friend Finder subscription, free App Lock. Messages & calls are in |
+| `bank.js` | 17 KB | Part 1b: money. Cash is the default. Digital money lives in PocketPal (a teen card linked to Mom's account): it needs MOBILE DATA (banking apps refuse public wifi; home w |
+| `browser.js` | 10 KB | Part 1d: the web browser. Made-up sites, each costs data per page. History is saved (and can be seen by whoever gets your phone, unless you clear it or App-Lock the brows |
+| `browser_news.js` | 10 KB | Part 1e: The Ledger (local news; your missing poster appears, updates, gets comments), Safeline (help — reaching out ends the run, bittersweet and honest), Threadly (foru |
+| `forum.js` | 9 KB | Part 1f: Threadly forums. Read boards, post your own question (free text) and get replies. Some DMs are creeps: the game throws a ⚠️ risk pop-up before you engage. |
+| `browser_shop.js` | 16 KB | Part 1g: Everything (online store — any product; pickup locker; pay by card or cash at pickup) and SwapSpot (used marketplace: fair sellers, scams that want a deposit, an |
+| `browser2.js` | 10 KB | Part 1h: transport company sites (timetables, prices, age rules — booking arrives in Part 2), StayFinder (motel listings with fake + real reviews — booking arrives in Par |
+| `jobs2.js` | 14 KB | Part 1i: WorkNow (a real job board: real jobs, realistic pay, real age rules — most say 16+, so a 12-year-old has to find the ones that'll take them) and TubeYou (videos  |
+| `travel2.js` | 2 KB | Part 2a: getting around Averland. Rides: walk, kick scooter, e-scooter (battery!), bike, your own vehicle (fuel + driving skill). Tickets: County Transit (anyone), CheapR |
+| `travel3.js` | 5 KB | Part 2b: the trip itself — tickets, battery, fuel, and things that happen on the road. |
+| `junkyard.js` | 7 KB | Part 2c: junkyards (every town; size varies) and vehicles you can buy for cash, fix, fuel, sleep in, and (badly, then less badly) drive. No theft: the owner sells "as-is, |
+| `endx_core.js` | 5 KB | ending engine. Sits in front of SH.Endings.show: whenever the story reaches an ending, the engine builds a context (who's with you, where, weather, vehicle, money, days g |
+| `okafor.js` | 18 KB | Ms. Okafor v2: an actual counselor. She tracks what you've told her (this visit AND past visits), reflects your specifics back, asks the NEXT question instead of the same |
+| `lex.js` | 18 KB | lexicon v3. A deeper parse of whatever the player types: - ~350 more slang / shorthand / misspelling mappings and multi-word phrase rewrites - more ways to say every feel |
+| `mind.js` | 30 KB | the Mind: real, specific memory for every character. - Facts you tell someone ("my favorite color is green", "i have a test friday") are remembered BY THAT PERSON, dated. |
+| `converse.js` | 26 KB | conversation manager (outermost layer over every brain). Tracks what's been talked about in THIS conversation (and per-person across visits), handles meta-talk ("can we t |
+| `ui2.js` | 24 KB | UI v2: HUD, character panel, grouped actions, richer story log, portrait dialogs, a living conversation screen, day cards with a recap of yesterday, stacked toasts, polis |
+| `stage.js` | 27 KB | the Stage. The scene becomes the game: a camera that follows Sam, objects you click to act on, people standing where they actually are, a door for the big choices, and a  |
+| `saves.js` | 6 KB | full world saves: autosave + 3 slots + export/import, migration, and a record of every choice. |
+| `fixes.js` | 4 KB | robustness layer: - snapshots are keyed per playthrough (not per seed), so a replay of the same story never loads another run's memories - every restore (rewind / load) r |
+| `family.js` | 11 KB | who you are and who you live with. Gender pick on the title screen; the family (names, who the "problem adult" is, Dad's story, money, Mom's job) is rolled from the story |
+| `main.js` | 5 KB | boot |
+| `mobile.js` | 3 KB | mobile shell: bottom tabs (Story / You / Phone / Map), swipe-free, thumb-sized. |
+| `phonescroll.js` | 1 KB | Drag-to-scroll inside the phone for mouse users (scrollbars are hidden, so give them a grip). |
 
 ## 5. Real resources (shown in credits)
 US: National Runaway Safeline 1-800-786-2929 · 988 · UK: 116 000 · Childline 0800 1111 · India: Childline 1098 · 112
@@ -208,3 +270,113 @@ US: National Runaway Safeline 1-800-786-2929 · 988 · UK: 116 000 · Childline 
   - Catalog of ~110 products across 11 categories (adult items exist; Sam refuses)
   - Phone scrolling fixed (touch, wheel, mouse drag)
 - Next: Part 2 (shopping in physical stores, transport booking, scooters/bikes riding, junkyard vehicles, driving lessons)
+- **Part 2 PARTIAL** (commit c9ae4cf):
+  - Long runs: the forced "exhausted" ending now only fires if health < 40, fullness < 25 or energy < 20, or after 9+ days with no place to stay (away town / vehicle / hideout / base)
+  - Ride modes: kick scooter (≤25 mi), e-scooter (battery, range ≈ battery × 0.18 mi), bike (≤30 mi), drive (own running vehicle), transport companies (CheapRide, Averline, Regional Rail, County Transit)
+  - Rain makes every travel mode 1.4× slower (never blocks)
+  - Ticket strictness per company; road incidents (some are just scares, some end the run)
+  - Junkyards everywhere: buy car / tempo / minivan / camper for cash, install parts, work on it, fuel it, sleep in it
+  - Ending engine (context-aware ending picker + endings-found counter on title screen)
+- **Part 2 TODO:** driving lessons (farmer + go-kart), physical shops, ~100 new endings + never-found endings, ending text for all new trigger keys (they fall back to "found by police" for now)
+
+---
+
+## 7. Story & world reference
+
+### Premise
+Sam (12, gender picked at start) lives in **Harlow**. Home is falling apart: Mom **Dana**, the adult man in the house (**Rick** by default; name and role randomized: stepdad / boyfriend / uncle), and a little sister (**Lily**, 7 by default; randomized). The game covers roughly 19 days before the run, then the run itself, then an ending.
+
+### Harlow locations
+home, patel (Mrs. Patel's house, Newton the beagle), jordan (Jordan's house, his mom Tanya), school, store (QuikMart), library, park, police, mall, hospital, diner, laundromat, underpass, bus (bus station), trainyard, station (train station), birch (Birch Street, where the six friends live), harbor (Harbor House youth shelter, 212 Wharf St; hidden until discovered).
+
+### Story beats (base days; each seed remaps them)
+d1 report card · d3 bully · d4 first Okafor talk · d5 parent conference · d6 fight at home · d7 Grandma's call · d9 bike · d12 "we're moving" · d15 juice incident · d16 bruise noticed at school · d17 CPS visit · d19 big night (the natural run moment).
+
+### Characters
+- **Family:** Mom Dana · Rick (randomized) · sister Lily (randomized) · **Grandma Rose** (Cedar Falls, 41 Larkspur Lane).
+- **Adults:** Ms. Okafor (school counselor) · Mrs. Patel · Officer Lowe · Ms. Ruiz · Dolores · Tanya (Jordan's mom).
+- **Kids:** Jordan (best friend) · Tyler (bully; the "7" in his lines is his jersey number) · Maya · Wren.
+- **Birch Street friends:** Nia (artist), Marco (skater/clown), Priya (science), Eli (gamer), Theo (basketball), Hazel (climber). Each has routines, likes, compatibility, free-text chat, and parents you can text or visit.
+- **dex_19:** online groomer storyline. Non-graphic; Sam always ends up safe.
+- **PIP:** sarcastic phone AI that suggests replies. It drops the sarcasm and shows real helplines if self-harm comes up.
+
+### Needs & stats (hidden numbers, shown only through world reactions)
+full, energy, hyg (hygiene), mood, stress, health, warmth · money · grades · heat (how hard people are looking) · notice (per town) · relationships per NPC · skills: drive (TubeYou theory max 40), fix, mech, camp, cook, aid, build, biz.
+
+### The country: Averland (Atlas app)
+37 generated places across 4 tiers: city, town, small town, village. Each has population, economy, jobs, locals, services (hospital / shelter / library / wifi / bus / rail), junkyard size, and danger and notice levels. **Police depend on size:** villages have no police, only a county sheriff 20–45 minutes away. Many villagers have no internet and don't follow missing-kid news.
+
+### Getting around
+| Mode | Range | Notes |
+|---|---|---|
+| Walk | ≤9 mi | free, slow, tiring |
+| Kick scooter | ≤25 mi | cheap to buy |
+| E-scooter | battery × 0.18 mi | costs far more than a kick scooter; recharge at an outlet; push it when it's dead |
+| Bike | ≤30 mi | used / BMX / new / cargo |
+| Drive | any | junkyard vehicle that runs + fuel ($5 per 10%); skill decides crash / pull-over odds |
+| County Transit | ≤40 mi | loose about kids |
+| CheapRide | intercity | drivers may refuse kids alone |
+| Averline | intercity | strict; may turn you away or call an agent |
+| Regional Rail | rail towns/cities | conductor checks |
+Rain = 1.4× travel time for every mode.
+
+### Money
+Cash by default. **PocketPal** bank needs mobile data, refuses public wifi, and Mom can see or freeze it. **Crew Pot** group account (goals, votes on anything over $15). Borrowing / IOUs, pawn counter at the mall. Prepaid data: $10 = 2GB, $15 = 5GB, $25 = 15GB; burner phone available. **No theft anywhere in the game** (player's rule).
+
+### Motels (StayFinder / SH.motels)
+Professional / loose / sloppy tiers. Per-night, weekly and monthly prices, with bargaining. Tiny room (mattress, one outlet, a window). A group needs separate rooms or can pay to share one. Too many people in one room is never a reason to get kicked out.
+
+### Group rules (player-designed)
+A group is noticed less (people assume they're camping or visiting) until 5 days in the same place; then odds go back to normal until you move. Emotional attachment between friends changes odds, good or bad. No splits, no jealousy. A crush who becomes a partner can join the group (kept innocent).
+
+---
+
+## 8. Endings
+
+### Original 20 ending keys
+harbor · grandma · patel · call911 · walkHome · friendFamily · reachedOut · foundSafe · foundHome · foundMom · foundMomKnows · trainSafe · garage · garageTold · collapse · empty · dex · dexNo · listened · quiet
+
+### "Found" reasons (variants of `found`)
+tracked (phone location) · police · post (missing poster) · security · self · agent (ticket agent) · bus · cedarLost · host · sheriff · away · exhausted
+
+### How the ending engine works (endx_core.js)
+Every ending goes through `SH.EndX`. It builds a context (who's with you, partner, place, town size, weather, night, days gone, money, bank frozen, vehicle, skills, heat, found reason…) and picks the highest-priority variant whose condition matches. If none matches, the original ending plays. Found endings are saved in localStorage (`smallhours_endings`) and counted on the title screen.
+
+### New trigger keys already fired by the game (ending text still to write)
+conductor · cheapDriver · nightbus · scooterFall · escootDead · bikeLong · walkHighway · lostWoods · riverCold · dog · storm · crash · crashDitch · crashHurt · driveStop · outOfGas · cheaprideCity · railCapital · van
+
+### Planned ~100 endings
+- **Found variants:** rain, party of 2, party of 3+, with partner, village, city, day 1, long run, burner, tracked, poster, rich, broke, night; foundSafe with party / uncle / partner / grandma / teacher.
+- **Vehicle:** crash, ditch, hurt, pulled over (and a skilled variant), out of gas, van life, van crew, van home, junkyard owner, camper by the lake, kart champion, farm family, tempo market.
+- **Transport:** CheapRide city, driver refuses, conductor, capital by rail, night bus, county loop, scooter fall, dead e-scooter, long bike ride, highway walk, collapse (village / city / party).
+- **Social:** walkHome / grandma / harbor / reachedOut variants with party, partner, rain and long runs; quiet crush, quiet friends, listened friends, empty-but-worked.
+- **Money:** bank frozen, fund flagged, swap meet, locker clerk, employer recognizes you, creep reported.
+- **Weird:** lost woods, cold river, dog, storm, library sleepover, mall night, sister's call, dex variants.
+
+### NEVER-FOUND endings (planned; the player's big request)
+A daily check after 21+ days with low heat, good health and somewhere to live offers "Disappear for good" (also a hub option after 10 days). Then a years-later epilogue. Variants:
+- **The House on the Edge of Town** (rare secret): crew with high attachment, abandoned house fully renovated (base level max), village or town edge, low heat for 60+ days, crew business plus savings plus jobs, everyone healthy through a winter, no family contact (burner only). Sub-variants: partner stays · whole crew stays · one friend went home on good terms · the business became a real shop.
+- Van life · farm family · city anonymity · crew business · you + partner · alone · coast town · camper by the lake · junkyard apprentice · more.
+- Bases (forest camp, tents, abandoned building renovation) come in Part 5, so some never-found endings are only reachable after it.
+
+---
+
+## 9. Developer reference (for continuing the build)
+
+### Global state `SH.G`
+t, phase, loc, s{full,energy,hyg,mood,stress,health,warmth}, money, rel, bag, phone, threads, flags, heat, reported, revealed, fam, gender, friends, crush, party, hideout, away, awayNotice, net.x, bank, crew, debts, owned, orders, swap, forum, fund, work{apps,gigs}, skills, tx, stats.hoursOut, missingAt, discoveredAt, veh{n,type,at,parts,work,fuel,running,warm,seats,nights,since}, escootBat, lastRide, _foundReason. No `day` field: use `SH.day()`.
+
+### Key APIs
+- `UI.dialog({title, text:[], choices:[{t, sub, cls, fn}]})` · `SH.Endings.show(key, title, sub, paras)` · `SH.advance(mins)` (wrapped by many modules)
+- Phone: `P.V.x = fn(body)`, `P.extraApps` (`{at, app:[id, icon, name, color]}`), `P.notify`, `P.push`, `P.send`
+- Atlas: `A.data().places`, `A.miles(a,b)`, `A.modes`, `A.go`, `A.hub`, `A.here()`, `A.svg(D, sel)`, `SH.Atlas.extra` (array of `f(place, choices, dark)`)
+- `SH.Net`, `SH.Bank`, `SH.Catalog`, `SH.Browser`, `SH.Forum`, `SH.Shop`, `SH.Jobs2`, `SH.TRANSPORT`, `SH.motels(id)`, `SH.skill(k)`
+- Part 2: `SH.EndX.add([{k, t, sub, on:[bases], p, w:(c)=>bool, x:(c)=>[paras]}])`, `SH.EndX.trigger(base, extra)`; `SH.Travel`; `SH.Junk` (yard, open, buy, part, work, check, fuel, sleep)
+
+### Gotchas
+- Keep source files small (≤8KB) and `node --check` every write.
+- Hotspot selectors need `:not(.off)`; `#daycard` blocks clicks on day 1 in tests.
+- git identity is lost after an environment reset: re-run `git config user.name/email` and re-add the remote.
+
+### Tests
+`tests/p1.js`, `p1b.js` (Part 1), `p2.js` (rides + junkyard), `bot.js` / `convo.js` (random-play and conversation bots), `mshot.js` (mobile screenshots).
