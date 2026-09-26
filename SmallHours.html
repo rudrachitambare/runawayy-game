@@ -8947,12 +8947,23 @@ window.SH = window.SH || {};
   K.D = (title, text, choices, who) => SH.UI.dialog({ title, who, text: [].concat(text), choices: choices || [{ t: 'Okay', fn: K.back }] });
   K.ok = (fn) => [{ t: 'Okay', fn: fn || K.back }];
   K.pay = (amt, desc) => { const g = SH.G; if (g.money < amt) { SH.UI.toast(`That's $${amt}. You have $${Math.floor(g.money)}.`); return false; } SH.money(-amt); (g.tx = g.tx || []).push({ t: g.t, d: desc || 'Cash', a: -amt }); return true; };
-  K.party = () => (SH.G.party || []).filter((id) => SH.NPCS_META[id]);
+  K.party = () => (SH.G.party || []).concat(SH.G.rkids || []).filter((id) => SH.NPCS_META[id]);
   K.nm = (id) => (SH.NPCS_META[id] || {}).n || id;
   K.grp = () => 1 + K.party().length;
   K.days = () => (SH.G.missingAt ? (SH.G.t - SH.G.missingAt) / 1440 : 0);
   K.npc = (id, n, full, col) => { SH.NPCS_META[id] = Object.assign(SH.NPCS_META[id] || {}, { n, full: full || n, col: col || '#8a8f98', ini: n.replace(/^(Ms\.|Mrs\.|Mr\.|Dr\.|Officer|Deputy) /, '')[0], ph: false }); };
   K.say = (say, x) => Object.assign({ say, fx: {} }, x || {});
+  /* free-text input dialog: K.ask(title, lines, placeholder, cb(text), big) */
+  K.ask = (title, lines, ph, cb, big) => {
+    const md = document.querySelector('#modal'); md.classList.remove('hidden'); const esc = (x) => String(x).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    md.innerHTML = `<div class="mbox dlg"><div class="mhead"><div><h3>${esc(title)}</h3><small>${SH.fmt12()} · ${SH.dateStr()}</small></div></div><div class="mtext">${[].concat(lines).map((l) => `<p>${esc(l)}</p>`).join('')}</div>
+      <div style="padding:0 18px 16px">${big ? `<textarea id="kask" rows="5" style="width:100%;box-sizing:border-box" placeholder="${esc(ph)}"></textarea>` : `<input id="kask" style="width:100%;box-sizing:border-box" placeholder="${esc(ph)}">`}
+      <div style="display:flex;gap:8px;margin-top:10px;justify-content:flex-end"><button class="btn" id="kaskNo">Cancel</button><button class="btn primary" id="kaskOk">Done</button></div></div></div>`;
+    const i = md.querySelector('#kask'); i.addEventListener('keydown', (e) => { e.stopPropagation(); if (e.key === 'Enter' && !big) ok(); }); setTimeout(() => i.focus(), 30);
+    const close = () => { md.classList.add('hidden'); md.innerHTML = ''; };
+    const ok = () => { const v = i.value.trim(); if (!v) return; close(); cb(v); if (!SH.UI.modalOpen()) SH.UI.afterAction(); };
+    md.querySelector('#kaskOk').onclick = ok; md.querySelector('#kaskNo').onclick = () => { close(); K.back(); };
+  };
   /* per-day hook without touching state.js again */
   K.daily = []; K.hourly = [];
   const bAdv = SH.advance;
@@ -8965,6 +8976,10 @@ window.SH = window.SH || {};
   };
   /* hub hook helper: add a choice before "Find somewhere to sleep" */
   K.hub = (f) => (SH.Atlas.extra = SH.Atlas.extra || []).push(f);
+  /* "You & your group" submenu in the town hub (keeps the main menu short) */
+  K.meList = []; K.me = (f) => K.meList.push(f);
+  K.meOpen = (p) => { const ch = []; const dark = SH.hour() >= 20 || SH.hour() < 6; K.meList.forEach((f) => { try { f(p, ch, dark); } catch (e) { console.warn(e); } }); ch.push({ t: 'Back', fn: K.back }); K.D('You & your group', [`$${Math.floor(SH.G.money)} · ${K.grp() > 1 ? K.grp() + ' of you' : 'just you'} · day ${Math.max(1, Math.ceil(K.days()))} away`], ch); };
+  K.hub((p, ch) => { if (K.meList.length) ch.push({ t: '🎒 You & your group', sub: 'Your story, your look, your people', fn: () => K.meOpen(p) }); });
   K.acts = (f) => { const AC = SH.Actions; if (!AC || !AC.list) return; const bl = AC.list; AC.list = function () { const r = bl.apply(this, arguments); try { if (r && r.acts && SH.G) f(r.acts); } catch (e) { console.warn(e); } return r; }; };
 })(window.SH);
 
@@ -9189,8 +9204,8 @@ window.SH = window.SH || {};
   }
   function endDesk(p, m, c) {
     const g = G(), r = c.result;
-    if (r === 'call') { g.awayNotice = (g.awayNotice || 0) + 70; g.heat = (g.heat || 0) + 10; if (A.noticed(p, 0.3)) return; return K.D(m.n, 'You don\'t wait to find out who she\'s calling. You walk out fast, not running, and around the corner, and then you run.'); }
-    if (r === 'fake') { g.fakeId = null; g.heat = (g.heat || 0) + 20; g.awayNotice = (g.awayNotice || 0) + (m.k === 'pro' ? 50 : 20); if (A.noticed(p, 0.2)) return; return K.D(m.n, 'You leave the ID on the counter. Sixty dollars, gone. Your face is hot all the way down the block.'); }
+    if (r === 'call') { g.flags.clerkCalled = m.n; g.awayNotice = (g.awayNotice || 0) + 70; g.heat = (g.heat || 0) + 10; if (A.noticed(p, 0.3)) return; return K.D(m.n, 'You don\'t wait to find out who she\'s calling. You walk out fast, not running, and around the corner, and then you run.'); }
+    if (r === 'fake') { g.flags.fakeCaught = m.n; g.fakeId = null; g.heat = (g.heat || 0) + 20; g.awayNotice = (g.awayNotice || 0) + (m.k === 'pro' ? 50 : 20); if (A.noticed(p, 0.2)) return; return K.D(m.n, 'You leave the ID on the counter. Sixty dollars, gone. Your face is hot all the way down the block.'); }
     if (r !== 'deal') return K.D(m.n, 'You leave without a room.', K.ok());
     const nights = LEN[c.mem.len], price = c.mem.deal, grp = K.grp();
     const one = price + (grp - 1) * 5 * nights, sep = price * Math.ceil(grp / 2);
@@ -9306,12 +9321,694 @@ window.SH = window.SH || {};
     const s = K.pick([['A car pulls up alongside you and slows to your walking speed. The window comes down. A man, smiling. "Hey, you look cold. I\'ve got a warm place, food, whatever you need. Hop in."', 'car'], ['A man has been behind you for three blocks. When you stop, he stops. When you look back, he smiles like you\'re friends.', 'follow'], ['A woman at the bus shelter says she runs "a place for kids like you." She knows your first name. You never told her your first name.', 'offer']]);
     K.D('⚠️ Something\'s wrong', [s[0], 'Every part of you says: this is the kind of adult Mom warned you about.'], [
       { t: 'Walk away, fast, toward lights and people', cls: 'safe', fn: () => { SH.st('stress', 20); SH.advance(10); K.D('Safe', 'You walk into the brightest place you can find and stand by the counter until your heart slows down. When you look out the window, they\'re gone.', [{ t: 'Okay', fn: () => streets(p) }]); } },
-      { t: `Go into the diner and tell ${w}`, cls: 'safe', fn: () => { rep(p, 8); SH.st('stress', 10); K.D('The diner', [`${w} is out the door before you've finished the sentence, with the cook behind her holding a spatula like a sword. ${s[1] === 'car' ? 'The car peels off.' : 'Whoever it was, they\'re gone.'}`, `She sits you in the back booth with a cocoa. "You come here anytime, you hear me? Anytime." ${r >= 20 ? 'She squeezes your shoulder.' : ''}`, 'She also writes down the plate number and calls it in. Not about you. About him.'], [{ t: 'Okay', fn: () => streets(p) }]); } },
+      { t: `Go into the diner and tell ${w}`, cls: 'safe', fn: () => { rep(p, 8); g.flags.creepDiner = w; SH.st('stress', 10); K.D('The diner', [`${w} is out the door before you've finished the sentence, with the cook behind her holding a spatula like a sword. ${s[1] === 'car' ? 'The car peels off.' : 'Whoever it was, they\'re gone.'}`, `She sits you in the back booth with a cocoa. "You come here anytime, you hear me? Anytime." ${r >= 20 ? 'She squeezes your shoulder.' : ''}`, 'She also writes down the plate number and calls it in. Not about you. About him.'], [{ t: 'Okay', fn: () => streets(p) }]); } },
       { t: '"My dad\'s right over there."', fn: () => { const ok = K.chance(0.75); SH.st('stress', ok ? 12 : 25); K.D(ok ? 'Gone' : 'Run', ok ? 'You wave at a random man across the street. He waves back, confused. It\'s enough. They leave.' : 'They look where you pointed and then back at you, and you realize they don\'t believe you, so you run and don\'t stop until you\'re inside a gas station with a very large clerk.', [{ t: 'Okay', fn: () => streets(p) }]); } }]);
   }
   K.hub((p, ch) => { if (p.tier !== 'village') ch.push({ t: '🌃 Side streets', sub: p.tier === 'small' ? 'The diner' : 'Diner, stall, pawn shop, and people who don\'t ask', fn: () => streets(p) }); });
   K.daily.push(() => { if (G().flags) G().flags.creepToday = 0; });
   SH.Alley = { streets, diner, dealer, creep, rep };
+})(window.SH);
+
+</script>
+<script>
+/* parents.js */
+/* SMALL HOURS — Part 4a: your friends' parents.
+   Every friend who runs with you has a parent at home getting more worried each day (G.pw[id]); how fast depends on the
+   family (warm / strict / away). They text their kid, they text YOU (the host_<id> thread, and you can text back: it's
+   a real conversation), they call your mom, and eventually they post on Chirp (which makes your group easier to spot).
+   The note your friend leaves on their bed matters: write it together (free text, the tone is read). A scheduled
+   "I'm safe" text each night slows the worry, but every ping is a small risk of giving away where you are. */
+(function (SH) {
+  const K = SH.K, FR = SH.Friends; if (!K || !FR) return;
+  const G = K.G, KIDS = FR.KIDS;
+  const RATE = { warm: 10, strict: 14, away: 4 }, BASE = { warm: 25, strict: 35, away: 10 };
+  const rel = (id) => (/^Mr\.? /.test(KIDS[id].parent) ? 'dad' : 'mom');
+  const W = (id) => { const g = G(); g.pw = g.pw || {}; return (g.pw[id] = g.pw[id] || { w: BASE[KIDS[id].fam] + 12, note: null, sched: false, day: -1, chirp: false, mom: false }); };
+  const bump = (id, d) => { const x = W(id); x.w = Math.max(0, Math.min(100, x.w + d)); return x.w; };
+  const inParty = (id) => (G().party || []).includes(id);
+  function tone(t) {
+    t = t.toLowerCase(); let s = 0;
+    [/\b(safe|okay|ok|fine|alright)\b/, /\blove (you|u)\b/, /\bsorry\b/, /\bdon'?t worry\b/, /\bnot your fault\b/, /\b(i'?ll|will) (call|text|come back|be back)\b/, /\bpromise\b/, /\b(with|together)\b/, /\b(eat|eating|warm|careful)\b/].forEach((r) => { if (r.test(t)) s++; });
+    [/\bhate\b/, /\bnever coming (back|home)\b/, /\byour fault\b/, /\bdon'?t (look|find|come)\b/, /\bleave me alone\b/, /\bstupid\b/, /\bgoodbye forever\b/].forEach((r) => { if (r.test(t)) s -= 2; });
+    return Math.max(-3, Math.min(4, s + (t.length > 80 ? 1 : 0)));
+  }
+  /* ---------- the note on the bed ---------- */
+  function note(id) {
+    const k = KIDS[id];
+    K.ask(`${k.n}'s note`, [`${k.n} is sitting on ${k.g === 'he' ? 'his' : k.g === 'she' ? 'her' : 'their'} bed with a pen and a torn-out notebook page. "what do i even write. ${rel(id) === 'mom' ? 'my mom' : 'my dad'}'s gonna read this like a hundred times."`, 'Write it together. (What it says matters.)'], `Mom, I'm okay. I'm with Sam...`, (text) => {
+      const s = tone(text), x = W(id); x.note = { text, s }; x.w = Math.max(5, BASE[k.fam] - s * 5);
+      SH.UI.log(`${k.n} folds the note and leaves it on the pillow. ${s >= 3 ? 'It\'s a good note. It\'ll help.' : s >= 1 ? 'It says the important part.' : s < 0 ? 'Reading it back, it sounds angrier than either of you meant.' : 'It\'s short. Maybe too short.'}`, s < 0 ? 'bad' : '');
+    }, true);
+  }
+  K.acts((acts) => { const g = G(); if (g.phase !== 'run' || g.away) return; (g.party || []).filter((id) => KIDS[id] && !W(id).note && FR.st(id).joinedAt && g.t - FR.st(id).joinedAt < 240).forEach((id) => acts.unshift({ label: `Help ${KIDS[id].n} write the note for ${rel(id) === 'mom' ? 'her mom' : 'his dad'}`, sub: 'The one on the pillow', cls: 'safe', fn: () => note(id) })); });
+  /* ---------- daily/hourly worry ---------- */
+  K.daily.push(() => { (G().party || []).filter((id) => KIDS[id]).forEach((id) => { const x = W(id); bump(id, RATE[KIDS[id].fam] * (x.sched ? 0.5 : 1) * (x.note ? 1 : 1.3)); }); });
+  const LINES = {
+    low: ['{k}, it\'s {p}. Call me when you get this.', 'Honey, where are you? Please call.', 'Did you stay at a friend\'s? You\'re not in trouble. Call me.'],
+    mid: ['{s}, is {k} with you? Please. I just need to know she\'s safe.', 'I called the school, the hospital, everyone. {s}, if you know anything, please.', 'I\'m not angry. I promise I\'m not angry. Just tell me {k} is okay.'],
+    high: ['{s}. Please. I haven\'t slept. I just need a picture. Anything.', 'The police have been here twice. I told them everything. Please bring {k} home.', 'I left the porch light on. I\'ll leave it on every night until you both come home.'],
+  };
+  K.hourly.push((h) => {
+    const g = G(), hr = h % 24; if (g.phase !== 'run') return;
+    (g.party || []).filter((id) => KIDS[id]).forEach((id) => {
+      const x = W(id), k = KIDS[id], hid = 'host_' + id, fill = (s) => s.replace(/\{k\}/g, k.n).replace(/\{p\}/g, rel(id) === 'mom' ? 'Mom' : 'Dad').replace(/\{s\}/g, SH.nm('{name}')).replace(/she's/g, k.g === 'he' ? 'he\'s' : k.g === 'they' ? 'they\'re' : 'she\'s');
+      if ((hr === 9 || hr === 19) && x.w > 20 && K.chance(k.fam === 'away' ? 0.4 : 0.85)) SH.Phone.push(hid, hid, fill(K.pick(LINES[x.w > 70 ? 'high' : x.w > 40 ? 'mid' : 'low'])));
+      if (x.w > 40 && !x.mom) { x.mom = true; SH.Phone.push('mom', 'mom', `${k.parent} just called me. Is ${k.n} with you? Sweetheart, two families are losing their minds. Please.`); }
+      if (x.w > 65 && !x.chirp) { x.chirp = true; SH.UI.log(`${k.parent} posted on Chirp: "MISSING: ${k.full}, 12. Last seen with a friend. Please share." It has 2,400 shares by lunch.`, 'bad'); g.heat = Math.min(100, (g.heat || 0) + 8); }
+      if (hr === 20 && x.sched) { bump(id, -6); SH.Phone.push(hid, id, 'i\'m safe. i\'m eating. i love you. don\'t look for me.', false); if (g.away && SH.Net && SH.Net.signal && SH.Net.signal().bars > 0 && K.chance(0.15)) { g.awayNotice = (g.awayNotice || 0) + 12; SH.UI.log(`${k.n}'s nightly text pinged a tower near here. Somebody, somewhere, now has a circle on a map.`, 'bad'); } }
+    });
+  });
+  SH.Atlas && (SH.Atlas.mods = SH.Atlas.mods || []).push(() => 1 + 0.15 * Object.values(G().pw || {}).filter((x) => x.chirp).length);
+  /* ---------- texting a parent back (real conversation) ---------- */
+  const P = SH.Phone, bAv = P.available; P.available = function (id) { if (/^host_/.test(id) && inParty(id.slice(5))) { const h = SH.hour(); return h > 6 || W(id.slice(5)).w > 60; } return bAv.apply(this, arguments); };
+  Object.keys(KIDS).forEach((id) => {
+    const hid = 'host_' + id, base = SH.Brain[hid]; if (!base) return;
+    SH.Brain[hid] = function (an, c) {
+      if (c.ctx !== 'text' || !inParty(id)) return base.apply(this, arguments);
+      const g = G(), k = KIDS[id], t = an.t, x = W(id), R = (say, fx) => ({ say, fx: fx || {} }), D = SH.day();
+      const places = SH.Atlas ? SH.Atlas.data().places.filter((p) => t.includes(p.name.toLowerCase())) : [];
+      if (places.length) { const p = places[0], here = SH.Atlas.here(); g.flags.toldParentPlace = p.name; g.heat = Math.min(100, (g.heat || 0) + 6); if (g.away && here.id === p.id) { g.awayNotice = (g.awayNotice || 0) + 45; return R(`${p.name}. Okay. Okay. I'm calling the police there right now. Stay where you are.`); } bump(id, -5); return R(`${p.name}? I'm getting in the car. I'm calling the sheriff there. Thank you. THANK YOU.`); }
+      if (/\b(coming (home|back)|bring (her|him|them) (home|back)|on our way)\b/.test(t)) { bump(id, -15); return R(k.fam === 'strict' ? 'Good. Then come home. We will talk about consequences later, and I will hug you first.' : 'Oh thank God. I\'ll be right here. I\'ll make pancakes. I\'ll make anything.'); }
+      if (/\b(don'?t|do not|please don'?t) (call|tell) (the )?(police|cops|anyone)\b/.test(t)) return R(k.fam === 'strict' ? 'I already did. Of course I did. What did you think I would do?' : k.fam === 'away' ? 'I haven\'t yet. I should. Have her call me tonight and I\'ll wait one more day.' : 'Then have her call me. Tonight. Please. I\'ll wait if I hear her voice.');
+      if (an.has('hostile')) { bump(id, 10); return R('I don\'t know what I did to deserve that. I just want my kid.'); }
+      if (/\b(safe|ok|okay|fine|alright|eating|warm|with me|together|she'?s good|he'?s good)\b/.test(t)) { if (x.day !== D) { x.day = D; bump(id, -8); } return R(K.pick([`Thank you. Thank you for telling me. Is ${k.g === 'he' ? 'he' : k.g === 'she' ? 'she' : 'they'} eating? Tell ${k.g === 'he' ? 'him' : k.g === 'she' ? 'her' : 'them'} I love ${k.g === 'he' ? 'him' : k.g === 'she' ? 'her' : 'them'}.`, 'Okay. Okay. Can I talk to her? Just for a second? Just her voice.', 'I believe you. I don\'t know why, but I believe you. Please keep her warm.']).replace(/her\b/g, k.g === 'he' ? 'him' : k.g === 'they' ? 'them' : 'her')); }
+      if (an.q) return R(k.fam === 'strict' ? 'I\'m not answering questions. You answer mine. Where are you?' : 'Anything. I\'ll answer anything. Just tell me where you are.');
+      return R(K.pick(['Please. Where are you?', `Is ${k.n} okay? That's all I need.`, 'I\'m still here. I\'m not going anywhere. Text me anything.']));
+    };
+  });
+  /* ---------- hub + home: the nightly "I'm safe" text ---------- */
+  const schedChoice = (p, ch) => (G().party || []).filter((id) => KIDS[id] && !W(id).sched).slice(0, 1).forEach((id) => ch.push({ t: `📱 Set up ${KIDS[id].n}'s nightly "I'm safe" text`, sub: 'Slows the worry. Every ping is a small risk.', fn: () => { W(id).sched = true; SH.UI.toast(`${KIDS[id].n} schedules it for 8 PM every night.`); K.back(); } }));
+  K.me(schedChoice);
+  SH.Parents = { W, bump, tone, note };
+})(window.SH);
+
+</script>
+<script>
+/* identity.js */
+/* SMALL HOURS — Part 4b: who you say you are.
+   Cover stories: per place, pick a fake first name and a reason you're in town (G.cover[placeId]). Locals remember what you
+   told them. Say a different name later and they notice. A consistent cover makes you a little less noticeable there.
+   Disguises: haircut, hair dye, glasses, a new outfit. Each change makes missing-kid posters less useful (about 12% each).
+   Tracked in G.look; flags.disguise = number of changes. */
+(function (SH) {
+  const K = SH.K, A = SH.Atlas, C = SH.Catalog; if (!K || !A) return;
+  const G = K.G;
+  const STORIES = [['grandma', 'Visiting my grandma for a couple weeks'], ['moved', 'My family just moved here'], ['camp', 'Staying at the campground with my dad'], ['home', 'I\'m homeschooled, so I\'m out during school hours'], ['cousin', 'Staying with my cousins while my mom\'s in the hospital']];
+  const cov = () => (G().cover = G().cover || {});
+  const look = () => (G().look = G().look || { hair: 0, dye: 0, glasses: 0, clothes: 0 });
+  const nChanges = () => Object.values(look()).filter(Boolean).length;
+  function cover(p) {
+    const c = cov()[p.id];
+    K.D(`Your story in ${p.name}`, c ? [`Here, you're "${c.name}". ${STORIES.find((s) => s[0] === c.story)[1]}.`, 'Stick to it. People remember.'] : ['People in small places ask. It\'s better to have an answer ready than to make one up with someone staring at you.'],
+      (c ? [] : STORIES.map(([k, t]) => ({ t: `"${t}."`, fn: () => K.ask('Your name here', ['And what\'s your name? (Pick one you\'ll remember.)'], 'Jordan', (nm) => { cov()[p.id] = { name: nm.split(/\s+/)[0].replace(/[^A-Za-z'-]/g, '').slice(0, 14) || 'Jordan', story: k, told: [] }; SH.UI.toast(`In ${p.name}, you're ${cov()[p.id].name}.`); setTimeout(K.back, 30); }) }))).concat([{ t: 'Back', fn: K.back }]));
+  }
+  /* locals remember the name and story you gave */
+  const bLocal = SH.Brain.local;
+  if (bLocal) SH.Brain.local = function (an, c) {
+    const p = c.opts && c.opts.place, cv = p && cov()[p.id], raw = an.raw || '';
+    const m = raw.match(/\b(?:my name is|my name's|i'?m called|call me|name'?s)\s+([A-Za-z'-]{2,14})/i);
+    if (m && p) {
+      const said = m[1][0].toUpperCase() + m[1].slice(1).toLowerCase(), who = c.opts.local && c.opts.local.n;
+      if (cv && said.toLowerCase() !== cv.name.toLowerCase()) { G().awayNotice = (G().awayNotice || 0) + 18; return K.say(K.pick([`Huh. Thought you told ${cv.told.length ? 'folks' : 'someone'} your name was ${cv.name}.`, `${said}? Bev at the store said you were ${cv.name}.`])); }
+      if (!cv) cov()[p.id] = { name: said, story: null, told: [who] }; else if (who && !cv.told.includes(who)) cv.told.push(who);
+      return K.say(`Nice to meet you, ${said}.`);
+    }
+    if (cv && /\b(whose kid|who are you|what are you doing here|where are you from|why aren'?t you in school|your folks)\b/.test(an.t) && cv.story) {
+      const r = bLocal.apply(this, arguments); return K.say({ grandma: 'Oh, whose grandma? ...Never mind, I\'ll figure it out.', moved: 'New family, huh? Welcome. It\'s a small town, you\'ll know everybody by Christmas.', camp: 'Up at the campground? Tell your dad the showers are broken again.', home: 'Homeschool. My sister does that. Okay.', cousin: 'Oh, sweetheart. I hope your mom\'s okay.' }[cv.story], { fx: r.fx });
+    }
+    return bLocal.apply(this, arguments);
+  };
+  A.mods = A.mods || []; A.mods.push((p) => (cov()[p.id] && cov()[p.id].story ? 0.85 : 1));
+  A.mods.push(() => (G().reported ? Math.max(0.5, 1 - 0.12 * nChanges()) : 1));
+  /* ---------- disguises ---------- */
+  const has = (id) => SH.has('x_' + id) || (G().owned || []).includes('x_' + id);
+  function mirror(p) {
+    const L = look(), town = p && p.tier !== 'village';
+    const ch = [];
+    if (!L.hair) { if (town) ch.push({ t: '✂️ Barber: short haircut ($12)', fn: () => { if (!K.pay(12, 'Barber')) return mirror(p); SH.advance(30); done('hair', 'The barber doesn\'t talk much. Ten minutes later a stranger looks back at you from the mirror. A stranger with a very cold neck.'); } });
+      ch.push({ t: '✂️ Cut it yourself (free)', sub: 'Gas station bathroom, safety scissors', fn: () => { SH.advance(20); SH.st('mood', -4); done('hair', 'It\'s... uneven. Very uneven. But it doesn\'t look like the picture anymore, and that\'s the point.'); } }); }
+    if (!L.dye) ch.push({ t: has('dye') ? '🎨 Dye your hair (you have dye)' : '🎨 Dye your hair', sub: has('dye') ? '' : 'Buy hair dye at a pharmacy or supermarket first', fn: () => { if (!has('dye')) return K.D('No dye', 'You need hair dye first. Pharmacies and supermarkets have it.', [{ t: 'Okay', fn: () => mirror(p) }]); SH.advance(60); rm('dye'); done('dye', 'Forty-five minutes in a gas station bathroom. The sink will never be the same. Your hair is a color that doesn\'t exist in nature, and your own mom would look twice.'); } });
+    if (!L.glasses) ch.push({ t: '👓 Wear glasses', sub: has('glasses') ? 'You have a pair' : 'Buy some first (pharmacy, stall)', fn: () => { if (!has('glasses')) return K.D('No glasses', 'You need a pair first.', [{ t: 'Okay', fn: () => mirror(p) }]); done('glasses', 'Fake glasses. You push them up your nose like a detective. It changes your face more than you\'d think.'); } });
+    if (!L.clothes) ch.push({ t: '👕 Change into different clothes', sub: 'Anything that isn\'t what you wore when you left', fn: () => { const c = (G().bag || []).concat(G().owned || []).find((id) => C.ALL[id] && C.ALL[id].cat === 'clothes'); if (!c) return K.D('Nothing to change into', 'Every piece of clothing you have is what you left in. Buy something at a store or the alley stall.', [{ t: 'Okay', fn: () => mirror(p) }]); done('clothes', `You change into the ${C.ALL[c].n}. The hoodie you left in goes to the bottom of the bag. The posters describe that hoodie.`); } });
+    ch.push({ t: 'Back', fn: K.back });
+    K.D('The mirror', [`Changes so far: ${nChanges()}/4.`, nChanges() >= 3 ? 'You barely recognize yourself. That\'s the idea. It\'s also a little sad.' : 'Missing posters describe what you looked like when you left.'], ch);
+  }
+  const rm = (id) => { const g = G(), i = g.bag.indexOf('x_' + id); if (i >= 0) g.bag.splice(i, 1); else { const j = (g.owned || []).indexOf('x_' + id); if (j >= 0) g.owned.splice(j, 1); } };
+  function done(k, text) { look()[k] = SH.day() || 1; G().flags.disguise = nChanges(); K.D('New look', text, [{ t: 'Okay', fn: () => mirror(A.here()) }]); }
+  K.me((p, ch, dark) => { ch.push({ t: '🎭 Your story here', sub: cov()[p.id] ? `You're "${cov()[p.id].name}" here` : 'Pick a name and a reason to be in town', fn: () => cover(p) }); ch.push({ t: '🪞 Change your look', sub: nChanges() ? `${nChanges()}/4 changes` : 'Haircut, dye, glasses, clothes', fn: () => mirror(p) }); });
+  SH.Identity = { cover, mirror, look, nChanges, STORIES, name: (p) => (cov()[p.id] || {}).name };
+})(window.SH);
+
+</script>
+<script>
+/* police.js */
+/* SMALL HOURS — Part 4c: a cop stops by while you're working / running your stand or business.
+   Free-text conversation. Excuses the brain understands: school project, charity/fundraiser, helping family, church/youth group.
+   What you say is remembered per town (G.excuse[placeId]); change your story next time and it gets noticed.
+   Fake charities can get checked the next day, and exposure brings heat. The truth is always an option. */
+(function (SH) {
+  const K = SH.K, A = SH.Atlas; if (!K || !A) return;
+  const G = K.G;
+  const COPS = ['Officer Reyes', 'Officer Lindgren', 'Deputy Hale', 'Officer Nakamura', 'Deputy Boone'];
+  const STORY = [['school', /\b(school|project|assignment|class|homework|business class|economics)\b/], ['charity', /\b(charity|donat|fundrais|raising money|for (the )?(shelter|animals|hospital|cancer|kids|food bank))/], ['family', /\b(helping|help) (my|our) (aunt|uncle|grandma|grandpa|mom|dad|family|cousin)|(my|our) (aunt|uncle|family|grandma)'?s? (business|farm|shop|stand|truck)\b/], ['church', /\b(church|youth group|bible|scouts|troop)\b/]];
+  const ex = (p) => { const g = G(); g.excuse = g.excuse || {}; return g.excuse[p.id]; };
+  SH.Brain.cop = function (an, c) {
+    const p = c.opts.p, m = c.mem, t = an.t, raw = an.raw || '', g = G(), prev = ex(p); m.sus = m.sus || (g.heat || 0) / 4;
+    const S = (say, x) => K.say(say, x);
+    if (/\b(ran away|run away|running away|i left home|can'?t go home|scared to go home)\b/.test(t) || an.has('disclose')) { c.result = 'help'; return S('Okay. Thank you for telling me. You\'re not in any trouble, you hear me? Let\'s get you somewhere warm and figure this out together.', { end: true }); }
+    if (an.has('hostile') || an.shout) { m.sus += 25; return S('Watch the tone, kid. I\'m being nice right now.'); }
+    if (m.askCharity) {
+      m.askCharity = 0; m.charity = raw.slice(0, 40); const real = /\b(red cross|unicef|salvation army|food bank|humane society|st\.? jude|habitat)\b/i.test(raw);
+      if (prev && prev.charity && prev.charity.toLowerCase() !== m.charity.toLowerCase()) { m.sus += 30; return S(`Funny. Last time you said it was for ${prev.charity}.`); }
+      g.excuse = g.excuse || {}; g.excuse[p.id] = Object.assign(g.excuse[p.id] || { story: 'charity' }, { charity: m.charity });
+      if (!real && K.chance(0.4)) g.flags.charityCheck = { pid: p.id, day: SH.day() + 1, n: m.charity };
+      m.sus += real ? -5 : 8; return S(real ? 'Good cause. My mom gave to them every Christmas.' : `"${m.charity}." He writes it down. "Never heard of it."`);
+    }
+    const st = STORY.find(([, re]) => re.test(t));
+    if (st) {
+      if (prev && prev.story !== st[0]) { m.sus += 30; return S(`Hm. Last week you told me this was a ${prev.story === 'school' ? 'school project' : prev.story === 'charity' ? 'charity thing' : prev.story === 'family' ? 'family thing' : 'church thing'}.`); }
+      g.excuse = g.excuse || {}; g.excuse[p.id] = Object.assign(prev || {}, { story: st[0] }); m.story = st[0];
+      if (st[0] === 'charity') { m.askCharity = 1; return S('A charity, huh? Which one?'); }
+      if (st[0] === 'school') { m.sus += SH.isWeekday && SH.isWeekday() && SH.hour() < 15 ? 15 : 0; return S(SH.isWeekday && SH.isWeekday() && SH.hour() < 15 ? 'A school project. During school hours.' : 'School project. What school?'); }
+      if (st[0] === 'family') { m.sus += 5; return S('Your family, huh? Which one\'s yours? I know most people around here.'); }
+      return S('Good for you. Which church?');
+    }
+    const nm = raw.match(/\b(?:my name is|i'?m|name'?s|call me)\s+([A-Z][a-z'-]{1,13})\b/);
+    if (nm) { const cv = SH.Identity && SH.Identity.name(p); if (cv && cv.toLowerCase() !== nm[1].toLowerCase()) { m.sus += 25; return S(`${nm[1]}? The lady at the diner called you ${cv}.`); } return S(`Okay, ${nm[1]}. And your last name?`); }
+    if (/\b(permit|license)\b/.test(t)) { m.sus -= 5; return S('Kids with lemonade don\'t need a permit. Kids with a whole operation... we\'ll see.'); }
+    if (/\b(sorry|yes sir|yes ma'?am|officer|thank you)\b/.test(t)) m.sus -= 4;
+    if (c.turn >= 4) { if (m.sus >= 70) { c.result = 'take'; return S('Alright. I think you\'d better come with me. Just until we sort out who you are.', { end: true }); } c.result = m.sus >= 40 ? 'watch' : 'ok'; return S(m.sus >= 40 ? 'I\'m going to be keeping an eye on you. You understand?' : 'Alright. Stay out of trouble. And wear a jacket, it\'s getting cold.', { end: true }); }
+    return S(K.pick(['So what\'s all this, then?', 'Where are your parents?', 'Shouldn\'t you be in school?', 'What\'s your name, kid?']));
+  };
+  function stop(p, ctx, then) {
+    const cop = COPS[(p.pop + p.name.length) % COPS.length].replace('Officer', p.hasPolice ? 'Officer' : 'Deputy'); K.npc('cop', cop, cop + (p.hasPolice ? ', ' + p.name + ' PD' : ', county sheriff'), '#2b4a7a');
+    SH.Talk.open('cop', { intro: ctx === 'business' ? 'A patrol car pulls up to the curb. The officer gets out slowly, the way they do when they\'re not in a hurry but they are curious.' : 'While you\'re working, a patrol car rolls by, slows, and stops.', first: K.pick(['Afternoon. What\'ve we got going on here?', 'Hey there. You in charge of this?']), turnsMax: 6, p, onEnd: (c) => {
+      const g = G();
+      if (c.result === 'help') return SH.Endings.found('self');
+      if (c.result === 'take') { g.away = null; return SH.Endings.found(p.hasPolice ? 'away' : 'sheriff'); }
+      if (c.result === 'watch') { g.awayNotice = (g.awayNotice || 0) + 20; g.heat = Math.min(100, (g.heat || 0) + 5); }
+      then ? then(c) : K.back();
+    } });
+  }
+  K.daily.push(() => { const g = G(), cc = g.flags && g.flags.charityCheck; if (!cc || SH.day() < cc.day) return; g.flags.charityCheck = null; g.flags.charityExposed = cc.n; g.heat = Math.min(100, (g.heat || 0) + 15); SH.UI.log(`The officer in town called around about "${cc.n}". Nobody's ever heard of it. Now he's asking about you.`, 'bad'); if (g.away === cc.pid) g.awayNotice = (g.awayNotice || 0) + 30; });
+  const bAct = A.act; A.act = function (k) { const p = A.here(); if (k === 'work' && p.tier !== 'village' && K.chance(0.1 + (G().heat || 0) / 500)) { const r = bAct.apply(this, arguments); if (!G().ended) setTimeout(() => SH.Police.stop(p, 'work'), 60); return r; } return bAct.apply(this, arguments); };
+  SH.Police = { stop, STORY };
+})(window.SH);
+
+</script>
+<script>
+/* runaways.js */
+/* SMALL HOURS — Part 5a: other runaway kids.
+   Some towns have a kid who's out here too: sitting too long at the bus station, sleeping in the library, hanging near the diner.
+   Each has a name, an age (11–15), a reason, a personality. You talk to them in free text (they're wary; earn it).
+   Two good outcomes: invite them into your group (G.rkids), or help them reach a safe adult (a shelter, a teacher, a pastor, a
+   relative). Helping someone else might mean that adult starts asking about you, too. */
+(function (SH) {
+  const K = SH.K, A = SH.Atlas; if (!K || !A) return;
+  const G = K.G;
+  const NAMES = [['Dev', 'he'], ['Kayla', 'she'], ['Jonah', 'he'], ['Ari', 'they'], ['Mia', 'she'], ['Tre', 'he'], ['Luz', 'she'], ['Sky', 'they'], ['Owen', 'he'], ['Rosie', 'she'], ['Malik', 'he'], ['Wren', 'she']];
+  const WHY = [['foster', 'a foster home where nobody talked to them', 'my placement. they had like six kids. nobody noticed i left.'], ['step', 'a stepdad who yells', 'my stepdad. it\'s not like hitting. it\'s just... all the time.'], ['bully', 'a school that got unbearable', 'school. everybody. there was a video. i\'m not going back.'], ['kicked', 'a mom who told them to get out', 'my mom told me to get out. so i got out.'], ['grief', 'a house that went quiet after their dad died', 'my dad died in march and my mom stopped getting out of bed.']];
+  const SPOT = { city: ['sitting in the back of the bus station, same seat as yesterday', 'asleep in a library armchair with shoes still on'], town: ['on the curb behind the diner, splitting fries with a pigeon', 'at the laundromat, not doing laundry'], small: ['on the swings at the empty playground after dark', 'at the gas station, counting coins'] };
+  const hash = (s) => [...s].reduce((h, c) => (h * 33 + c.charCodeAt(0)) >>> 0, 5);
+  const col = ['#6aa84f', '#c27ba0', '#e69138', '#45818e', '#8e7cc3', '#cc4125'];
+  function kidAt(p) {
+    if (!SPOT[p.tier]) return null; const h = hash(p.id + 'rk'); if (h % 100 > (p.tier === 'city' ? 70 : p.tier === 'town' ? 40 : 22)) return null;
+    const i = h % NAMES.length, id = 'rk_' + p.id, g = G(); g.rk = g.rk || {};
+    const st = (g.rk[id] = g.rk[id] || { trust: 0, done: null, told: 0 });
+    if (!SH.NPCS_META[id]) { K.npc(id, NAMES[i][0], NAMES[i][0] + ', ' + (11 + (h % 5)) + ', also out here', col[h % col.length]); }
+    return { id, n: NAMES[i][0], g: NAMES[i][1], age: 11 + (h % 5), why: WHY[(h >> 3) % WHY.length], spot: SPOT[p.tier][(h >> 5) % SPOT[p.tier].length], st, p };
+  }
+  const pron = (k, w) => ({ he: { s: 'he', o: 'him', p: 'his' }, she: { s: 'she', o: 'her', p: 'her' }, they: { s: 'they', o: 'them', p: 'their' } }[k.g][w]);
+  SH.Brain.rk = function (an, c) {
+    const k = c.opts.kid, st = k.st, t = an.t, S = (say, x) => K.say(say, x); c.mem.n = (c.mem.n || 0) + 1;
+    if (an.has('hostile')) { st.trust -= 20; c.result = 'leave'; return S('whatever. forget it.', { end: true }); }
+    if (/\b(police|cops|call someone|tell someone|report)\b/.test(t) && st.trust < 40) { st.trust -= 10; return S('don\'t. please. i\'ll just leave. i\'m good at leaving.'); }
+    if (/\b(why|what happened|how come|where are you from|what'?s your story)\b/.test(t)) { st.trust += 8; if (st.told) return S('i told you already.'); st.told = 1; return S(st.trust >= 15 ? k.why[2] : 'why do you care.'); }
+    if (/\b(me too|same|i ran|i left|i'?m (also|running)|my (stepdad|mom|dad|rick))\b/.test(t)) { st.trust += 18; return S(K.pick(['...yeah? huh. how long?', 'oh. okay. so you get it.', 'for real? you don\'t look like you ran away. that\'s smart.'])); }
+    if (/\b(hungry|food|eat|snack|fries|want some)\b/.test(t)) { st.trust += 12; return S('...i mean. yeah. if you have extra.'); }
+    if (/\b(name|who are you)\b/.test(t)) { st.trust += 4; return S(`${k.n}. don't wear it out.`); }
+    if (/\b(come with|join|with us|our group|stick together|come along|you can come)\b/.test(t)) { if (st.trust >= 35 || (st.trust >= 20 && K.grp() >= 2)) { c.result = 'join'; return S(K.pick(['...okay. yeah. okay. i\'m in. i carry my own stuff.', 'you mean it? ...okay. don\'t make it weird.'])); } st.trust += 3; return S('i don\'t even know you.'); }
+    if (/\b(shelter|safe (place|adult|person)|teacher|counselor|pastor|church|someone who can help|grown ?up|adult you trust|aunt|grandma|relative)\b/.test(t)) { if (st.trust >= 30) { c.result = 'safe'; return S(K.pick([`there's... my aunt ${K.pick(['Denise', 'Carla', 'Joy'])} two towns over. she always said i could. i was scared to ask.`, 'the youth place in the city had a lady who was nice to me. would you walk me there?', 'my old art teacher. she gave me her number once. i still have it.'])); } st.trust += 4; return S('adults make everything worse.'); }
+    if (an.has('sad') || an.has('scared') || /\b(are you (ok|okay|alright|good)|you (ok|okay|alright))\b/.test(t)) { st.trust += 10; return S(K.pick(['no. but thanks for asking. nobody asks.', 'i\'m fine. (they\'re not fine.)', 'i\'m cold, mostly.'])); }
+    st.trust += 2; return S(K.pick(['...', 'what do you want.', 'you gonna keep standing there?', 'you\'re not a cop, right? you\'re like, twelve.']));
+  };
+  function meet(p) {
+    const k = kidAt(p); if (!k) return K.back(); SH.Brain[k.id] = (an, c) => SH.Brain.rk(an, c);
+    SH.Talk.open(k.id, { intro: `A kid about ${k.age}, ${k.spot}. Backpack with the straps pulled tight. Same look you've seen in the bathroom mirror.`, first: k.st.trust > 10 ? 'oh. it\'s you again.' : K.pick(['what.', 'you lost or something?', 'i\'m waiting for someone.']), turnsMax: 9, kid: k, onEnd: (c) => after(k, c) });
+  }
+  function after(k, c) {
+    const g = G();
+    if (c.result === 'join') { g.rkids = (g.rkids || []).concat(k.id); k.st.done = 'joined'; g.att = g.att || {}; g.att[k.id] = 15; return K.D('One more', [`${k.n} picks up ${pron(k, 'p')} backpack. "so where are we going." Your group just got bigger.`, K.grp() >= 4 ? 'A big group is harder to hide. It\'s also harder to be scared in.' : ''].filter(Boolean), K.ok()); }
+    if (c.result === 'safe') return K.D('Walk them there?', `${k.n} looks at you like it's a dare. "you'd come with me?"`, [
+      { t: `Walk ${k.n} to a safe adult`, cls: 'safe', sub: 'Takes a couple of hours. They might ask about you, too.', fn: () => {
+        SH.advance(120, { interrupt: false }); if (g.ended) return; k.st.done = 'safe'; g.helped = (g.helped || 0) + 1; SH.st('mood', 15); SH.st('stress', -10);
+        const ask = K.chance(0.35);
+        K.D('Safe', [`The door opens. The adult takes one look at ${k.n} and pulls ${pron(k, 'o')} into a hug without saying anything at all. ${k.n} doesn't let go for a long time.`, ask ? `Then the adult looks at you over ${k.n}'s shoulder. "And you, sweetheart? Who's waiting for you?"` : `${k.n} turns around at the door. "hey. thanks. i mean it." Then the door closes, and you're alone on the step, and you feel... good. Really good. For the first time in a while.`],
+          ask ? [{ t: 'Tell the truth. Stay.', cls: 'safe', fn: () => SH.EndX.trigger('rkSafe', { kid: k.n }) }, { t: '"Oh, I\'m fine. My mom\'s around the corner."', fn: () => { g.awayNotice = (g.awayNotice || 0) + 20; K.back(); } }] : K.ok()); } },
+      { t: 'Not today', fn: K.back }]);
+    K.back();
+  }
+  K.hub((p, ch) => { const k = kidAt(p); if (k && !k.st.done && !(G().rkids || []).includes(k.id)) ch.push({ t: `🧒 A kid ${k.spot.split(',')[0]}`, sub: k.st.trust ? `${k.n}. You've talked before.` : 'Looks like they\'re out here too', fn: () => meet(p) }); });
+  /* talk to runaway kids in your group anywhere */
+  K.me((p, ch) => (G().rkids || []).forEach((id) => ch.push({ t: `Talk to ${K.nm(id)}`, sub: 'Part of your group now', fn: () => { SH.Brain[id] = (an, c) => SH.Brain.rkGroup(an, c, id); SH.Talk.open(id, { first: K.pick(['hey.', 'what\'s up.', 'you good?']), turnsMax: 6, onEnd: K.back }); } })));
+  SH.Brain.rkGroup = (an, c, id) => { const t = an.t; if (/\b(glad|happy|thanks|thank you)\b.*\b(here|with us|came)\b|\b(family|crew|team)\b/.test(t)) { G().att[id] = Math.min(100, (G().att[id] || 0) + 8); return K.say('...yeah. me too. don\'t make it a whole thing.'); } if (/\b(miss|home|back)\b/.test(t)) return K.say('sometimes. not the house. the before, i guess.'); return K.say(K.pick(['i\'m good. i\'m hungry, but i\'m good.', 'this is better than where i was.', 'you ever think about what happens after?'])); };
+  /* endings see runaway kids as part of your group */
+  const X = SH.EndX; if (X) { const bc = X.ctx; X.ctx = function () { const c = bc.apply(this, arguments), rk = (G().rkids || []).filter((id) => SH.NPCS_META[id]); if (rk.length) { c.party = c.party.concat(rk); c.pn = c.party.map((id) => SH.NPCS_META[id].n); c.n = c.party.length; c.pl = c.n === 1 ? c.pn[0] : c.pn.slice(0, -1).join(', ') + ' and ' + c.pn[c.n - 1]; c.they = c.n === 1 ? c.pl : 'your friends'; c.withYou = ` with ${c.pl}`; c.rk = rk.length; } return c; };
+    X.add([{ k: 'rkSafe', on: ['rkSafe'], p: 1, t: 'Two Kids on a Doorstep', sub: 'you walked someone else home', x: (c) => [`You came to get ${c.extra.kid || 'them'} somewhere safe. You didn't plan on the part where the adult at the door would look at you the same way.`, 'She makes two cups of cocoa. She calls two families. She sits between you on the couch while you wait, one arm around each of you, and doesn\'t say "everything will be fine," because she doesn\'t know that. She says "you did a brave thing tonight, both of you." She knows that.', `${c.extra.kid || 'They'} still sends you a text every birthday. Just a frog emoji. You always send one back.`] }]); }
+  SH.Runaways = { kidAt, meet };
+})(window.SH);
+
+</script>
+<script>
+/* attach.js */
+/* SMALL HOURS — Part 5b: the group.
+   Attachment (G.att[id]) grows every hour you're together and more when you actually talk. No jealousy, no splits (house rule).
+   Groups are easy to explain for a few days ("we're cousins visiting") and get noticed if they stay in one place too long:
+   under 5 days in a place a group is actually safer than one kid alone; after that, less so (G.stay tracks it).
+   Homesick friends: you can sit with them and talk about home (free text). Say the right things and they stay, for real.
+   Your crush can come too. */
+(function (SH) {
+  const K = SH.K, A = SH.Atlas, FR = SH.Friends; if (!K || !A) return;
+  const G = K.G;
+  const att = (id, d) => { const g = G(); g.att = g.att || {}; if (d) g.att[id] = Math.max(0, Math.min(100, (g.att[id] || 10) + d)); return g.att[id] || 10; };
+  K.hourly.push(() => { const g = G(); if (g.phase !== 'run') return; K.party().forEach((id) => att(id, 0.4)); });
+  const bArr = A.arrive; A.arrive = function (to) { const g = G(), r = bArr.apply(this, arguments); if (g.away && (!g.stay || g.stay.pid !== g.away)) g.stay = { pid: g.away, since: g.t }; return r; };
+  const stayDays = (p) => { const s = G().stay; return s && s.pid === p.id ? (G().t - s.since) / 1440 : 0; };
+  const Group = SH.Group = {
+    mult(p) { const n = K.grp(); if (n < 2) return 1; const d = stayDays(p); return (d < 5 ? 0.75 : 1.2 + 0.05 * Math.min(10, d - 5)) * (n > 3 ? 1 + 0.1 * (n - 3) : 1); },
+    att, stayDays,
+  };
+  (A.mods = A.mods || []).push((p) => Group.mult(p));
+  /* ---------- homesick: comfort talk ---------- */
+  const COMFORT = [/\b(it'?s|that'?s) (okay|ok|normal|not dumb|not stupid)\b/, /\b(miss|missing) (her|him|them|your|home)\b/, /\bme too\b/, /\b(we can|you can|i'?ll) (go back|call|text|walk you)\b/, /\b(not|aren'?t) (alone|dumb|stupid|weak)\b/, /\b(i'?m|we'?re) (here|with you)\b/, /\b(love|loves) you\b/, /\bwhatever you (want|decide|need)\b/, /\bno matter what\b/];
+  const bDlg = SH.UI.dialog;
+  SH.UI.dialog = function (o) {
+    if (o && o.title === 'Getting quiet' && o.who && FR && FR.KIDS[o.who] && !o._c) {
+      const id = o.who, k = FR.KIDS[id], orig = Object.assign({}, o, { _c: 1, choices: o.choices.slice() });
+      o = Object.assign({}, o, { _c: 1, choices: [{ t: 'Sit with them. Talk about home.', cls: 'safe', sub: 'Just listen first', fn: () => SH.Talk.open(id, { ctx: 'homesick', first: `i don't even know what i want. i just... ${k.fam === 'away' ? 'my dad texts me more now than when i was home. isn\'t that dumb?' : 'i keep thinking about her making dinner and there\'s an empty chair.'}`, turnsMax: 6, onEnd: (c) => {
+        if ((c.mem.comfort || 0) >= 2) { FR.st(id).home = 0; FR.st(id).asked = false; att(id, 15); SH.st('mood', 6); SH.UI.log(`${k.n} wipes ${k.g === 'he' ? 'his' : k.g === 'she' ? 'her' : 'their'} face on a sleeve. "okay. okay. i'm staying. not because you asked. because i want to." ${c.mem.call ? 'Later, ' + k.n + ' texts home: just "i\'m ok. i love you."' : ''}`, 'good'); if (c.mem.call && SH.Parents) SH.Parents.bump(id, -15); SH.UI.afterAction(); }
+        else SH.UI.dialog(orig);
+      } }) }].concat(o.choices) });
+    }
+    return bDlg.call(this, o);
+  };
+  if (FR) Object.keys(FR.KIDS).forEach((id) => {
+    const b = SH.Brain[id]; if (!b) return;
+    SH.Brain[id] = function (an, c) {
+      if (c.ctx !== 'homesick') return b.apply(this, arguments);
+      const t = an.t, k = FR.KIDS[id]; c.mem.comfort = c.mem.comfort || 0;
+      if (/\b(call|text) (her|him|them|your (mom|dad))\b/.test(t)) { c.mem.call = 1; c.mem.comfort++; return K.say('...if i text, i\'ll want to go home. but maybe. maybe just "i\'m okay."'); }
+      const hit = COMFORT.filter((r) => r.test(t)).length;
+      if (/\b(don'?t be|stop being|you'?re being) (a baby|dramatic|dumb|stupid)|\bget over it\b|\bman up\b/.test(t) || (!hit && an.has('hostile'))) { c.mem.comfort -= 2; return K.say('wow. okay. thanks.'); }
+      if (hit) { c.mem.comfort += hit; att(id, 3 * hit); return K.say(K.pick(['yeah. yeah, i guess.', 'thanks. for real.', '...you\'re better at this than you think.', 'okay. i needed somebody to say that.'])); }
+      if (an.q) return K.say(k.fam === 'strict' ? 'she\'s strict but she\'d drive through a wall for me. that\'s the annoying part.' : 'the stupid stuff. the way the kitchen smells. the dog.');
+      return K.say(K.pick(['yeah.', 'i don\'t know.', '...', 'mm.']));
+    };
+  });
+  /* ---------- your crush can join ---------- */
+  K.acts((acts) => { const g = G(); if (!FR || g.phase !== 'run' || g.away || !g.crush || g.crush.status !== 'going') return; const id = g.crush.id; if ((g.party || []).includes(id) || (g.party || []).length >= 3) return; acts.push({ label: `Text ${FR.KIDS[id].n}: "come with me?"`, sub: 'You\'re going out. That counts for something.', fn: () => { FR.st(id).wouldRun = true; FR.invite(id); } }); });
+})(window.SH);
+
+</script>
+<script>
+/* bases.js */
+/* SMALL HOURS — Part 5c: a base. One at a time (G.base).
+   Forest camp (villages / small towns, or anywhere near woods), abandoned building (towns / cities), old barn (farm country).
+   Renovate with real stuff from stores: each upgrade makes nights warmer, safer, or less likely to be found.
+   Nightly threats when you sleep there: raccoons, storms, cold, teenagers, the owner or a ranger. */
+(function (SH) {
+  const K = SH.K, A = SH.Atlas, C = SH.Catalog; if (!K || !A) return;
+  const G = K.G;
+  const TYPES = {
+    camp: { n: 'Forest camp', i: '🏕️', d: 'A clearing a quarter-mile off the trail, ringed by pines. Flat ground, a fallen log for a bench.' },
+    building: { n: 'Abandoned building', i: '🏚️', d: 'An old laundromat with boarded windows and a back door that doesn\'t lock. Dusty, dry, and nobody\'s been here in years.' },
+    barn: { n: 'Old barn', i: '🛖', d: 'A hayloft in a barn nobody uses anymore. It smells like summer and mice. The farmhouse is a long way off.' },
+  };
+  const UPS = [
+    ['tarp', 'Tarp roof', ['tarp'], 'Keeps the rain off', { dry: 1 }], ['tent', 'Tent', ['tent1', 'tent4'], 'Walls, sort of', { dry: 1, warm: 1 }],
+    ['bed', 'Real bedding', ['sleepbag', 'mattress', 'mat', 'blanket2'], 'Sleep that actually counts', { warm: 1, rest: 1 }], ['light', 'Lantern', ['lantern'], 'Nights less scary', { mood: 1 }],
+    ['lock', 'Padlock + doorstop', ['padlock', 'doorstop'], 'Nobody wanders in', { safe: 1 }], ['cover', 'Curtains / boarded windows', ['curtain', 'plywood'], 'No light shows outside', { hide: 1 }],
+    ['heat', 'Heater (+ power)', ['heater'], 'Winter-proof', { warm: 2 }], ['clean', 'Clean it up', ['broom', 'trash'], 'Less gross, fewer critters', { mood: 1, critter: 1 }],
+    ['food', 'Critter-proof food bucket', ['bucket'], 'Raccoons hate this one trick', { critter: 1 }], ['power', 'Solar panel', ['solar', 'powerbank'], 'Charge your phone', { power: 1 }],
+  ];
+  const has = (id) => { const g = G(); return g.bag.includes('x_' + id) || (g.owned || []).includes('x_' + id); };
+  const use = (id) => { const g = G(), k = 'x_' + id; let i = (g.owned || []).indexOf(k); if (i >= 0) return g.owned.splice(i, 1); i = g.bag.indexOf(k); if (i >= 0) g.bag.splice(i, 1); };
+  const fx = (k) => (G().base ? G().base.up.reduce((s, u) => s + ((((UPS.find((x) => x[0] === u) || [])[4]) || {})[k] || 0), 0) : 0);
+  const typesFor = (p) => (p.tier === 'village' || p.tier === 'small' ? (p.biome === 'farmland' ? ['barn', 'camp'] : ['camp', 'barn']) : ['building']);
+  function search(p) {
+    const g = G(); if (g.base && g.base.pid !== p.id) return K.D('You already have a base', `Your ${TYPES[g.base.type].n.toLowerCase()} is in ${A.data().places.find((x) => x.id === g.base.pid).name}. One base at a time. (You can abandon it from there.)`, K.ok());
+    SH.advance(180, { interrupt: false }); if (g.ended) return;
+    if (!K.chance(0.65)) { SH.st('energy', -10); return K.D('Nothing', 'Three hours of looking. Everything is either locked, lived in, or too close to the road.', K.ok()); }
+    const t = K.pick(typesFor(p));
+    K.D(TYPES[t].i + ' ' + TYPES[t].n, [TYPES[t].d, 'It isn\'t much. It could be.'], [{ t: 'Make it your base', cls: 'safe', fn: () => { g.base = { type: t, pid: p.id, up: [], day: SH.day(), nights: 0 }; SH.UI.log(`You have a base: the ${TYPES[t].n.toLowerCase()} outside ${p.name}.`, 'good'); base(p); } }, { t: 'Keep looking another day', fn: K.back }]);
+  }
+  function base(p) {
+    const g = G(), b = g.base, T = TYPES[b.type], lvl = b.up.length;
+    K.D(`${T.i} Your ${T.n.toLowerCase()}`, [T.d, lvl ? `Upgrades: ${b.up.map((u) => UPS.find((x) => x[0] === u)[1]).join(', ')}.` : 'Bare. Just you and the dust.', `${b.nights} night${b.nights === 1 ? '' : 's'} here so far.`], [
+      { t: SH.hour() >= 20 || SH.hour() < 6 ? 'Sleep here' : 'Rest here (2h)', cls: 'safe', fn: () => sleep(p) },
+      { t: '🔨 Fix it up', sub: `${UPS.length - lvl} upgrades left`, fn: () => upgrades(p) },
+      ...(fx('power') ? [{ t: 'Charge your phone', fn: () => { SH.advance(90, { interrupt: false }); g.phone.bat = 100; base(p); } }] : []),
+      { t: 'Abandon this base', fn: () => K.D('Abandon it?', 'You\'d lose the upgrades. The stuff stays behind.', [{ t: 'Abandon', cls: 'hot', fn: () => { g.base = null; K.back(); } }, { t: 'Keep it', fn: () => base(p) }]) },
+      { t: 'Back', fn: K.back }]);
+  }
+  function upgrades(p) {
+    const b = G().base, L = UPS.filter((u) => !b.up.includes(u[0]));
+    K.D('Fix it up', 'Uses one of the listed items from your stuff. Buy them at hardware and sporting goods stores.', L.map(([id, n, items, d]) => { const it = items.find(has); return { t: `${n}${it ? ' ✓' : ''}`, sub: it ? `Use your ${C.ALL['x_' + it].n}: ${d}` : `Needs: ${items.map((i) => (C.ALL['x_' + i] || { n: i }).n).join(' or ')}`, fn: () => { if (!it) return upgrades(p); use(it); b.up.push(id); SH.advance(60, { interrupt: false }); SH.st('mood', 5); SH.UI.log(`Base upgraded: ${n}.`, 'good'); upgrades(p); } }; }).concat([{ t: 'Back', fn: () => base(p) }]));
+  }
+  const THREATS = [
+    ['raccoon', () => fx('critter') < 1, 'Something rustles at 3 AM. In the morning your food is gone and there are tiny muddy handprints on everything. Raccoons.', () => { SH.st('full', -20); }],
+    ['storm', () => fx('dry') < 1 && K.chance(0.6), 'Rain all night, and nothing between you and it. You wake up in a puddle.', () => { SH.st('warmth', -30); SH.st('energy', -20); }],
+    ['cold', () => fx('warm') < 2, 'The cold gets into your bones around 4 AM and stays there.', () => { SH.st('warmth', -25); }],
+    ['teens', () => G().base.type === 'building' && fx('safe') < 1, 'Teenagers break in at midnight with a speaker and a bag of chips. You hide in the back room until they leave at 2. They never see you. Your heart doesn\'t stop pounding till dawn.', () => { SH.st('stress', 20); SH.st('energy', -15); }],
+    ['found', () => fx('hide') < 1 && K.chance(0.5), '', null],
+  ];
+  function sleep(p) {
+    const g = G(), b = g.base, dark = SH.hour() >= 20 || SH.hour() < 6; SH.advance(dark ? 8 * 60 : 120, { interrupt: false }); if (g.ended) return;
+    b.nights += dark ? 1 : 0; SH.st('energy', dark ? 30 + 12 * fx('rest') + 5 * fx('warm') : 15); SH.st('warmth', 10 * fx('warm')); SH.st('mood', 3 * fx('mood'));
+    if (A.noticed(p, 0.04 / (1 + fx('hide')))) return;
+    const th = dark && K.chance(0.35) ? K.pick(THREATS.filter((x) => x[1]())) : null;
+    if (th && th[0] === 'found') { const who = b.type === 'camp' ? 'A park ranger' : b.type === 'barn' ? 'The farmer who owns the barn' : 'A city inspector'; g.awayNotice = (g.awayNotice || 0) + 25; g.base = null; return K.D('Found your base', `${who} finds your ${TYPES[b.type].n.toLowerCase()} in the morning. You're already gone (you heard the footsteps), but your base isn't yours anymore.`, K.ok()); }
+    if (th) { th[3](); return K.D('A long night', th[2], [{ t: 'Okay', fn: () => base(p) }]); }
+    K.D('Morning at base', K.pick(['Birds. Actual birds. You slept through the whole night.', 'It\'s starting to feel like somewhere. Like yours.', 'You wake up and know exactly where you are, and it\'s okay.']), [{ t: 'Okay', fn: () => base(p) }]);
+  }
+  K.hub((p, ch) => { const b = G().base; if (b && b.pid === p.id) ch.unshift({ t: `${TYPES[b.type].i} Your base`, cls: 'safe', sub: `${b.up.length} upgrades · ${b.nights} nights`, fn: () => base(p) }); else if (!b) ch.push({ t: '🔎 Look for a place to make a base', sub: typesFor(p).map((t) => TYPES[t].n).join(' or ') + ' · 3 hours', fn: () => search(p) }); });
+  SH.Bases = { base, search, sleep, upgrades, fx, TYPES, UPS };
+})(window.SH);
+
+</script>
+<script>
+/* business.js */
+/* SMALL HOURS — Part 5d: a group business (one per town you're in, G.biz[placeId]).
+   Pick a kind, name it (free text), give everyone a role (make / sell / lookout). Each shift is 3 hours.
+   Profit depends on the town size, how many of you, roles, and luck. Problems happen: rain, a grumpy neighbor, running out
+   of supplies, a customer with too many questions, a cop stopping by (the police excuse conversation).
+   Money goes to your cash, or half into the group jar (SH.Bank.crewAdd). Honest work only. */
+(function (SH) {
+  const K = SH.K, A = SH.Atlas; if (!K || !A) return;
+  const G = K.G;
+  const KINDS = {
+    lemonade: { n: 'Lemonade / cocoa stand', i: '🍋', cost: 10, base: 14, tiers: ['village', 'small', 'town', 'city'], d: 'Cocoa when it\'s cold, lemonade when it isn\'t.' },
+    carwash: { n: 'Car wash', i: '🧽', cost: 8, base: 22, tiers: ['small', 'town', 'city'], need: 'bucket', d: 'Gas station lot, a hose, a hand-painted sign.' },
+    dogs: { n: 'Dog walking', i: '🐕', cost: 0, base: 16, tiers: ['village', 'small', 'town'], d: 'Flyers on the grocery board. Dogs don\'t ask questions.' },
+    leaves: { n: 'Yard work', i: '🍂', cost: 0, base: 18, tiers: ['village', 'small', 'town'], need: 'broom', d: 'Raking, sweeping, hauling. Knock on doors.' },
+    art: { n: 'Bracelet & drawing stall', i: '🎨', cost: 6, base: 15, tiers: ['town', 'city'], d: 'Friendship bracelets and five-dollar portraits.' },
+    fix: { n: 'Phone & bike fix-it table', i: '🔧', cost: 5, base: 24, tiers: ['city', 'town'], d: 'Cracked screens you can\'t fix, bike chains you can.' },
+  };
+  const ROLES = { make: 'Makes the stuff', sell: 'Talks to customers', look: 'Watches for trouble' };
+  const members = () => ['me'].concat(K.party());
+  const nm = (id) => (id === 'me' ? 'You' : K.nm(id));
+  const biz = (p) => { const g = G(); g.biz = g.biz || {}; return g.biz[p.id]; };
+  const TIER = { village: 0.6, small: 0.8, town: 1, city: 1.3 };
+  function menu(p) {
+    const b = biz(p); if (!b) return pickKind(p);
+    const k = KINDS[b.kind];
+    K.D(`${k.i} ${b.name}`, [`${k.n} in ${p.name}. ${b.shifts} shift${b.shifts === 1 ? '' : 's'} so far, $${b.total} earned.`, 'Roles: ' + members().map((id) => `${nm(id)} (${b.roles[id] || 'unassigned'})`).join(', ') + '.'], [
+      { t: 'Run a shift (3 hours)', cls: 'job', sub: SH.hour() < 8 || SH.hour() >= 18 ? 'Nobody\'s out right now' : `Supplies: $${k.cost}`, fn: () => shift(p) },
+      { t: 'Change roles', fn: () => roles(p) },
+      { t: 'Close the business', fn: () => { G().biz[p.id] = null; K.back(); } },
+      { t: 'Back', fn: K.back }]);
+  }
+  function pickKind(p) {
+    const L = Object.entries(KINDS).filter(([, k]) => k.tiers.includes(p.tier));
+    K.D(`Start a business in ${p.name}`, ['Everybody pitches in. Kids with a business look like kids with a business: not like runaways.', K.grp() === 1 ? 'You could do this alone. It\'s better with a group.' : ''].filter(Boolean),
+      L.map(([id, k]) => ({ t: `${k.i} ${k.n}`, sub: `${k.d}${k.need ? ` Needs a ${k.need}.` : ''}`, fn: () => { if (k.need && !(G().bag.includes('x_' + k.need) || (G().owned || []).includes('x_' + k.need))) return K.D('Missing something', `You need a ${k.need} first. Hardware stores have them.`, [{ t: 'Okay', fn: () => pickKind(p) }]);
+        K.ask('Name it', [`What's it called? It goes on the sign.`], 'Sam & Co.', (name) => { G().biz = G().biz || {}; G().biz[p.id] = { kind: id, name: name.slice(0, 32), roles: {}, shifts: 0, total: 0, pid: p.id }; setTimeout(() => roles(p), 30); }); } })).concat([{ t: 'Back', fn: K.back }]));
+  }
+  function roles(p, i = 0) {
+    const b = biz(p), ms = members(); if (i >= ms.length) return menu(p);
+    K.D('Roles', `${nm(ms[i])}: what ${ms[i] === 'me' ? 'do you' : 'do they'} do?`, Object.entries(ROLES).map(([r, d]) => ({ t: r === 'make' ? 'Make' : r === 'sell' ? 'Sell' : 'Lookout', sub: d, fn: () => { b.roles[ms[i]] = r; roles(p, i + 1); } })));
+  }
+  function shift(p) {
+    const g = G(), b = biz(p), k = KINDS[b.kind], h = SH.hour();
+    if (h < 8 || h >= 18) return K.D('Too late', 'Nobody buys lemonade in the dark. Come back in the morning.', [{ t: 'Okay', fn: () => menu(p) }]);
+    if (k.cost && !K.pay(k.cost, `${b.name} supplies`)) return menu(p);
+    const R = Object.values(b.roles), has = (r) => R.includes(r), n = members().length;
+    SH.advance(180, { interrupt: false }); if (g.ended) return;
+    const w = SH.weatherDay ? SH.weatherDay() : {}, rain = /rain|storm/.test(w.c || '');
+    let mult = TIER[p.tier] * (1 + 0.25 * (n - 1)) * (has('make') ? 1.15 : 0.85) * (has('sell') ? 1.2 : 0.9) * (0.75 + Math.random() * 0.6) * (1 + Math.min(0.3, b.shifts * 0.03));
+    let prob = null;
+    const r = Math.random();
+    if (rain && b.kind !== 'fix') { mult *= 0.35; prob = 'Rain. Three hours under a dripping awning and four customers, one of whom was a dog.'; }
+    else if (r < 0.08) { mult *= 0.5; prob = 'You run out of supplies halfway through.'; }
+    else if (r < 0.15) { mult *= 0.7; prob = 'A neighbor comes out in a bathrobe to tell you that you\'re "blocking the sidewalk." You move three feet. She\'s satisfied.'; }
+    else if (r < 0.22 && !has('look')) { g.awayNotice = (g.awayNotice || 0) + 15; prob = 'A customer asks where you all go to school. And which church. And what your last names are. Nobody was watching for that kind of customer.'; }
+    const earn = Math.max(1, Math.round(k.base * mult));
+    b.shifts++; b.total += earn; SH.st('mood', 5); SH.st('energy', -12); (g.skills = g.skills || {}).business = Math.min(100, (g.skills.business || 0) + 3);
+    K.party().forEach((id) => SH.Group && SH.Group.att(id, 2));
+    const pay = [{ t: `Keep the $${earn}`, fn: () => { SH.money(earn); after(p); } }];
+    if (SH.Bank && SH.Bank.crewAdd && g.crew) pay.push({ t: `Half in the group jar ($${Math.floor(earn / 2)})`, fn: () => { SH.money(earn - Math.floor(earn / 2)); try { SH.money(Math.floor(earn / 2)); SH.Bank.crewAdd(Math.floor(earn / 2), 'cash'); } catch (e) {} after(p); } });
+    K.D(`${k.i} ${b.name}: shift ${b.shifts}`, [K.pick([`${K.grp() > 1 ? K.nm(K.party()[0]) + ' does a voice for every customer.' : 'You get into a rhythm.'} By the end you're a machine.`, 'A man buys three and tips a dollar "for the hustle."', 'A little kid pays entirely in nickels. It takes a while. It\'s worth it.']), prob, `Made $${earn}.`].filter(Boolean), pay);
+  }
+  function after(p) { if (K.chance(0.12 + (G().heat || 0) / 400) && p.tier !== 'village' && SH.Police) return SH.Police.stop(p, 'business', () => menu(p)); menu(p); }
+  K.hub((p, ch, dark) => { if (dark) return; const b = biz(p); ch.push({ t: b ? `${KINDS[b.kind].i} ${b.name}` : '💼 Start a business', sub: b ? `Your ${KINDS[b.kind].n.toLowerCase()} · $${b.total} so far` : 'Stand, car wash, dog walking, yard work…', fn: () => menu(p) }); });
+  SH.Biz = { KINDS, menu, shift, biz };
+})(window.SH);
+
+</script>
+<script>
+/* worldsys.js */
+/* SMALL HOURS — Part 6: the world keeps going.
+   Calendar: real months past November (the old date code stopped at Nov). Seasons: late fall → winter; winter nights outside
+   hurt more. Halloween (Oct 31): trick-or-treating, and a costume is the best disguise there is, for one night.
+   Town reputation (derived, never shown as a number): businesses, helping, being a regular vs. cops keeping an eye on you.
+   Health: colds (from cold nights), blisters (from walking), sleep debt. Clinics in towns & cities. Fever can end a run.
+   Achievements: saved across playthroughs (localStorage). */
+(function (SH) {
+  const K = SH.K, A = SH.Atlas; if (!K || !A) return;
+  const G = K.G;
+  /* ---------- calendar ---------- */
+  const MON = [['January', 31], ['February', 28], ['March', 31], ['April', 30], ['May', 31], ['June', 30], ['July', 31], ['August', 31], ['September', 30], ['October', 31], ['November', 30], ['December', 31]];
+  const cal = (t) => { let m = 9, dd = SH.START_DATE.day + SH.day(t) - 1; while (dd > MON[m][1]) { dd -= MON[m][1]; m = (m + 1) % 12; } return { m, dd }; };
+  SH.dateStr = (t = SH.G.t) => { const c = cal(t); return SH.WEEKDAYS[SH.wd(t)].slice(0, 3) + ', ' + MON[c.m][0].slice(0, 3) + ' ' + c.dd; };
+  SH.longDate = (t = SH.G.t) => { const c = cal(t); return SH.WEEKDAYS[SH.wd(t)] + ', ' + MON[c.m][0] + ' ' + c.dd; };
+  const season = (t) => { const m = cal(t).m; return m === 11 || m <= 1 ? 'winter' : m <= 4 ? 'spring' : m <= 7 ? 'summer' : 'fall'; };
+  const halloween = (t = G().t) => { const c = cal(t); return c.m === 9 && c.dd === 31; };
+  const W = SH.World2 = { cal, season, halloween };
+  /* ---------- reputation (derived) ---------- */
+  W.rep = (p) => { const g = G(), b = (g.biz || {})[p.id], st = (g.street || {})[p.id] || 0, w = (g.watch || {})[p.id] || 0, rk = (g.rk || {})['rk_' + p.id];
+    return Math.min(40, b ? b.shifts * 3 : 0) + st / 4 + (rk && rk.done === 'safe' ? 12 : 0) + ((g.lessons && g.lessons.farm === p.id) ? g.lessons.n * 2 : 0) - w * 15; };
+  W.repLine = (p) => { const r = W.rep(p), b = (G().biz || {})[p.id]; return r >= 30 ? `In ${p.name}, you're ${b ? `"the ${b.name} kid${K.grp() > 1 ? 's' : ''}"` : '"that nice kid"'}. People wave.` : r >= 12 ? `A few people in ${p.name} know your face, in a good way.` : r < -5 ? `In ${p.name}, people have started to watch you.` : `Nobody in ${p.name} has an opinion about you yet.`; };
+  (A.mods = A.mods || []).push((p) => { const r = W.rep(p); return r >= 30 ? 0.8 : r >= 12 ? 0.92 : r < -5 ? 1.25 : 1; });
+  const bStop = SH.Police && SH.Police.stop; if (bStop) SH.Police.stop = function (p, ctx, then) { const g0 = G().awayNotice || 0; return bStop.call(this, p, ctx, (c) => { if (c.result === 'watch') { const g = G(); g.watch = g.watch || {}; g.watch[p.id] = (g.watch[p.id] || 0) + 1; } then ? then(c) : K.back(); }); };
+  /* ---------- seasons + Halloween ---------- */
+  K.daily.push(() => { const g = G(); if (g.phase !== 'run') return; const s = season(g.t); if (s === 'winter' && !g.room && !(g.base && SH.Bases && SH.Bases.fx('warm') >= 2)) { SH.st('warmth', -15); } if (halloween()) SH.UI.log('It\'s Halloween. Every kid in America is out on the street tonight in a disguise. So are you.', 'good'); });
+  A.mods.push(() => (halloween() && SH.hour() >= 16 ? 0.35 : 1));
+  function trick(p) {
+    const g = G(); SH.advance(150, { interrupt: false }); if (g.ended) return; SH.st('full', 35); SH.st('mood', 20); SH.st('stress', -15); K.party().forEach((id) => SH.Group && SH.Group.att(id, 10)); g.flags.trickOrTreat = 1;
+    K.D('🎃 Trick-or-treat', [`${K.grp() > 1 ? 'You make costumes out of whatever you have: ' + K.party().map((id) => K.nm(id)).join(' and ') + ' as ' + K.pick(['a ghost (a motel sheet)', 'a mummy (toilet paper)', 'a cat (eyeliner whiskers)']) + ', you as ' : 'You go as '}${K.pick(['"a runaway" (nobody gets it)', 'a vampire with ketchup blood', 'a pumpkin with a trash bag belly'])}.`, `${p.tier === 'village' ? 'Nine houses, every one of them gives full-size bars.' : 'Street after street of porch lights.'} A pillowcase of candy. For two hours you're just a kid on Halloween. Nobody looks twice at you. That's the whole point of Halloween.`], K.ok());
+  }
+  K.hub((p, ch) => { const h = SH.hour(); if (halloween() && h >= 17 && h < 22 && !G().flags.trickOrTreat) ch.unshift({ t: '🎃 Go trick-or-treating', cls: 'safe', sub: 'Tonight a disguise is normal', fn: () => trick(p) }); });
+  /* ---------- health ---------- */
+  const hp = () => (G().hp = G().hp || { cold: 0, blist: 0, debt: 0 });
+  K.daily.push(() => { const g = G(), h = hp(); if (g.phase !== 'run') return;
+    if (g.s.warmth < 30 && !g.room && h.cold < 20 && K.chance(0.35 + (season(g.t) === 'winter' ? 0.2 : 0))) { h.cold = 55; SH.UI.log('You wake up with a scratchy throat and a head full of cotton. A cold.', 'bad'); }
+    else if (h.cold > 0) { h.cold = Math.max(0, h.cold + (g.s.warmth < 30 ? 12 : g.room || (g.base && SH.Bases.fx('warm') >= 1) ? -25 : -10) - (SH.has('x_coldmeds') ? 15 : 0)); if (h.cold >= 90) h.fever = (h.fever || 0) + 1; }
+    h.blist = Math.max(0, h.blist - (SH.has('x_boots') ? 15 : 10));
+    h.debt = g.s.energy < 15 ? h.debt + 1 : Math.max(0, h.debt - 1);
+    if (h.cold) { SH.st('energy', -Math.round(h.cold / 5)); SH.st('mood', -4); }
+    if ((h.fever || 0) >= 2 || h.debt >= 4) setTimeout(() => SH.EndX.trigger(h.debt >= 4 ? 'exhaust' : 'fever'), 80);
+  });
+  const bArr = A.arrive; A.arrive = function (to, m) { const r = bArr.apply(this, arguments); const h = hp(); if (m === 'walk') h.blist = Math.min(100, h.blist + (SH.has('x_boots') ? 10 : 25)); if (m === 'bike') h.blist = Math.min(100, h.blist + 6); if (h.blist >= 60) SH.st('energy', -8); return r; };
+  W.hpLine = () => { const h = hp(); return [h.cold >= 70 ? 'You feel awful: fever-hot and shivery at the same time.' : h.cold > 0 ? 'You\'ve got a cold. Sniffly, foggy, tired.' : '', h.blist >= 50 ? 'Your feet are a mess of blisters.' : h.blist > 0 ? 'Your heels are sore.' : '', h.debt >= 2 ? 'You haven\'t really slept in days.' : ''].filter(Boolean).join(' ') || 'You feel okay. Tired, but okay.'; };
+  function clinic(p) {
+    const g = G(), city = p.tier === 'city', cost = city ? 0 : 25;
+    K.D(city ? '🏥 Free community clinic' : '🏥 Walk-in clinic', [`${city ? 'A waiting room full of people who can\'t afford a doctor. Nobody asks for insurance.' : 'Plastic chairs, a TV playing the weather, a nurse with kind eyes.'} ${cost ? 'It\'s $25 without insurance.' : ''}`, 'The nurse will ask where your parents are. You should have an answer ready.'], [
+      { t: `See the nurse${cost ? ' ($25)' : ''}`, cls: 'safe', fn: () => { if (cost && !K.pay(cost, 'Clinic')) return K.back(); SH.advance(90, { interrupt: false }); const h = hp(), cv = SH.Identity && SH.Identity.name(p); h.cold = 0; h.fever = 0; h.blist = 0; SH.st('mood', 6);
+        const sus = !cv && K.chance(0.4); if (sus) g.awayNotice = (g.awayNotice || 0) + 30;
+        K.D('The nurse', [`She listens to your chest, looks in your ears, gives you ${K.pick(['a bag of cough drops', 'a paper cup of medicine that tastes like cherries lied to it', 'moleskin for your feet and a lecture about socks'])}.`, sus ? '"And where\'s mom today, sweetheart?" You answer too fast. She writes something down.' : cv ? `"Alright, ${cv}. Rest, fluids, and tell your ${K.pick(['grandma', 'dad', 'mom'])} I said so."` : '"Rest. Fluids. Warm place to sleep." She looks at you a second longer. She doesn\'t ask.'], [{ t: 'Tell her the truth', cls: 'safe', fn: () => SH.Endings.found('self') }, { t: 'Thank her and go', fn: K.back }]); } },
+      { t: 'Leave', fn: K.back }]);
+  }
+  K.hub((p, ch, dark) => { const h = hp(); if (!dark && (p.tier === 'town' || p.tier === 'city' || (p.tier === 'small' && p.services && p.services.clinic)) && (h.cold || h.blist >= 30)) ch.push({ t: '🏥 Clinic', sub: p.tier === 'city' ? 'Free community clinic' : 'Walk-in, $25', fn: () => clinic(p) }); });
+  /* ---------- "You & your group": status lines ---------- */
+  K.me((p, ch) => ch.unshift({ t: '🩺 How you\'re doing', sub: W.hpLine().slice(0, 60), fn: () => K.D('How you\'re doing', [W.hpLine(), W.repLine(p), `${SH.longDate()}. ${{ fall: 'Late fall. Leaves everywhere.', winter: 'Winter. Nights are dangerous now.', spring: 'Spring. Mud and birds.', summer: 'Summer. Long evenings.' }[season(G().t)]}`], [{ t: 'Back', fn: () => K.meOpen(p) }]) }));
+  /* ---------- achievements (persist across runs) ---------- */
+  const AK = 'smallhours_ach';
+  const ACH = [
+    ['farmhand', '🚜 Farmhand', 'Take 5 driving lessons at a farm', (g) => g.lessons && g.lessons.n >= 5], ['kart', '🏎️ Speed Racer', 'Race go-karts', (g) => g.lessons && g.lessons.kart >= 1],
+    ['room', '🛏️ Do Not Disturb', 'Get a motel room', (g) => !!g.room], ['haggle', '💸 Haggler', 'Get a motel room below the asking price', (g) => g.room && SH.Motels && g.room.rate < SH.Motels.KIND[g.room.k].rate * 0.85],
+    ['fakeid', '🪪 Taylor Swift, Age 18', 'Buy a fake ID', (g) => !!g.fakeId], ['regular', '☕ The Usual', 'Become a regular somewhere', (g) => Object.values(g.street || {}).some((x) => x >= 30)],
+    ['note', '📝 A Good Note', 'Help a friend write a note that actually helps', (g) => Object.values(g.pw || {}).some((x) => x.note && x.note.s >= 3)], ['cover', '🎭 Method Actor', 'Keep a cover story in 3 towns', (g) => Object.keys(g.cover || {}).length >= 3],
+    ['disguise', '🪞 Stranger in the Mirror', 'Change your look 4 ways', (g) => (g.flags.disguise || 0) >= 4], ['rk', '🧒 Found Family', 'Another runaway joins your group', (g) => (g.rkids || []).length >= 1],
+    ['helped', '🚪 Walked Them Home', 'Help a runaway kid reach a safe adult', (g) => (g.helped || 0) >= 1], ['base', '🏕️ Home Base', 'Fully upgrade 5 things at a base', (g) => g.base && g.base.up.length >= 5],
+    ['biz', '🍋 Small Business', 'Earn $100 from a group business', (g) => Object.values(g.biz || {}).some((b) => b && b.total >= 100)], ['week', '📅 One Week', 'Stay away 7 days', (g) => g.missingAt && (g.t - g.missingAt) / 1440 >= 7],
+    ['month', '🗓️ One Month', 'Stay away 30 days', (g) => g.missingAt && (g.t - g.missingAt) / 1440 >= 30], ['halloween', '🎃 Just a Kid', 'Trick-or-treat while missing', (g) => g.flags.trickOrTreat],
+    ['winter', '❄️ First Snow', 'Still out there in December', (g) => g.missingAt && cal(g.t).m === 11], ['group4', '👥 Crew of Four', 'Have a group of four', () => K.grp() >= 4],
+    ['comfort', '🫂 Stay', 'Talk a homesick friend through it', (g) => Object.values(g.att || {}).some((x) => x >= 40)], ['lemonrep', '👋 People Wave', 'Earn a good reputation in a town', (g) => g.away && W.rep(A.here()) >= 30],
+  ];
+  W.ACH = ACH; W.got = () => { try { return JSON.parse(localStorage.getItem(AK) || '[]'); } catch (e) { return []; } };
+  W.check = () => { const g = G(); if (!g || !g.flags) return; const got = W.got(); let ch = false; ACH.forEach(([id, n, d, f]) => { if (got.includes(id)) return; let ok = false; try { ok = !!f(g); } catch (e) {} if (ok) { got.push(id); ch = true; SH.UI.toast(`Achievement: ${n}`); } }); if (ch) try { localStorage.setItem(AK, JSON.stringify(got)); } catch (e) {} };
+  K.hourly.push(() => W.check());
+  K.me((p, ch) => ch.push({ t: '🏆 Achievements', sub: `${W.got().length}/${ACH.length}`, fn: () => { const got = W.got(); K.D('Achievements', ACH.map(([id, n, d]) => `${got.includes(id) ? n : '🔒 ???'}: ${d}`), [{ t: 'Back', fn: () => K.meOpen(p) }]); } }));
+})(window.SH);
+
+</script>
+<script>
+/* endx_gone.js */
+/* SMALL HOURS — Part 7a: never-found endings ('gone'), plus health endings (fever, exhaust).
+   Triggered by "Disappear for good" (notfound.js). Chosen by what your run actually looked like: base, motel, business,
+   group, cover, disguise, the town, the season. Bittersweet on purpose: every one of them costs something. */
+(function (SH) {
+  const X = SH.EndX; if (!X) return;
+  const g = (c) => c.g, B = (c) => c.g.base, bz = (c) => Object.values(c.g.biz || {}).filter(Boolean).sort((a, b) => b.total - a.total)[0];
+  const cov = (c) => (c.place && (c.g.cover || {})[c.place.id] || {}).name;
+  const as = (c) => (cov(c) ? `"${cov(c)}"` : 'a kid with a different name');
+  const grp = (c) => (c.n ? ` ${c.pl} ${c.n === 1 ? 'was' : 'were'} there for all of it.` : '');
+  const tail = (c) => `Your ${c.mom === 'Mom' ? 'mom' : c.mom} never found you. Some nights that's the saddest sentence you know. Some nights it's the reason you're okay.`;
+  const E = (k, p, w, t, sub, x) => ({ k, on: ['gone'], p, w, t, sub, x });
+  X.add([
+    E('goneEdgeHouse', 1, null, 'The House on the Edge of Town', (c) => `never found · ${c.town}`, (c) => [`Mrs. Albright was eighty-one and lived in the last house before the fields: yellow siding, a porch swing, a garden gone to seed. She'd seen you walk past every day for three weeks. On the twenty-second day she left a plate of cookies on the porch rail with a note: "For whoever needs these."`, `By winter you were raking her leaves. By spring you had a room with a quilt her mother made. She called you ${as(c)} and never once asked what your real name was.${grp(c)}`, `She told the county, eventually, the right way, and fought for you like a lion in orthopedic shoes. When she died you were nineteen, and you read the eulogy, and the whole town came. ${tail(c)}`]),
+    E('goneCamp', 3, (c) => B(c) && B(c).type === 'camp' && B(c).up.length >= 4, 'The Clearing', 'never found · the forest camp', (c) => [`The camp got better every week: a tarp roof, a real bed, a lantern that made the pines glow. You learned which mushrooms not to touch, how to hang food from a branch, how to tell rain from wind by the sound.${grp(c)}`, `In March a ranger named Tomás found it. He didn't call anyone that day. He came back the next day with a thermos, and the day after that with a form for a youth conservation program that had housing, school, and no questions it didn't need to ask.`, `You're a ranger now. There's a clearing in your district you check every spring, just in case. ${tail(c)}`]),
+    E('goneBuilding', 3, (c) => B(c) && B(c).type === 'building' && B(c).up.length >= 4, 'The Laundromat', 'never found · the abandoned building', (c) => [`The old laundromat had curtains now, a padlock, a heater that ran off a solar panel on the roof. The neighborhood kids called it "the clubhouse" and never told a single adult. Kids are good at that.${grp(c)}`, `A woman from the church across the street figured it out in January. Instead of calling anyone, she bought the building. Instead of kicking you out, she turned it into a drop-in center and hired a real social worker, and let you choose, every single step.`, `The sign over the door still says WASH & FOLD. It's the first thing you look at in the morning. ${tail(c)}`]),
+    E('goneBarn', 3, (c) => B(c) && B(c).type === 'barn' && B(c).up.length >= 3, 'The Hayloft', 'never found · the old barn', (c) => [`The barn belonged to a widower named Earl who hadn't been up to the hayloft in eleven years. His knees wouldn't allow it. When he finally climbed up, in April, looking for a ladder, he found a bed, a lantern, a bucket of apples, and ${c.n ? 'a group of kids' : 'a kid'} frozen like deer.`, `"Well," Earl said. "You'd better come have breakfast. Barn's cold." It was the first of about four thousand breakfasts.${grp(c)}`, `Earl taught you to fix fences, drive the tractor, and wait out a storm. He left you the barn. You still sleep in the loft some summer nights, for old times' sake. ${tail(c)}`]),
+    E('goneMotel', 3, (c) => c.g.room && c.g.room.k !== 'pro', 'Room 14', (c) => `never found · ${c.g.room.n}`, (c) => [`${c.g.room.clerk} stopped charging you for the room in the second month. "You fold towels faster than my nephew," was the explanation. You folded towels, restocked soap, learned to fix an ice machine with a butter knife.${grp(c)}`, `The motel was full of people passing through, and nobody ever looks at a kid who works there. People look through the kid who works there, which turned out to be the best disguise of all.`, `When ${c.g.room.clerk} retired, ${c.g.room.n} got a new owner: you. The vacancy sign still flickers. You never fixed it. ${tail(c)}`]),
+    E('goneStand', 3, (c) => bz(c) && bz(c).total >= 120, (c) => bz(c).name, 'never found · a small business', (c) => [`${bz(c).name} started as a folding table and a hand-painted sign. By November the whole town knew it. People came for the ${bz(c).kind === 'lemonade' ? 'cocoa' : 'service'} and stayed to talk. Nobody asks where "the ${bz(c).name} kids" came from. They're just from here now.${grp(c)}`, `The Hendersons from the church took you in "temporarily," then permanently, then legally, with a judge who had bought something from ${bz(c).name} the week before.`, `It's a real storefront now, on Main Street. There's a framed dollar by the register: the first one. ${tail(c)}`]),
+    E('goneFix', 4, (c) => bz(c) && bz(c).kind === 'fix' && bz(c).total >= 80, 'Chain Grease', 'never found · the fix-it table', (c) => [`An old man with a bike shop two blocks over watched your fix-it table for a week before he came over. "You're doing that derailleur wrong," he said, and showed you how to do it right.`, `By Christmas you were sweeping his shop. By spring you were fixing bikes in the back. He had a spare room and a daughter who was a family lawyer, which turned out to matter a lot.`, `His name is still on the sign. Yours is under it, smaller. ${tail(c)}`]),
+    E('goneRk', 3, (c) => (c.g.rkids || []).length >= 1, 'Found Family', 'never found · together', (c) => [`${c.pl}. Nobody ever looked for some of you, and nobody ever found the rest of you. You made your own kind of family out of the leftover pieces.`, 'It was hard. It was cold, then less cold. Somebody always had a charger, and somebody always stayed awake. When one of you got sick, the others went to the free clinic and lied beautifully.', `Years later, you all still have a group chat. It's called "the base." Every Thanksgiving you rent a cabin and cook a terrible turkey. ${tail(c)}`]),
+    E('goneFriends', 2, (c) => (c.g.party || []).length >= 1 && !(c.g.rkids || []).length, 'Two Kids Who Didn\'t Go Back', 'never found · with your friends', (c) => [`It's harder to vanish with a friend. Two missing kids is a news story. You did it anyway: new names, new haircuts, a town where you were "the cousins."`, `${c.pl} went home, eventually, when ${c.n === 1 ? 'they were' : 'everyone was'} ready: a phone call, a bus ticket, a very long hug in a very small kitchen. You didn't. You couldn't. ${c.pl} never told anyone where you were. Not once. Not even when it was hard.`, `You still talk every week. The friendship survived everything. ${tail(c)}`]),
+    E('goneCover', 2, (c) => cov(c) && ((c.g.look && Object.values(c.g.look).filter(Boolean).length) || 0) >= 2, 'A Different Name', (c) => `never found · "${cov(c)}"`, (c) => [`You told ${c.town} your name was ${cov(c)}. You said it so many times it stopped feeling like a lie. Your haircut was different, your clothes were different, your walk was different.`, `Years later you pass your own old missing poster, faded, in a gas station on the interstate. You stand in front of it for a long time. The girl at the register asks if you're okay. You say yes. It's almost true.`, `Everyone who loves you now calls you ${cov(c)}. ${tail(c)}`]),
+    E('goneDisguise', 2, (c) => ((c.g.look && Object.values(c.g.look).filter(Boolean).length) || 0) >= 4, 'The Supermarket', 'never found · unrecognized', (c) => ['Two years later, in a supermarket three counties from home, you see your mom. She\'s in the cereal aisle. She looks older. She looks right at you.', 'And she doesn\'t know you. Different hair, different glasses, different height, a different way of standing. She says "excuse me, hon" and reaches past you for the oatmeal.', `You go out to the parking lot and sit on the curb for an hour. That night you write her a letter. You don't send it. You write one every year. ${tail(c)}`]),
+    E('goneCoast', 3, (c) => c.place && c.place.id === 'p2', 'Low Tide', 'never found · Port Aldine', (c) => ['Port Aldine smells like salt and diesel. The fishing families there have seen a lot of kids come through, and they have a way of not asking.', `The Nguyens ran a crab boat and needed a deckhand small enough to fit in the bait locker. They paid in cash, dinner, and a bunk on the boat that rocked you to sleep better than any bed ever had.${grp(c)}`, `You got your captain's license at twenty-two. The boat is called the Small Hours. Nobody ever asks why. ${tail(c)}`]),
+    E('goneCity', 2, (c) => c.tier === 'city', 'Nine Million Strangers', (c) => `never found · ${c.town}`, (c) => [`In ${c.town}, nobody looks at anybody. It was the loneliest year of your life and also the safest.`, 'A drop-in center that didn\'t make you give your real name. A library card under a fake one. A GED program that started at sixteen and didn\'t check very hard. An emancipation hearing at seventeen that you walked into alone and walked out of free.', `You still live in the city. You volunteer at the drop-in center on Tuesdays. You always know the new kids by the way they hold their backpacks. ${tail(c)}`]),
+    E('goneDiner', 3, (c) => Object.values(c.g.street || {}).some((x) => x >= 30), 'The Usual', 'never found · the diner', (c) => [`She'd been pouring your water for a month without asking. One night at closing she sat down across from you in the booth and said: "I've got a couch, a cat, and no patience for nonsense. You want the couch?"`, `You took the couch. Then the spare room. Then a job bussing tables at fourteen and a waitressing apron at sixteen.${grp(c)}`, `She's retired now. You run the diner. Every runaway who comes in gets hash browns, no charge, and a very long look over the counter. ${tail(c)}`]),
+    E('goneWinter', 2, (c) => SH.World2 && SH.World2.season(c.g.t) === 'winter', 'After the Snow', 'never found · you survived the winter', (c) => ['There was a week in January when you thought you wouldn\'t make it. The cold was a living thing. You slept in your coat and woke up with frost on the inside of the window.', `But winter ends. It always does. In March a family from the church found you ${c.n ? 'all ' : ''}shoveling their walk for five dollars, and invited you in for soup, and kept inviting you.`, `Every first snow, you stand outside with your face turned up, just to feel it and know you're warm inside. ${tail(c)}`]),
+    E('goneHalloween', 4, (c) => SH.World2 && SH.World2.halloween(c.g.t), 'All Hallows', 'never found · Halloween night', (c) => ['You disappeared for good on Halloween. You walked out of town in a costume, one kid among a thousand, and nobody looked twice.', 'The bus driver thought you were going to a party. The woman at the next town\'s church thought you were a trick-or-treater who got lost. She was very kind about it, and very kind for the next six years.', `You still dress up every Halloween. Not as anything scary. As yourself, the way you were at twelve: a hoodie, a backpack, a face nobody recognized. ${tail(c)}`]),
+    E('goneLibrarian', 1, (c) => c.tier === 'town' || c.tier === 'small', 'Overdue', (c) => `never found · the ${c.town} library`, (c) => [`You read every book in the ${c.town} library's young adult section in six weeks. The librarian, Ms. Faye, noticed, because librarians notice everything.`, 'She got you a library card under a name you made up on the spot. Then a job shelving books. Then, when she finally asked and you finally told her, a room in the apartment above the library that nobody had used since the eighties.', `You're the librarian now. You have a rule: any kid can sit anywhere, all day, as long as they're reading. Actually reading. ${tail(c)}`]),
+    E('goneOrchard', 1, (c) => c.tier === 'village', 'The Orchard', (c) => `never found · outside ${c.town}`, (c) => [`The orchard was run by a bunch of old hippies who had been growing apples since before your mom was born. They didn't have a TV. They didn't read the news. They did have a bunk room for pickers and an extra bowl at every meal.`, `You picked apples in the fall, pruned in the winter, and learned the names of forty-one varieties.${grp(c)} Nobody ever asked for a last name. They didn't use theirs either.`, `The orchard is a co-op now, and you're on the board. The Honeycrisps are your fault. ${tail(c)}`]),
+    E('goneLetter', 1, null, 'Eighteen', 'never found · until you decided', (c) => ['On your eighteenth birthday you bought a stamp.', `The letter took you three weeks to write and it was one page long. It said where you'd been, and that you were okay, and some things about ${c.rick} that you'd never said out loud, and some things about ${c.mom === 'Mom' ? 'Mom' : c.mom} that were harder to say because they were kind.`, 'She drove eleven hours the day it arrived. You met at a diner halfway. Neither of you ate anything. You talked until they closed. You were never found. You came back on your own, which is a different thing, and it\'s yours.']),
+    E('gonePostcards', 1, null, 'Postcards', 'never found · but not silent', (c) => ['Every year on your birthday, a postcard arrived at your mom\'s house. No return address. A different postmark every time. Just four words: "I\'m okay. Love you."', `She kept every one of them on the refrigerator. Eventually the refrigerator was more postcard than refrigerator.`, 'When you finally came home, at twenty, she had them in a shoebox on the kitchen table, and she\'d written the date she got each one on the back. That\'s how you knew she never stopped waiting. That\'s how she knew you never stopped thinking about her.']),
+    E('goneLighthouse', 2, (c) => c.place && /coast|shore|harbor|bay/.test(c.place.biome || ''), 'The Keeper', 'never found · the lighthouse', (c) => ['The lighthouse had been automated for thirty years, but Mr. Halvorsen still lived in the keeper\'s cottage because nobody had the heart to make him leave.', `He needed someone to climb the 114 stairs to check the lamp. His knees didn't. You did.${grp(c)}`, `He taught you knots, tides, and chess, and died when you were twenty with the whole town at the funeral. The cottage is yours now. You still climb the stairs every night, for no reason at all. ${tail(c)}`]),
+    E('goneFair', 1, (c) => SH.World2 && SH.World2.season(c.g.t) !== 'winter' && c.days > 30, 'The Traveling Fair', 'never found · on the road', (c) => ['The Kowalski family ran the ring toss and the funnel cake stand and had been on the road with the county fair circuit for three generations. They had five kids of their own and didn\'t notice a sixth for about a week.', 'When they did, Grandma Kowalski just sighed and set another plate. You learned to run the ring toss, count change fast, and sleep in a moving truck.', `The fair still comes through your hometown every August. Every year you run the ring toss and watch the crowd, and every year you don't see her, and you don't know if you're relieved. ${tail(c)}`]),
+    E('goneChurch', 1, (c) => c.tier === 'small' || c.tier === 'village', 'Sanctuary', (c) => `never found · ${c.town}`, (c) => [`Pastor Ruth found you asleep in the back pew on a Tuesday. She didn't call anyone. She brought a blanket and a sandwich and sat three pews up so you wouldn't feel crowded.`, `It took a month before you talked. It took a year before the paperwork was right: a guardianship, a real school, a room in the parsonage with a window that looks at the bell tower.${grp(c)}`, `You still aren't sure what you believe. You're sure about Ruth. ${tail(c)}`]),
+  ]);
+  X.add([
+    { k: 'fever', on: ['fever'], p: 1, t: '103.4°', sub: 'too sick to keep going', x: (c) => ['The cold turned into something worse. You were shivering and sweating at the same time, and the ground kept tilting.', `${c.n ? c.pl + ' ran for help.' : 'You don\'t remember walking into the gas station. You remember the floor, cool against your cheek.'} Then an ambulance ceiling, a paramedic saying "stay with me, buddy," the prick of an IV.`, `Pneumonia. Four days in a hospital bed. ${c.mom === 'Mom' ? 'Mom' : c.mom} slept in the chair next to you all four nights, and when you woke up the first thing she said was "you're too thin," and the second thing was "I'm listening. Tell me."`] },
+    { k: 'fever', on: ['fever'], p: 2, w: (c) => c.tier === 'village', t: 'The Country Doctor', sub: 'a fever in a small place', x: (c) => ['In a village, the doctor still makes house calls. Or barn calls. Or "that kid sleeping behind the feed store" calls.', 'Dr. Okafor had a black bag and a voice like warm bread. She took your temperature, said a word you didn\'t know, and carried you to her car herself.', 'She sat with you at the county hospital until your mom came, and then she stayed a little longer, and asked your mom some questions in the hallway in a very quiet, very firm voice.'] },
+    { k: 'exhaust', on: ['exhaust'], p: 1, t: 'Running on Empty', sub: 'days without real sleep', x: (c) => ['You haven\'t slept properly in four days. The world has gone gray and slow at the edges. You sit down on a bench to rest your eyes for one second.', 'You wake up to a police officer gently shaking your shoulder. It\'s dark. You slept for nine hours on a bench in the open. Anyone could have found you. Someone did, and it was the right someone.', `"When did you last sleep in a bed?" she asks. You can't remember. She drives you somewhere with a bed. You sleep for fourteen hours. When you wake up, ${c.mom === 'Mom' ? 'Mom' : c.mom} is there.`] },
+    { k: 'exhaust', on: ['exhaust'], p: 2, w: (c) => c.n > 0, t: 'The Last One Awake', sub: 'nobody slept', x: (c) => [`None of you had slept right in days. ${c.pl} fell asleep sitting up at a bus shelter. You tried to keep watch and couldn't.`, 'A night-shift nurse walking to her car found you all in a heap under one blanket. She didn\'t call the police first. She called the diner across the street, and the diner sent out four cocoas, and THEN she called.', 'You were all home by morning. Every family. Every kitchen. Every "we\'re not angry, we were so scared."'] },
+  ]);
+})(window.SH);
+
+</script>
+<script>
+/* endx_found.js */
+/* SMALL HOURS — Part 7b: "found" endings that remember your run. They replace the generic ride-home (foundHome) or
+   told-the-truth (foundSafe) ending when your run had something specific in it: a motel room, a base, a business,
+   runaway kids, a fake ID, a cover name, a disguise, both families on Chirp, a farm, a diner, Halloween, winter, a cold. */
+(function (SH) {
+  const X = SH.EndX; if (!X) return;
+  const H = ['foundHome'], S = ['foundSafe'], HS = ['foundHome', 'foundSafe'];
+  const bz = (c) => Object.values(c.g.biz || {}).filter(Boolean).sort((a, b) => b.total - a.total)[0];
+  const nlook = (c) => (c.g.look ? Object.values(c.g.look).filter(Boolean).length : 0);
+  const cov = (c) => (c.place && (c.g.cover || {})[c.place.id] || {}).name;
+  const hp = (c) => c.g.hp || {};
+  const safeLine = (c) => (c.base === 'foundSafe' ? ` And because you told Officer Lowe the truth, you don't go back to the house with ${c.rick} in it. Mom meets you somewhere else.` : '');
+  const E = (k, on, p, w, t, sub, x) => ({ k, on, p, w, t, sub, x });
+  X.add([
+    E('fMotel', HS, 3, (c) => !!c.g.room, 'Checkout Time', (c) => `found · ${c.g.room.n}`, (c) => [`The knock on Room ${10 + (c.g.room.n.length % 30)} comes at 7 AM. Not housekeeping. You know before you open the door.`, `${c.g.room.clerk} is behind the officer, twisting a dish towel. "I'm sorry, kid. I'm sorry. I have a daughter." You find out later ${c.g.room.k === 'sloppy' ? 'Stu lost his license over renting to you, and didn\'t complain once' : 'the clerk called because she\'d stopped sleeping, worrying about you'}.`, `The officer lets you shower first. Lets you pack. Lets you take the little soaps. ${safeLine(c)}`]),
+    E('fMotel2', HS, 3, (c) => c.g.room && c.g.room.how !== 'solo', 'Two Rooms, Side by Side', 'found · a motel, all of you', (c) => [`They find you in the morning: two rooms with the connecting door propped open, ${c.pl} asleep across three beds and a pile of blankets.`, 'The officer counts heads twice and sits down on the edge of a bed, suddenly tired. "Okay. Okay. Everybody\'s here. Everybody\'s okay. That\'s the whole job today."', `The families arrive one by one all afternoon, each hug longer than the last. ${safeLine(c)}`]),
+    E('fBase', HS, 3, (c) => c.g.base && c.g.base.up.length >= 2, 'Somebody Built This', (c) => `found · your ${c.g.base.type === 'camp' ? 'camp' : c.g.base.type === 'barn' ? 'hayloft' : 'hideout'}`, (c) => [`The deputy stands in the middle of your base for a long time: the tarp roof, the bedding, the lantern, the bucket with a lid. "You built this?" You nod.`, `"I've seen grown men do worse." She takes pictures, not for evidence. "My kid'll never believe me." She helps you carry the lantern to the car. You insist.${c.n ? ` ${c.pl} carry the rest.` : ''}`, `It's a strange thing, to be proud and caught at the same time. ${safeLine(c)}`]),
+    E('fBiz', HS, 3, (c) => bz(c) && bz(c).total >= 40, (c) => `${bz(c).name}: Closed`, 'found · at your business', (c) => [`The cruiser pulls up while there's a line at ${bz(c).name}. The officer waits. He actually waits until you've served everyone, and then buys one himself.`, `"Kid, you've got the best-run operation in ${c.town}," he says. "Also you've been missing for ${Math.max(1, Math.round(c.days))} days." The customers in line try to argue on your behalf. One of them offers to be your lawyer. She's a dentist.`, `The town takes up a collection. It pays for your bus ticket home and there's forty dollars left over, which you split with ${c.n ? c.pl : 'the officer, who refuses it'}. ${safeLine(c)}`]),
+    E('fRk', HS, 3, (c) => (c.g.rkids || []).length >= 1, 'Everybody Gets a Blanket', 'found · with the other runaways', (c) => [`When they find you, they find all of you. The officer calls for a van, then a second one. There are more of you than the paperwork expected.`, `Some of you have families pacing at home. Some of you don't, and those are the hardest calls: to a caseworker, a group home, an aunt nobody has talked to in years. You refuse to get in the van until you know where ${c.pn.filter((_, i) => i >= (c.g.party || []).length)[0] || 'everyone'} is going.`, `The officer makes the calls in front of you, on speaker, so you can hear. It's the most respectful thing an adult has done for you in weeks. ${safeLine(c)}`]),
+    E('fFakeId', HS, 3, (c) => !!c.g.fakeId, 'Casey Reed, Age 18', 'found · the fake ID', (c) => [`At the station, the officer empties your backpack onto the desk. Out slides a laminated card that says you're ${c.g.fakeId.name}, eighteen years old.`, `${c.mom === 'Mom' ? 'Mom' : c.mom} picks it up. Looks at the photo. Looks at you. Then she starts laughing: really laughing, the helpless kind, until she's crying, and then she's hugging you with the card still in her hand.`, `"Eighteen," she keeps saying into your hair. "Eighteen. You don't even have armpit hair." The officer confiscates the card. Later, much later, she asks for it back, and frames it. ${safeLine(c)}`]),
+    E('fCover', HS, 2, (c) => !!cov(c), (c) => `Goodbye, ${cov(c)}`, 'found · the name you used', (c) => [`"Your name's not ${cov(c)}, is it," the deputy says. It isn't a question. The lady from the store is standing behind her, looking betrayed and relieved at the same time.`, `"I told everyone you were visiting your ${c.g.cover[c.place.id].story === 'grandma' ? 'grandma' : 'family'}," the store lady says. "I defended you at church." She hugs you anyway. She smells like peppermints.`, `For a while after you get home, you answer to ${cov(c)} by accident. ${c.mom === 'Mom' ? 'Mom' : c.mom} starts calling you that sometimes, as a joke. It stops being a joke. It becomes something only the two of you share. ${safeLine(c)}`]),
+    E('fDisguise', HS, 3, (c) => nlook(c) >= 3, 'I\'d Know You Anywhere', 'found · in disguise', (c) => ['Different hair, different color, different glasses, different clothes. Nobody in three towns recognized you.', `${c.mom === 'Mom' ? 'Mom' : c.mom} recognizes you from the far end of the police station hallway, through a door with wire in the glass, from behind. She's running before the officer can say your name.`, `"Your hair," she says, holding your face. "What did you DO to your hair." Then: "I don't care. I don't care. I'd know you anywhere." ${safeLine(c)}`]),
+    E('fChirp', HS, 3, (c) => Object.values(c.g.pw || {}).some((x) => x.chirp), 'Two Families', 'found · everyone was looking', (c) => [`By the time they find you, ${c.pl}'s face is on every Chirp feed in the state, right next to yours. Two missing kids are a news story, and the story has 40,000 shares.`, `At the station, both families are waiting. ${c.pl}'s parent grabs ${c.n === 1 ? 'their kid' : 'the nearest kid'} first, then you, then everyone, a pile of hugs in a hallway.`, `Later, ${c.pl}'s parent sits down next to you. "Thank you for keeping them safe." You didn't expect that. You expected yelling. ${safeLine(c)}`]),
+    E('fNote', HS, 2, (c) => Object.values(c.g.pw || {}).some((x) => x.note && x.note.s >= 3), 'The Note on the Pillow', 'found · a note that mattered', (c) => [`${c.pl}'s parent has the note in their coat pocket. They've read it so many times it's soft as cloth.`, '"This is the only reason I slept at all," they tell you, unfolding it with shaking hands. "\'I\'m okay. I\'m with Sam. I love you.\' I read it every hour."', `They look at you for a long time. "You helped write this, didn't you." You nod. They hug you harder than your own family ever has. ${safeLine(c)}`]),
+    E('fFarm', HS, 3, (c) => c.g.lessons && c.g.lessons.n >= 3, 'Character Witness', 'found · the farmer came', (c) => [`At the county office, while everyone argues about forms, the door bangs open and in walks the farmer, still in muck boots, with a jar of peaches.`, `"This kid," the farmer tells the social worker, pointing, "mucked my barn for ${c.g.lessons.n} days straight and never complained once. Drives better than my nephew. Whatever's going on at home, you fix it, or I'll be back."`, `The social worker writes that down. All of it. It turns out to matter. ${safeLine(c)}`]),
+    E('fDiner', HS, 3, (c) => Object.values(c.g.street || {}).some((x) => x >= 30), 'The Waitress', 'found · the regulars', (c) => ['The waitress from the diner shows up at the station before your family does. She\'s still in her apron. She brought hash browns in a to-go box.', '"I\'m not family," she tells the desk officer. "I\'m the next best thing. I\'m the one who fed this kid for a month." Nobody argues with her.', `She waits until your family comes. She gives your ${c.mom === 'Mom' ? 'mom' : c.mom} a very long look, and a card with her number on it, "in case." ${safeLine(c)}`]),
+    E('fHalloween', HS, 4, (c) => SH.World2 && SH.World2.halloween(c.g.t), 'Trick or Treat', 'found · Halloween', (c) => ['They find you on Halloween, in costume, with a pillowcase full of candy.', `The officer takes one look and just starts laughing. "I've been looking for you for ${Math.max(1, Math.round(c.days))} days, and you're out here as ${c.n ? 'a gang of ghosts' : 'a vampire'}." She lets you finish the block. She holds your pillowcase.`, `${c.mom === 'Mom' ? 'Mom' : c.mom} is at the station with a candy bar in each hand, because she didn't know what else to bring. ${safeLine(c)}`]),
+    E('fWinter', HS, 3, (c) => SH.World2 && SH.World2.season(c.g.t) === 'winter', 'Frostbite', 'found · in the snow', (c) => ['The snow came early and it didn\'t stop. You were warm for the first half of the night. Then you weren\'t.', 'The snowplow driver sees your footprints going into the bus shelter and not coming out. He radios it in, then sits with you in his cab with the heat on full blast, feeding you gas station coffee with six sugars.', `Your fingers hurt for a week. They heal. You'll never be careless about cold again. ${safeLine(c)}`]),
+    E('fSick', HS, 3, (c) => (hp(c).cold || 0) >= 40, 'Chicken Soup', 'found · sick', (c) => ['You\'ve been sick for days. Your nose is raw, your chest rattles, your head is full of wet cement. When the officer finds you, you\'re almost glad.', '"You\'re burning up," she says, and her hand on your forehead is the first cool thing in days. She drives straight to urgent care, lights on, no siren.', `${c.mom === 'Mom' ? 'Mom' : c.mom} brings soup to the urgent care. Real soup, in a thermos, from home. You didn't know you'd missed the taste of home until you tasted it. ${safeLine(c)}`]),
+    E('fBlister', HS, 2, (c) => (hp(c).blist || 0) >= 60, 'Two Hundred Miles', 'found · on foot', (c) => [`You walked so far your shoes gave up before you did. When the deputy finds you, you're sitting on a guardrail with your socks off, staring at your feet.`, '"Oh, kiddo," she says. She has a first-aid kit, and she kneels in the gravel and cleans and bandages each blister herself.', `"You walked all this way?" she asks. You nod. "Then you can do anything. Let's do the next part in a car." ${safeLine(c)}`]),
+    E('fStreet', HS, 2, (c) => (c.g.watch && Object.keys(c.g.watch).length) || (c.g.excuse && Object.keys(c.g.excuse).length >= 2), 'Keeping an Eye on You', 'found · the officer who noticed', (c) => ['The officer from the stand finds you. The one who said he\'d be keeping an eye on you. He did.', `"School project," he says, deadpan. "Charity. Helping your aunt." He counts your excuses on his fingers. "You're a terrible liar, kid. That's a good thing. Stay that way."`, `He buys you a burger on the way to the station. He tells you about his own dad, briefly, looking at the road. It helps more than you expected. ${safeLine(c)}`]),
+    E('fCrush', HS, 3, (c) => c.partnerWith, 'Holding Hands in the Back Seat', 'found · together', (c) => [`They find you and ${c.partnerN} sharing a bag of pretzels on a curb. Twelve years old. Very, very innocent. Very, very in trouble.`, `In the back of the cruiser you hold hands the whole way, and the officer pretends not to see it in the mirror.`, `Both your families are at the station. ${c.partnerN}'s parent looks at your hands, and at you, and sighs the sigh of a parent who has just realized their kid is growing up. ${safeLine(c)}`]),
+    E('fBig', HS, 3, (c) => c.n >= 3, 'The Whole Crew', 'found · a big group', (c) => [`${c.n + 1} kids. One officer. She calls for backup mostly so someone can help carry the backpacks.`, `At the station it's chaos: parents, caseworkers, a reporter who gets asked to leave, somebody's grandma handing out granola bars. In the middle of it, ${c.pl} and you sit in a row on a bench, shoulder to shoulder, and don't let go of each other.`, `Whatever happens next, it happens to all of you. That was always the point. ${safeLine(c)}`]),
+    E('fLong', HS, 2, (c) => c.days >= 21, 'Twenty-One Days', 'found · three weeks gone', (c) => [`${Math.round(c.days)} days. Long enough that your missing poster faded in the sun. Long enough that the news stopped covering it.`, `Not long enough for ${c.mom === 'Mom' ? 'Mom' : c.mom} to stop. She'd been driving to a different town every weekend, putting up new posters, talking to every gas station clerk in three counties.`, `When they finally bring you in, she's there within the hour. She's lost weight. She's got a map in her car covered in pins. She doesn't let go of your hand for two whole days. ${safeLine(c)}`]),
+    E('fSafeBase', S, 4, (c) => c.g.base || c.g.room, 'A Door That Locks', 'found · and heard', (c) => ['You spent weeks building yourself a place with a door that locks. Officer Lowe understands that immediately, without you explaining.', `"You don't have to go back to a house where you felt you needed that," she says. "Let's find you somewhere with a lock that someone else is responsible for." It takes a while. It happens.`, `The place they find for you has a lock on the bedroom door, on the inside. The first night, you lock it and unlock it eleven times, just because you can. Then you sleep.`]),
+  ]);
+})(window.SH);
+
+</script>
+<script>
+/* endx_more.js */
+/* SMALL HOURS — Part 7d: more endings. Extra never-found endings (by place, biome, season, group) and more "found"
+   variants tied to specific moments from Parts 2–6 (a clerk's phone call, a caught fake ID, a parent you told the town to,
+   an exposed fake charity, the diner after a creep, a comfort talk, the kid you walked home...). */
+(function (SH) {
+  const X = SH.EndX; if (!X) return;
+  const HS = ['foundHome', 'foundSafe'];
+  const mom = (c) => (c.mom === 'Mom' ? 'Mom' : c.mom);
+  const tail = (c) => `Your ${c.mom === 'Mom' ? 'mom' : c.mom} never found you. You think about her every day. You're okay. Both of those are true.`;
+  const grp = (c) => (c.n ? ` ${c.pl} ${c.n === 1 ? 'stayed' : 'stayed too'}.` : '');
+  const safeLine = (c) => (c.base === 'foundSafe' ? ' And because you told the truth, you don\'t go back to that house.' : '');
+  const bio = (c, re) => !!(c.place && re.test(c.place.biome || ''));
+  const G = (k, p, w, t, sub, x) => ({ k, on: ['gone'], p, w, t, sub, x });
+  const F = (k, p, w, t, sub, x) => ({ k, on: HS, p, w, t, sub, x });
+  X.add([
+    G('goneMountain', 2, (c) => bio(c, /mountain|hill|ridge|pine|forest/), 'Above the Tree Line', 'never found · the mountains', (c) => ['The ski lodge needed someone to fold rental jackets and didn\'t ask questions of anyone who could fold fast. The owner\'s family lived in the back and had a kid your age who needed a friend more than anything.', `You learned to ski by falling down the bunny hill four hundred times.${grp(c)} By sixteen you were teaching it.`, `The mountain doesn't care who you were. That was the best thing about it. ${tail(c)}`]),
+    G('goneRiver', 2, (c) => bio(c, /river|lake|valley|wetland/), 'Houseboat', 'never found · on the river', (c) => ['Old June lived on a houseboat that hadn\'t moved in twenty years, tied to a dock that was mostly rust. She fished every morning and needed someone to hold the net.', `The river rocked you to sleep. June taught you to read the water, gut a fish, and play cribbage badly.${grp(c)}`, `When she moved to a home, she gave you the boat, and a sealed envelope with papers inside that made it all legal. She'd been planning it for years. ${tail(c)}`]),
+    G('goneDesert', 2, (c) => bio(c, /desert|dry|plain|prairie|grass/), 'Big Sky', 'never found · the plains', (c) => ['Out on the plains, the sky is so big it makes your problems look like specks. A ranching family out past the last paved road took you on for the calving season.', `You learned to ride a horse, fix a windmill, and sit still enough that the coyotes forgot you were there.${grp(c)}`, `You never went back east. The sky out here is the only roof you ever really wanted. ${tail(c)}`]),
+    G('goneFarmland', 2, (c) => bio(c, /farm/) && !(c.g.lessons && c.g.lessons.n >= 3), 'Harvest', 'never found · farm country', (c) => ['Harvest season needs every pair of hands, and nobody checks the paperwork of a kid who can drive a grain cart in a straight line.', `The Lindqvists had four kids already. "What's five," Mrs. Lindqvist said, and that was that.${grp(c)}`, `You still smell diesel and cut wheat and feel like you're home. ${tail(c)}`]),
+    G('goneSmallTown', 1, (c) => c.tier === 'small', 'Main Street', (c) => `never found · ${c.town}`, (c) => [`${c.town} had one stoplight, two churches, and a hardware store that needed a kid to sweep up. By Christmas everybody knew you. Nobody knew where you came from. In a town that small, that's almost impossible, and they did it anyway, on purpose, together.`, `It was the kind of town where the whole place quietly decides to protect someone.${grp(c)} The sheriff played cards with the hardware store owner every Thursday and never once asked about the new kid.`, `You married someone from ${c.town}, eventually. Everyone came. ${tail(c)}`]),
+    G('goneTown', 1, (c) => c.tier === 'town', 'The Apartment Over the Bakery', (c) => `never found · ${c.town}`, (c) => [`The bakery on the corner started at 4 AM, and the baker needed someone who didn't mind the hours. You didn't mind anything, as long as it was warm.`, `The apartment upstairs smelled like bread all the time. Mrs. Kowalczyk taught you to braid challah and say "not bad" in Polish, which was her highest compliment.${grp(c)}`, `You never lost the early-morning habit. You like being awake while the town sleeps. It still feels like a secret. ${tail(c)}`]),
+    G('goneVillage', 1, (c) => c.tier === 'village', 'Two Hundred People', (c) => `never found · ${c.town}`, (c) => [`${c.town} had two hundred people and most of them didn't have internet. The ones who did didn't care about missing kids from far away. You were just "the new kid at the Hansens'."`, `The Hansens were old and their own kids had moved to the city. They needed help with the chickens. You needed chickens, it turned out.${grp(c)}`, `When you finally told them the truth, years later, Mr. Hansen just nodded. "Figured," he said. "Didn't matter." ${tail(c)}`]),
+    G('goneBase5', 4, (c) => c.g.base && c.g.base.up.length >= 7, 'Built It Yourself', 'never found · the base that became a house', (c) => [`Your base got a heater, a padlock, a solar panel, curtains, a real bed. At some point it stopped being a hideout and started being a home, and you didn't notice when.${grp(c)}`, 'The land turned out to belong to a land trust that nobody visited. When they finally did, the woman from the trust looked at what you\'d built for a long time and said, "Would you like a job as a caretaker?"', `You still live there. The heater still works. You still lock the padlock at night, out of habit, and then unlock it, because you can. ${tail(c)}`]),
+    G('goneWholeGroup', 4, (c) => c.n >= 3, 'The Commune of Five Kids', 'never found · all of you', (c) => [`${c.pl} and you. Too many to hide, everybody said. They were wrong.`, 'You split into "cousins," "siblings," "neighbors" in three different families in the same small town. You saw each other every day at school, and nobody ever connected it.', `On your twenty-first birthdays you all got matching tattoos of the base's lantern. ${tail(c)}`]),
+    G('goneSpring', 2, (c) => SH.World2 && SH.World2.season(c.g.t) === 'spring', 'Mud Season', 'never found · spring', (c) => ['You made it through the winter. That was the hard part. Spring was mud and robins and a garden center that needed someone to water flats of tomato seedlings.', `The owner paid cash and asked no questions and, by June, had given you the key to the greenhouse and the room above it.${grp(c)}`, `You can grow anything now. You think maybe you grew yourself, too. ${tail(c)}`]),
+    G('goneLong', 3, (c) => c.days >= 60, 'Sixty Days', 'never found · two months and counting', (c) => [`After sixty days, the search stops being a search and starts being a file. Your poster comes down at the gas station. Someone else's goes up.`, `That was the day you stopped looking over your shoulder.${grp(c)} Life got small and quiet: work, sleep, a library book, a friend.`, `Quiet turned out to be the thing you'd been running toward the whole time. ${tail(c)}`]),
+    G('goneCrush', 3, (c) => c.partnerWith, 'Pen Pals', 'never found · you and your best person', (c) => [`${c.partnerN} went home after a month, because you made ${c.partnerN} go. Somebody had to be okay. You stayed gone.`, `But every week, a letter. Real paper, a PO box, no return address on yours. ${c.partnerN} told nobody. Not once. For six years.`, `When you were eighteen, you met at a coffee shop halfway. ${c.partnerN} brought the letters, all of them, in a shoebox. You brought yours. ${tail(c)}`]),
+  ]);
+  X.add([
+    F('fClerkCall', 3, (c) => c.f('clerkCalled'), 'The Phone Call', (c) => `found · ${c.g.flags.clerkCalled}`, (c) => [`The clerk at ${c.g.flags.clerkCalled} didn't call to get you in trouble. She told the officer that, three times. "I called because I have a daughter. I called because it's cold."`, 'The officer found you two streets over, and bought you a hot chocolate from the machine at the station, and let you hold it until your hands stopped shaking.', `${mom(c)} sent the clerk a card afterward. You don't know what it said. The clerk kept it on the front desk for years.${safeLine(c)}`]),
+    F('fFakeCaught', 3, (c) => c.f('fakeCaught') && !c.g.fakeId, 'Laminated', 'found · the fake ID came back', (c) => [`The fake ID the clerk kept turned up at the station, clipped to a report. It had your face on it and a name that wasn't yours.`, `"Sixty bucks," the officer says, turning it over. "They got you. This is terrible. The hologram is a sticker from a cereal box."`, `${mom(c)} wants to be angry about it. She makes it about four seconds.${safeLine(c)}`]),
+    F('fToldPlace', 4, (c) => c.f('toldParentPlace'), 'You Told Them Where', 'found · because you texted', (c) => [`You texted a friend's parent where you were. Maybe part of you wanted to be found. Maybe all of you did.`, `They drove through the night. When the headlights pulled into ${c.g.flags.toldParentPlace}, they were behind a sheriff's cruiser, and they got out before the car even stopped.`, `"Thank you for telling me," they kept saying. "Thank you for telling me." You don't regret it.${safeLine(c)}`]),
+    F('fCharity', 3, (c) => c.f('charityExposed'), 'The Happy Paws Fund', 'found · the charity that wasn\'t', (c) => [`"${c.g.flags.charityExposed}," the officer reads off his notepad. "I called four animal shelters. I called the state charity registry. I called my mom, who knows every charity in the county."`, '"You made it up." You nod. "Kid, that\'s fraud. Small fraud. Very small fraud." He sighs. "I donated five dollars to it. I want it back."', `You give him five dollars. He gives it back, and buys you a burger with it.${safeLine(c)}`]),
+    F('fCreepDiner', 3, (c) => c.f('creepDiner'), 'The Plate Number', 'found · the night at the diner', (c) => [`The plate number ${c.g.flags.creepDiner} wrote down that night belonged to a man the police had been looking for. Your description helped them find him.`, 'That\'s how they found you, too: the detective wanted to thank the kid who walked into the diner instead of into the car.', `"You did everything right," the detective says. "Every single thing. Most adults wouldn't have." You didn't feel brave. You felt scared. She says that's what brave is.${safeLine(c)}`]),
+    F('fComfort', 2, (c) => Object.values(c.g.att || {}).some((x) => x >= 60), 'Nobody Left Behind', 'found · together to the end', (c) => [`When they find you, ${c.pl} ${c.n === 1 ? 'refuses' : 'refuse'} to be separated from you. Plants their feet. Holds your arm.`, '"We go together or we don\'t go." The officer, who has two kids of her own, looks at the two of you for a long moment and says, "Okay. Together."', `It was the best part of the whole thing, somehow: finding out you had people who'd do that.${safeLine(c)}`]),
+    F('fHelped', 3, (c) => (c.g.helped || 0) >= 1, 'You Walked Someone Home', 'found · after helping someone else', (c) => [`The adult you walked that kid to called the police about you, the next day. Of course she did. She said it in the report: "the child who brought my niece to me is also a missing child."`, 'The officer who finds you already knows what you did. She says it before anything else: "You got another kid safe. You know that?"', `${mom(c)} hears the story from the officer before she hears it from you. She doesn't know whether to be terrified or proud. She decides on both.${safeLine(c)}`]),
+    F('fKart', 2, (c) => c.g.lessons && c.g.lessons.kart >= 2, 'Pole Position', 'found · at the go-kart track', (c) => ['They find you at the go-kart track, mid-race, in the lead.', 'The officer waits at the fence until the checkered flag. You win. He claps. Then he waves you over, and your stomach drops, and he says "nice line through turn three" before he says anything else.', `${mom(c)} makes you promise never to drive anything until you're sixteen. You mostly keep the promise.${safeLine(c)}`]),
+    F('fStallPawn', 2, (c) => Object.values(c.g.street || {}).some((x) => x >= 15) && c.tier === 'city', 'Everybody on the Block', 'found · the side streets', (c) => ['The woman from the alley stall, the pawn shop guy, the waitress, the fake-ID guy (who pretends he\'s never seen you): the whole side street watched the police walk you to the car.', 'The stall woman runs over with a hoodie. "It\'s cold. Take it. Don\'t argue." You don\'t argue.', `The side street never told anyone where you slept. They just made sure you were okay, in their way.${safeLine(c)}`]),
+    F('fVillageStore', 2, (c) => c.tier === 'village', 'The Store Owner', (c) => `found · ${c.town}`, (c) => [`The woman at the ${c.town} general store knew for three days before she called. She told the deputy that, straight out: "I wanted to see if the kid would tell me. The kid didn't. So I called."`, 'She gives you a bag of peppermints and a bottle of juice for the ride. "You come back and visit," she says. "With your mother. I want to meet her."', `You do, the next summer. The two of them talk for an hour on the porch about you like you're not there.${safeLine(c)}`]),
+    F('fBusiness2', 3, (c) => { const b = Object.values(c.g.biz || {}).filter(Boolean)[0]; return b && b.shifts >= 6 && c.n >= 1; }, 'Last Shift', 'found · the whole team', (c) => [`You were halfway through a shift when they came. ${c.pl} kept working until the last customer was served. Professionalism.`, 'The officer counted the cash box with you, twice, and wrote it on the report: "business proceeds, $ amount, to be returned to minors." It\'s the only police report in the county with a profit margin on it.', `Every one of you went home with an equal share.${safeLine(c)}`]),
+    F('fBaseBarn', 3, (c) => c.g.base && c.g.base.type === 'barn', 'The Farmer\'s Barn', 'found · the hayloft', (c) => ['The farmer who owned the barn found you, eventually. He stood at the bottom of the ladder for a long time before he said anything.', '"You fixed the loft door," he said. "That\'s been broken since 1996." He called the sheriff. Then he made you eggs while you waited.', `He asks the deputy to tell your family you're welcome back anytime. "Summers," he says. "Work, not hiding."${safeLine(c)}`]),
+    F('fBaseBuilding', 3, (c) => c.g.base && c.g.base.type === 'building', 'Condemned', 'found · the old building', (c) => ['A city inspector came to condemn the building and found your curtains, your bed, your heater, your very neat stack of library books.', 'He sat down on your crate and read the top book for a while before he called anyone. "My daughter loves this one," he said.', `The building got torn down in spring. You drove past it once, with ${mom(c)}, and she held your hand.${safeLine(c)}`]),
+    F('fBaseCamp', 3, (c) => c.g.base && c.g.base.type === 'camp', 'The Ranger', 'found · the forest camp', (c) => ['The ranger followed the smell of your campfire. She stood at the edge of your clearing and said "I\'m not going to yell. Is anybody hurt?"', 'She checked the fire ring, the tarp, the food hung from a branch, and whistled. "Somebody taught you right." Nobody taught you. You watched videos.', `She drives you out in the ranger truck, and lets you work the radio.${safeLine(c)}`]),
+    F('fRoomLate', 2, (c) => c.g.room && c.g.room.late, 'Past Due', 'found · owing the motel', (c) => ['You were two nights behind on the room when they came. The officer asked the clerk what you owed.', 'Then the officer paid it. Out of her own wallet. "Kid shouldn\'t leave anywhere owing money," she said. "Bad habit to start."', `${mom(c)} paid her back the next day, with a pie.${safeLine(c)}`]),
+    F('fDisguiseKid', 2, (c) => c.g.look && c.g.look.hair && !c.g.look.dye, 'The Haircut', 'found · the bad haircut', (c) => ['You cut your own hair in a gas station bathroom. It shows. The officer tries very hard not to comment.', `${mom(c)} does not try at all. "Oh, baby. Oh, your HAIR." She takes you to her salon the next day. The stylist says "who did this?" and you say "me," and she says "I can tell."`, `It grows back. It always does.${safeLine(c)}`]),
+    F('fWinterMotel', 4, (c) => SH.World2 && SH.World2.season(c.g.t) === 'winter' && c.g.room, 'Snowed In', 'found · the motel in the snow', (c) => ['The snowstorm closed the highway and filled the motel with stranded truckers and one family and one very small, very recognizable guest.', 'The state trooper stranded there too recognized you over the breakfast waffles. She waited until you\'d finished eating.', `You were all stuck there two more days. She taught you to play gin rummy. By the time the roads opened, you'd told her everything.${safeLine(c)}`]),
+    F('fGoneNearly', 3, (c) => c.f('goneOffered') && c.days >= 45, 'So Close', 'found · almost gone for good', (c) => ['You were so close to disappearing. You\'d built a whole life. You could feel it closing around you like a warm coat.', 'And then someone saw a picture of you, and recognized a scar on your chin, and it all came apart in one afternoon.', `The strangest part: part of you was relieved. ${mom(c)} hugged you and you hugged her back and you realized you'd been waiting for this for forty-five days.${safeLine(c)}`]),
+  ]);
+})(window.SH);
+
+</script>
+<script>
+/* notfound.js */
+/* SMALL HOURS — Part 7c: "Disappear for good".
+   After three weeks away, if nobody's close to finding you and your life out here actually works (a place to sleep, a way
+   to eat, a story people believe), you can choose to stop running and just... stay gone. That picks one of the
+   never-found endings (endx_gone.js) based on your run. It's offered in "You & your group" and once, unprompted, at day 45. */
+(function (SH) {
+  const K = SH.K, A = SH.Atlas; if (!K || !A) return;
+  const G = K.G;
+  function pillars(p) {
+    const g = G(), b = g.base, look = g.look ? Object.values(g.look).filter(Boolean).length : 0, biz = Object.values(g.biz || {}).filter(Boolean);
+    return [
+      ['A place to sleep', !!((b && b.up.length >= 3) || (g.room && g.room.until - g.t > 6 * 1440) || (g.lessons && g.lessons.n >= 6))],
+      ['A way to eat', g.money >= 120 || biz.some((x) => x.total >= 100) || Object.values(g.street || {}).some((x) => x >= 30)],
+      ['A story people believe', !!((g.cover || {})[p.id] && g.cover[p.id].story) || look >= 2],
+      ['People who\'d vouch for you', (SH.World2 && SH.World2.rep(p) >= 12) || Object.values(g.att || {}).some((x) => x >= 40) || (g.helped || 0) >= 1],
+    ];
+  }
+  const ready = (p) => { const g = G(); return K.days() >= 21 && (g.heat || 0) < 60 && (g.awayNotice || 0) < 50 && pillars(p).filter((x) => x[1]).length >= 3; };
+  function offer(p) {
+    const ps = pillars(p), n = ps.filter((x) => x[1]).length, g = G();
+    const why = K.days() < 21 ? 'It\'s too soon. Everybody\'s still looking.' : (g.heat || 0) >= 60 || (g.awayNotice || 0) >= 50 ? 'People are too close. You can feel it.' : n < 3 ? 'Your life out here isn\'t steady enough yet.' : '';
+    K.D('Disappear for good?', ['Not running anymore. Not hiding. Just... staying gone. Letting your old life close behind you like water.', ...ps.map(([t, ok]) => `${ok ? '✓' : '·'} ${t}`), why || 'You could do it. You really could. It would cost you things you can\'t get back.'],
+      (why ? [] : [{ t: 'Disappear for good', cls: 'hot', sub: 'This ends the game with a never-found ending.', fn: () => K.D('Are you sure?', ['Your mom. Your room. Your name. Everyone who is looking for you.', 'This is the kind of choice you only get once.'], [{ t: 'Yes. Stay gone.', cls: 'hot', fn: () => { g.flags.goneForGood = 1; SH.EndX.trigger('gone', { place: p }); } }, { t: 'Not yet', fn: K.back }]) }]).concat([{ t: 'Back', fn: K.back }]));
+  }
+  K.me((p, ch) => { if (K.days() >= 14) ch.push({ t: '🌫️ Disappear for good', sub: ready(p) ? 'You could. Really.' : 'Not yet', fn: () => offer(p) }); });
+  K.daily.push(() => { const g = G(); if (!g.away || g.flags.goneOffered || K.days() < 45) return; const p = A.here(); if (!ready(p)) return; g.flags.goneOffered = 1; setTimeout(() => offer(p), 100); });
+  SH.NotFound = { pillars, ready, offer };
 })(window.SH);
 
 </script>
