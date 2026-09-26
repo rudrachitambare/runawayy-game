@@ -129,6 +129,7 @@
       R(x, E.shade('#6a6e76'), E.W * 0.46 + 200, E.gy - 8, E.W, 8); R(x, E.shade('#2e3a48'), E.W * 0.46 + 200, E.gy - 70, E.W, 5); for (let i = 0; i < 4; i++) R(x, E.shade('#2e3a48'), E.W * 0.46 + 210 + i * 70, E.gy - 66, 4, 58); E.rail = true; },
   };
   PL.house2 = PL.house;
+  SH.ScenePL = PL; // other files add art for new location types (pickup.js)
 
   /* ---------------- interiors (home, before you leave) ---------------- */
   function interior(x, E, room) {

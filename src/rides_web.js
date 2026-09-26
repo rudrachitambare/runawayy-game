@@ -37,7 +37,7 @@
     const here = SH.Atlas.here(), next = T.all().find((t) => T.state(t) === 'booked'), B0 = R.board(here, G().t, 240).slice(0, 4);
     return Rd.top('plan') + Rd.form(null, null, 'now') + (next ? `<div class="wsec">Your next trip</div>` + B.row({ go: 'rides.av/tickets', icon: '🎫', t: `${fmt(next.dep)} ${Rd.day(next.dep)} → ${esc(next.toN)}`, sub: `Board at ${esc(next.pts[0])} · leaves ${T.left(next.dep)}` }) : '') +
       `<div class="wsec">Leaving ${esc(here.name)} soon</div>` + (B0.length ? B0.map((b) => { const end = b.rt.stops.length - 1; return B.row({ icon: b.rt.op.icon, go: `rides.av/trip/${encodeURIComponent('rt:' + b.rt.id + '/' + b.i + '/' + end + '/' + b.dep)}?to=${b.rt.stops[end]}`, t: `${fmt(b.dep)} ${esc(b.rt.op.n)} → ${esc(NP(b.rt.stops[end]).name)}`, sub: esc(T.ptxt(T.point(here.id, b.rt))) }); }).join('') : B.note(`Nothing leaves ${esc(here.name)}. You'll have to walk or bike to a bigger place first.`, 'warn')) +
-      B.note('<b>How it works:</b> search, pick a ride, book it. Pay with PocketPal now, or reserve and pay cash when you board. Then go to the boarding spot on your ticket before it leaves and tap <b>🎫 Board</b> there (it shows in the town menu, or at the Harlow bus depot/station).', 'info');
+      B.note('<b>How it works:</b> search, pick a ride, book it. Pay with PocketPal now, or reserve and pay cash when you board. Then go to the boarding spot on your ticket before it leaves and tap <b>🎫 Board</b> there (it shows in the town menu, or, in Harlow, at the spot on your ticket: the Greyline depot, the Route 9 pickup or the station).', 'info');
   }
   function find(path) {
     const f = NP(q(path, 'f')) || SH.Atlas.here(), t = NP(q(path, 't')), w = q(path, 'w') || 'now'; if (!t) return plan();

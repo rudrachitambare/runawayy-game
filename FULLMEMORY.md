@@ -334,3 +334,23 @@ Next ideas (not started, need "go"): two-change trip planning; balance pass on m
 - Fix (CSS ≤760px): `#center` is the scroll container, and `#stage` and `#log` no longer flex, so the scene scrolls away. New lines only scroll into view when they're below the fold (never pushing the line's top off-screen). A "⬆ Scene" pill (`#toScene`) appears after scrolling past 60% of the scene. The title screen also scrolls (`align-items:safe center`).
 - Testing touch scroll: `Input.synthesizeScrollGesture` does NOT work in this headless Chromium. Use CDP `Input.dispatchTouchEvent` touchStart/touchMove/touchEnd (see mobscroll_test.js). Note: #daycard covers everything for 4.2s after a new day.
 - GitHub Pages is live from branch arena/01a0dd5d-runawayy-game: https://rudrachitambare.github.io/runawayy-game/ (root index.html redirects to SmallHours.html). It can't be reached from the sandbox (TLS error), so test SmallHours.html locally.
+
+## Request #30: "fix bugs, NLP + context, keep shoplifting but no caught→home, old v1 characters, a stop for non-official transport"
+- **Old v1 characters** (`src/famfix.js`, tests/famscan.js): the rolled family (mom, the adult man, sister, grandma, surnames, role) only reached text that went through `SH.nm`. The scene header ("Rick: asleep · Lily: home"), side panel, props, phone photos/notes and every ending's AFTER section leaked the defaults (73 leaks in the scan).
+  - Fix: a MutationObserver runs all page text and title/placeholder/aria-label/alt through `SH.nm`, and canvas `fillText`/`strokeText`/`measureText` are wrapped too. It does nothing when the family matches the defaults. famscan now reports 0 leaks.
+  - Jordan is canon (current best friend), not a leak.
+- **Shoplifting** stays. On the run, getting caught is a clerk scene with 3 choices (put it back / "I'm just hungry" / drop it and run). There is **no Found ending** from shoplifting any more (the old `heat > 30 → Endings.found('security')` is gone). At home it's unchanged (the clerk scene plus suspicion).
+- **Route 9 Pickup** (`src/pickup.js`, LOC `pickup`, x585 y318, open 24h, vis 0.5): the Gas-N-Go gravel lot where every **unofficial** road service boards.
+  - `R.informal(o)` = tempo / minivan / car, or bus with style ≠ pro. It stays at the Greyline depot: Averline (express), County Transit, pro buses. Rail uses the station.
+  - routes.js adds a Harlow feeder route for any informal operator that doesn't serve Harlow. This runs after all normal generation, so existing routes and timetables are unchanged.
+  - `T.point` for Harlow plus an informal op returns "Route 9 pickup (the crate bench…)" with loc 'pickup'. Tickets board there.
+  - Departures boards in Harlow are per spot. `R.only` is a filter applied inside `R.board`, **before** the 12-item cap.
+  - Actions: 🚏 Rides leaving from here (at home it goes through "This is it" → `Run.start('pickup')` → board), Read the painted board, Ask a driver, Gas-N-Go chips and restroom, wait on the crate bench.
+  - Scene art: `SH.ScenePL.pickup` (scene2.js now exports `SH.ScenePL`).
+- **PIP context** (`src/pip_ctx.js`, tests/part16.js): `G.pipCtx {place, jr{key,to}, intent, when, at}`, expires after 12 game hours.
+  - Follow-ups: how much / when / where do I get on / direct? / check IDs? / cheaper / faster (says so when it's already the cheapest) / and tonight|tomorrow|at 5pm / what about X / "X?" / book it (opens the rides.av trip).
+  - "there/it/that town" means the last place. Place facts: motel, wifi/signal, police, hospital, shelter, stores, how far, tell me about.
+  - `PIP.placeIn(text)` finds towns anywhere in a sentence, with Levenshtein typos ("birch crossig" → Birch Crossing, and it says it's guessing). Slang: tmrw/tonite/wher/wen….
+  - Works in Harlow too. "my ticket" is passed through to web_more.
+- Tests: part15 (pickup, per-spot boards, shoplift), part16 (PIP context), famscan.js. All parts 2–16 pass; bot runs have 0 errors.
+- Sandbox resets happen mid-session: re-run the chromium setup, and `git fetch; git reset <pushed sha>` (mixed) when HEAD shows d467fc4.

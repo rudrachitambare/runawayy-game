@@ -4,7 +4,7 @@
      pay 'cash' = reserve a seat, pay the driver/counter when you board (you need the cash then).
      Companies that check ages (professional ones, except County Transit) ask the youngest passenger's age.
      12 → refused online ("under 15 can't travel alone"). Saying 15+ books it, but the door check still happens.
-   WHERE YOU BOARD  T.point(placeId, route): Harlow → "Bay 3 · Harlow bus depot" / "Platform 2 · Harlow Station";
+   WHERE YOU BOARD  T.point(placeId, route): Harlow → "Bay 3 · Harlow bus depot" (official buses) / "Route 9 pickup" (everything else on the road, pickup.js) / "Platform 2 · Harlow Station";
      cities: central terminal bays; towns: depot bays; small towns/villages: a kerbside stop outside a landmark;
      sketchy vans/car pools: a parking lot; rail: platforms, or a halt (a sign and a bench) in tiny places.
    BOARDING  "🎫 Board" shows in the town menu (away) or at the Harlow bus depot / station, and in My trips when you're
@@ -66,7 +66,7 @@
   T.board = function (c) {
     const tk = T.get(c), g = G(); if (!tk) return; if (T.state(tk) !== 'booked') return SH.UI.toast('That ticket is ' + tk.st + '.');
     if (A.here().id !== tk.from) return SH.UI.toast(`This leaves from ${tk.fromN}. You're in ${A.here().name}.`);
-    if (!g.away && tk.loc && g.loc !== tk.loc) return SH.UI.toast(`Go to the ${tk.loc === 'station' ? 'train station' : 'bus depot'} first. ${tk.pts[0]}.`);
+    if (!g.away && tk.loc && g.loc !== tk.loc) return SH.UI.toast(`Wrong spot. This one boards at ${tk.pts[0]}.`);
     const go = () => { tk.st = 'used'; const jr = R.byKey(tk.key); jr.prepaid = tk.pay === 'card'; jr.tk = tk.code; SH.Mobile && SH.Mobile.is && SH.Mobile.is() && SH.Mobile.tab('story'); document.body.classList.remove('mapfull'); R.take(jr, A.data().places.find((p) => p.id === tk.to)); };
     const wait = tk.dep - g.t;
     const waitThen = () => (wait > 3 ? SH.UI.dialog({ title: `🎫 ${tk.code}`, text: [`You wait at ${tk.pts[0]}. It leaves at ${fmt(tk.dep)} (${Math.floor(wait / 60) ? Math.floor(wait / 60) + 'h ' : ''}${wait % 60}m).`], choices: [{ t: 'Wait for it', cls: 'safe', fn: go }, { t: 'Not yet', fn: () => {} }] }) : go());

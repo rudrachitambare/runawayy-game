@@ -4484,7 +4484,14 @@ window.SH = window.SH || {};
   A.shoplift = function () {
     const G = SH.G; SH.advance(5, { interrupt: false });
     if (U.chance(0.35)) {
-      if (G.phase === 'run' && G.heat > 30) { SH.Endings.found('security'); return; }
+      if (G.phase === 'run') { // caught on the run: a scene, never a trip home (the story keeps going)
+        SH.st('stress', 12);
+        D({ title: 'Caught', text: ['A hand on your shoulder. The clerk. "Put it back, kid."', G.heat > 30 ? 'He squints at you like he\'s trying to place your face. Then a customer calls him over, and the moment passes.' : 'He looks at your backpack, then at you. "Just put it back."'],
+          choices: [{ t: 'Put it back and walk out', fn: () => { SH.st('mood', -4); log('You walk out fast. You don\'t look back until the next block.', 'warn'); } },
+            { t: '"I\'m just hungry."', fn: () => { if (U.chance(0.6)) { SH.addBag('granola', true); log('He sighs and waves it off. "Go on. Don\'t come back in here doing that."', 'sys'); } else { SH.st('mood', -3); log('"Everybody\'s hungry. Out." You go.', 'warn'); } } },
+            { t: 'Drop it and run', fn: () => { SH.st('energy', -4); log('You drop it and bolt. Nobody follows. Your heart takes three blocks to slow down.', 'warn'); } }] });
+        done(); return;
+      }
       SH.st('stress', 15); SH.susp(20, 'QuikMart called home');
       D({ title: 'Caught', text: ['A hand on your shoulder. The clerk, an older guy in a veteran\'s cap. "Put it back, kid." You put it back.', 'He looks at you for a long time. "You hungry?" You don\'t answer. He hands you the granola bar anyway. "Don\'t do that again. Next time I call somebody."'], choices: [{ t: 'Nod', fn: () => { SH.addBag('granola', true); } }] });
     } else { SH.addBag('granola', true); SH.st('stress', 6); SH.st('mood', -3); SH.tag('stole'); log('It\'s in your sleeve before you can think. Your heart doesn\'t slow down for two blocks.', 'warn'); }
@@ -4895,6 +4902,7 @@ window.SH = window.SH || {};
       R(x, E.shade('#6a6e76'), E.W * 0.46 + 200, E.gy - 8, E.W, 8); R(x, E.shade('#2e3a48'), E.W * 0.46 + 200, E.gy - 70, E.W, 5); for (let i = 0; i < 4; i++) R(x, E.shade('#2e3a48'), E.W * 0.46 + 210 + i * 70, E.gy - 66, 4, 58); E.rail = true; },
   };
   PL.house2 = PL.house;
+  SH.ScenePL = PL; // other files add art for new location types (pickup.js)
 
   /* ---------------- interiors (home, before you leave) ---------------- */
   function interior(x, E, room) {
@@ -8437,6 +8445,8 @@ window.SH = window.SH || {};
 
   /* ---------- build the whole network for this seed ---------- */
   let NET = null;
+  // official = the pro intercity/county/pro buses (Greyline depot) and rail; everything else on the road uses the Route 9 pickup
+  R.informal = (o) => !!o && (o.type === 'tempo' || o.type === 'minivan' || o.type === 'car' || (o.type === 'bus' && o.style !== 'pro'));
   R.net = function () { const D = A.data(); if (!D) return null; if (NET && NET.seed === D.seed) return NET; NET = build(D); return NET; };
 
   function build(D) {
@@ -8522,6 +8532,16 @@ window.SH = window.SH || {};
         });
       }
     });
+    // Harlow's Route 9 pickup: every unofficial bus and every tempo / minivan / car pool runs at least once from Harlow
+    // (added after everything else so the rest of the network and its timetables stay exactly the same)
+    const H = D.places.find((p) => p.home);
+    if (H) ops.forEach((o) => {
+      if (!R.informal(o) || routes.some((rt) => rt.op === o && rt.stops.includes(H.id))) return;
+      const lim = o.type === 'bus' ? [35, 150] : o.type === 'minivan' ? [20, 80] : [10, 55];
+      const ok = o.type === 'tempo' ? (p) => p.tier === 'village' || p.tier === 'small' : o.type === 'minivan' ? (p) => p.tier !== 'city' : o.type === 'bus' ? non : all;
+      const c = within(H.id, lim[0], lim[1], ok).sort(() => r() - 0.5);
+      for (const q of c) if (roadRoute(o, H.id, q.id, o.type === 'car' ? () => false : o.type === 'bus' ? (p) => non(p) || r() < 0.4 : all)) break;
+    });
     // who stops where
     const at = {}; routes.forEach((rt) => rt.stops.forEach((id, i) => (at[id] = at[id] || []).push([rt, i])));
     D.places.forEach((p) => { const L = at[p.id] || []; p.busStop = L.some(([rt]) => !rt.op.T.rail); p.served = L.length > 0; });
@@ -8556,7 +8576,7 @@ window.SH = window.SH || {};
   };
   /* departures from a place in the next `win` minutes (falls back to the first ones tomorrow) */
   R.board = function (place, t, win) {
-    const N = R.net(); const L = (N && N.at[place.id]) || [], out = [];
+    const N = R.net(); const L = ((N && N.at[place.id]) || []).filter(([rt]) => !R.only || R.only(rt.op)), out = []; // R.only: set by pickup.js for Harlow's per-spot boards
     L.forEach(([rt, i]) => { if (i >= rt.stops.length - 1) return; let dep = R.next(rt, i, t); for (let n = 0; n < 3 && dep != null && dep <= t + (win || 360); n++) { out.push({ rt, i, dep }); dep = R.next(rt, i, dep + 1); } });
     if (!out.length) L.forEach(([rt, i]) => { if (i < rt.stops.length - 1) { const dep = R.next(rt, i, t); if (dep != null) out.push({ rt, i, dep }); } });
     return out.sort((a, b) => a.dep - b.dep).slice(0, 12);
@@ -13020,7 +13040,7 @@ window.SH = window.SH || {};
      pay 'cash' = reserve a seat, pay the driver/counter when you board (you need the cash then).
      Companies that check ages (professional ones, except County Transit) ask the youngest passenger's age.
      12 → refused online ("under 15 can't travel alone"). Saying 15+ books it, but the door check still happens.
-   WHERE YOU BOARD  T.point(placeId, route): Harlow → "Bay 3 · Harlow bus depot" / "Platform 2 · Harlow Station";
+   WHERE YOU BOARD  T.point(placeId, route): Harlow → "Bay 3 · Harlow bus depot" (official buses) / "Route 9 pickup" (everything else on the road, pickup.js) / "Platform 2 · Harlow Station";
      cities: central terminal bays; towns: depot bays; small towns/villages: a kerbside stop outside a landmark;
      sketchy vans/car pools: a parking lot; rail: platforms, or a halt (a sign and a bench) in tiny places.
    BOARDING  "🎫 Board" shows in the town menu (away) or at the Harlow bus depot / station, and in My trips when you're
@@ -13082,7 +13102,7 @@ window.SH = window.SH || {};
   T.board = function (c) {
     const tk = T.get(c), g = G(); if (!tk) return; if (T.state(tk) !== 'booked') return SH.UI.toast('That ticket is ' + tk.st + '.');
     if (A.here().id !== tk.from) return SH.UI.toast(`This leaves from ${tk.fromN}. You're in ${A.here().name}.`);
-    if (!g.away && tk.loc && g.loc !== tk.loc) return SH.UI.toast(`Go to the ${tk.loc === 'station' ? 'train station' : 'bus depot'} first. ${tk.pts[0]}.`);
+    if (!g.away && tk.loc && g.loc !== tk.loc) return SH.UI.toast(`Wrong spot. This one boards at ${tk.pts[0]}.`);
     const go = () => { tk.st = 'used'; const jr = R.byKey(tk.key); jr.prepaid = tk.pay === 'card'; jr.tk = tk.code; SH.Mobile && SH.Mobile.is && SH.Mobile.is() && SH.Mobile.tab('story'); document.body.classList.remove('mapfull'); R.take(jr, A.data().places.find((p) => p.id === tk.to)); };
     const wait = tk.dep - g.t;
     const waitThen = () => (wait > 3 ? SH.UI.dialog({ title: `🎫 ${tk.code}`, text: [`You wait at ${tk.pts[0]}. It leaves at ${fmt(tk.dep)} (${Math.floor(wait / 60) ? Math.floor(wait / 60) + 'h ' : ''}${wait % 60}m).`], choices: [{ t: 'Wait for it', cls: 'safe', fn: go }, { t: 'Not yet', fn: () => {} }] }) : go());
@@ -13139,7 +13159,7 @@ window.SH = window.SH || {};
     const here = SH.Atlas.here(), next = T.all().find((t) => T.state(t) === 'booked'), B0 = R.board(here, G().t, 240).slice(0, 4);
     return Rd.top('plan') + Rd.form(null, null, 'now') + (next ? `<div class="wsec">Your next trip</div>` + B.row({ go: 'rides.av/tickets', icon: '🎫', t: `${fmt(next.dep)} ${Rd.day(next.dep)} → ${esc(next.toN)}`, sub: `Board at ${esc(next.pts[0])} · leaves ${T.left(next.dep)}` }) : '') +
       `<div class="wsec">Leaving ${esc(here.name)} soon</div>` + (B0.length ? B0.map((b) => { const end = b.rt.stops.length - 1; return B.row({ icon: b.rt.op.icon, go: `rides.av/trip/${encodeURIComponent('rt:' + b.rt.id + '/' + b.i + '/' + end + '/' + b.dep)}?to=${b.rt.stops[end]}`, t: `${fmt(b.dep)} ${esc(b.rt.op.n)} → ${esc(NP(b.rt.stops[end]).name)}`, sub: esc(T.ptxt(T.point(here.id, b.rt))) }); }).join('') : B.note(`Nothing leaves ${esc(here.name)}. You'll have to walk or bike to a bigger place first.`, 'warn')) +
-      B.note('<b>How it works:</b> search, pick a ride, book it. Pay with PocketPal now, or reserve and pay cash when you board. Then go to the boarding spot on your ticket before it leaves and tap <b>🎫 Board</b> there (it shows in the town menu, or at the Harlow bus depot/station).', 'info');
+      B.note('<b>How it works:</b> search, pick a ride, book it. Pay with PocketPal now, or reserve and pay cash when you board. Then go to the boarding spot on your ticket before it leaves and tap <b>🎫 Board</b> there (it shows in the town menu, or, in Harlow, at the spot on your ticket: the Greyline depot, the Route 9 pickup or the station).', 'info');
   }
   function find(path) {
     const f = NP(q(path, 'f')) || SH.Atlas.here(), t = NP(q(path, 't')), w = q(path, 'w') || 'now'; if (!t) return plan();
@@ -13199,12 +13219,12 @@ window.SH = window.SH || {};
         <div class="muted" style="font-size:11px;margin:3px 0">${t.ops.map(esc).join(' → ')}</div>
         ${t.st === 'booked' ? `<div style="font-size:12px;margin:6px 0;padding:6px 8px;background:#0005;border-radius:8px">📍 <b>Board at:</b> ${esc(t.pts[0])}<br>⏰ Be there by <b>${fmt(t.dep - 10)}</b> · leaves ${T.left(t.dep)}${t.pts.length > 1 ? '<br>🔁 Change: ' + t.pts.slice(1).map(esc).join(' · ') : ''}</div>
         <div style="font-size:11.5px">${t.pay === 'card' ? `✅ Paid $${t.cost} with PocketPal` : `💵 Pay <b>$${t.cost}</b> cash when you board (you have $${Math.floor(G().money)})`}${t.lied ? ' · <span style="color:#f2c14e">booked as 15+</span>' : ''}</div>
-        <div style="display:flex;gap:6px;margin-top:8px">${here ? `<button class="wbtn ok" onclick="SH.Tickets.board('${t.code}')">🎫 Board</button>` : `<button class="wbtn alt" onclick="SH.Browser.go('avermaps.av/p/${t.from}')">${SH.Atlas.here().id === t.from ? `🗺️ Go to ${t.loc === 'station' ? 'the station' : t.loc === 'bus' ? 'the bus depot' : 'the stop'}` : `🗺️ Get to ${esc(t.fromN)}`}</button>`}<button class="wbtn bad" style="width:auto;padding:9px 12px" onclick="SH.Tickets.cancel('${t.code}')">Cancel</button></div>
-        ${!here ? `<div class="muted" style="font-size:10.5px;margin-top:5px">${SH.Atlas.here().id !== t.from ? `You're in ${esc(SH.Atlas.here().name)}. This leaves from ${esc(t.fromN)}.` : G().away ? '' : `Walk to the ${t.loc === 'station' ? 'train station' : 'bus depot'} on the map, then tap 🎫 Board there.`}</div>` : ''}` :
+        <div style="display:flex;gap:6px;margin-top:8px">${here ? `<button class="wbtn ok" onclick="SH.Tickets.board('${t.code}')">🎫 Board</button>` : `<button class="wbtn alt" onclick="SH.Browser.go('avermaps.av/p/${t.from}')">${SH.Atlas.here().id === t.from ? `🗺️ Go to ${t.loc === 'station' ? 'the station' : t.loc === 'bus' ? 'the bus depot' : t.loc === 'pickup' ? 'the Route 9 pickup' : 'the stop'}` : `🗺️ Get to ${esc(t.fromN)}`}</button>`}<button class="wbtn bad" style="width:auto;padding:9px 12px" onclick="SH.Tickets.cancel('${t.code}')">Cancel</button></div>
+        ${!here ? `<div class="muted" style="font-size:10.5px;margin-top:5px">${SH.Atlas.here().id !== t.from ? `You're in ${esc(SH.Atlas.here().name)}. This leaves from ${esc(t.fromN)}.` : G().away ? '' : `Walk to the ${SH.Tickets.locName ? SH.Tickets.locName(t.loc) : 'bus depot'} on the map, then tap 🎫 Board there.`}</div>` : ''}` :
         t.st === 'missed' ? `<button class="wbtn alt" style="margin-top:6px" onclick="SH.Browser.go('rides.av/find?f=${t.from}&t=${t.to}&w=now')">Find the next one</button>` : ''}</div>`;
     };
     return Rd.top('tix', 'Your tickets') + (live.length ? live.map(card).join('') : B.note('No upcoming trips. Book one from the 🔎 Plan tab.', 'info')) + (old.length ? '<div class="wsec">Past</div>' + old.map(card).join('') : '') +
-      B.note('<b>Boarding:</b> be at the spot on your ticket before it leaves. Away from home, the <b>🎫 Board</b> button is in the town menu. In Harlow, go to the bus depot or the train station. Miss it and the ticket is gone (card tickets can be cancelled before for a partial refund).', 'info');
+      B.note('<b>Boarding:</b> be at the spot on your ticket before it leaves. Away from home, the <b>🎫 Board</b> button is in the town menu. In Harlow: official buses leave from the Greyline depot, cheap buses, tempos, vans and car pools from the Route 9 pickup (Gas-N-Go lot), trains from the station. Miss it and the ticket is gone (card tickets can be cancelled before for a partial refund).', 'info');
   }
   function deps() {
     const here = SH.Atlas.here(), L = R.board(here, G().t, 360);
@@ -13416,6 +13436,267 @@ window.SH = window.SH || {};
   const bind = () => { const c = C(); if (!c || c._ms) return; c._ms = 1; c.addEventListener('scroll', sync, { passive: true }); window.addEventListener('resize', sync); sync(); };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bind); else bind();
   SH.MobScroll = { reveal, sync };
+})(window.SH);
+
+</script>
+<script>
+/* pickup.js */
+/* SMALL HOURS — the Route 9 Pickup: Harlow's unofficial stop.
+   The Greyline depot is for the official lines (Averline, County Transit, professional coaches); Harlow Station is rail.
+   Everything else on the road (CheapRide and the other cheap buses, tempos, minivan shuttles, car pools) picks up in the
+   gravel lot beside the Gas-N-Go on Route 9 & Center Ave. No ticket window, no bays: a painted board, a crate bench,
+   drivers who shout where they're going. Less watched than the depot. Operators here are sketchy-but-safe at worst.
+   routes.js guarantees each of these companies runs at least once from Harlow (R.informal marks them). */
+(function (SH) {
+  const U = SH.util, R = SH.Routes, A = SH.Atlas, D = (o) => SH.UI.dialog(o), log = (t, c) => SH.UI.log(t, c || 'sys');
+  const G = () => SH.G, H = () => A.data().places.find((p) => p.home) || A.data().places[0];
+  const fmt = (t) => R.fmt(t);
+
+  SH.LOC.pickup = { name: 'Route 9 Pickup', sub: 'Gas-N-Go lot · vans, tempos, cheap buses', x: 585, y: 318, type: 'pickup', icon: '🚐', indoor: false, vis: 0.5, bus: true,
+    blurb: 'A gravel lot beside the Gas-N-Go where the cheap buses, tempos and van shuttles pull in. A hand-painted board, a bench made of a plank on two crates, and nobody checking anything.' };
+  SH.OPEN.pickup = () => true;
+  if (SH.World && SH.World.START_KNOWN && !SH.World.START_KNOWN.includes('pickup')) SH.World.START_KNOWN.push('pickup');
+
+  /* which services use which Harlow spot */
+  const WHERE = { bus: (o) => !o.T.rail && !R.informal(o), station: (o) => !!o.T.rail, pickup: (o) => R.informal(o) };
+  const T = SH.Tickets;
+  T.locName = (l) => ({ station: 'train station', bus: 'Greyline bus depot', pickup: 'Route 9 pickup (Gas-N-Go lot)' })[l] || 'stop';
+  const SPOTS = ['the curb by the air pump', 'the painted board by the ice machine', 'the crate bench', 'the far end of the lot, by the dumpster fence'];
+  const bp = T.point;
+  T.point = function (pid, rt) {
+    const p = A.data().places.find((x) => x.id === pid);
+    if (p && p.home && rt && rt.op && R.informal(rt.op)) { let h = 0; for (const c of String(rt.id)) h = (h * 31 + c.charCodeAt(0)) >>> 0; return { n: 'Route 9 pickup', at: SPOTS[h % SPOTS.length], loc: 'pickup' }; }
+    return bp.apply(this, arguments);
+  };
+
+  /* departures boards in Harlow only show what actually leaves from where you're standing */
+  const bView = R.boardView;
+  R.boardView = function (place) { const g = G(); R.only = (!g.away && place && place.home && WHERE[g.loc]) || null; try { return bView.apply(this, arguments); } finally { R.only = null; } };
+  // (boardView builds its choices synchronously, so the filter only applies to that one board)
+
+  const here = () => { const g = G(); R.only = WHERE.pickup; try { return R.board(H(), g.t); } finally { R.only = null; } };
+  const soon = () => here().filter((b) => b.dep - G().t <= 90);
+
+  /* ---------- actions ---------- */
+  const bl = SH.Actions.list;
+  SH.Actions.list = function () {
+    const out = bl.apply(this, arguments), g = G(); if (!g || g.loc !== 'pickup' || g.away || !out || !out.acts) return out;
+    const a = out.acts, act = (label, sub, fn, o) => Object.assign({ label, sub, fn }, o || {}), done = () => SH.UI.afterAction();
+    const B = here(), nx = B[0];
+    a.push(act('🚏 Rides leaving from here', nx ? `Next: ${fmt(nx.dep)} ${nx.rt.op.icon} ${nx.rt.op.n}` : 'Nothing else today', () => {
+      if (g.phase !== 'home') return R.boardView(H());
+      D({ title: 'This is it', text: ['If you get in one of these, you\'ve run away. No going back upstairs and pretending.', 'Nobody here will ask. That\'s the point of this place.'],
+        choices: [{ t: 'Get on something', cls: 'hot', fn: () => { SH.Run.start('pickup', false); setTimeout(() => R.boardView(H()), 60); } }, { t: 'Not today', cls: 'safe', fn: () => {} }] });
+    }, { cls: g.phase === 'home' ? 'hot' : 'safe' }));
+    a.push(act('Read the painted board', 'Who stops here, and when', () => {
+      SH.advance(3, { interrupt: false }); const ops = {}; B.forEach((b) => { const o = b.rt.op; (ops[o.id] = ops[o.id] || { o, t: [] }).t.push(b.dep); });
+      const lines = Object.values(ops).map(({ o, t }) => `${o.icon} ${o.n.toUpperCase()}: ${t.slice(0, 3).map(fmt).join(', ')}`);
+      log(lines.length ? 'The board is plywood, repainted so many times the old times show through. ' + lines.join(' · ') + '. Underneath, in marker: "PAY THE DRIVER. NO REFUNDS. NO CRYING."' : 'The board is plywood. Everything on it for today is crossed out.', 'sys'); done();
+    }));
+    a.push(act('Ask a driver where he\'s headed', '5 min', () => {
+      SH.advance(5, { interrupt: false }); const s = soon();
+      if (!s.length) { log('The lot is empty except for a pigeon and a guy filling up a lawnmower gas can. Nothing\'s pulling in for a while.', 'sys'); return done(); }
+      const b = U.pick(s), o = b.rt.op, end = A.data().places.find((p) => p.id === b.rt.stops[b.rt.stops.length - 1]);
+      const who = { tempo: 'A tempo driver with a toothpick', minivan: 'A woman leaning on a dented van', car: 'A guy in a sedan with a RIDES sign on the dash', bus: 'A bus driver finishing a cigarette' }[o.type] || 'A driver';
+      log(`${who} squints at you. "${end.name}. ${fmt(b.dep)}. ${R.price(b.rt, b.i, b.rt.stops.length - 1)} bucks, cash, pay when you get in." ${o.style === 'sketchy' ? 'He doesn\'t ask how old you are. He doesn\'t ask anything.' : '"You by yourself?" You shrug. He shrugs back.'}`, 'sys');
+      SH.flag('knowsPickup'); done();
+    }));
+    a.push(act('Gas-N-Go: chips $1.75', '', () => { if (g.money < 1.75) return SH.UI.toast('Not enough cash.'); SH.money(-1.75); (g.tx = g.tx || []).push({ t: g.t, d: 'Gas-N-Go', a: -1.75 }); SH.addBag('chips', true); done(); }));
+    a.push(act('Gas-N-Go restroom', '+hygiene · the key is on a hubcap', () => { SH.advance(10, { interrupt: false }); SH.st('hyg', 6); done(); }));
+    if (g.phase === 'run') a.push(act('Sit on the crate bench and wait', '30 min · cold, but nobody looks', () => { SH.advance(30, { interrupt: true }); SH.st('warmth', SH.raining() ? -8 : -3); SH.st('stress', -3); log(U.pick(['A tempo pulls in, honks twice, and leaves half-full. The driver yells a town name you don\'t catch.', 'Two farmhands load a crate of chickens onto the roof of a van. The chickens have opinions.', 'The Gas-N-Go clerk comes out to smoke, looks at you, looks at the road, goes back in.']), 'sys'); done(); }));
+    return out;
+  };
+
+  /* ---------- scene art ---------- */
+  const PL = SH.ScenePL;
+  if (PL) PL.pickup = function (x, E) {
+    const gy = E.gy, W = E.W, sh = E.shade, Rr = (c, X, Y, w, h) => { x.fillStyle = c; x.fillRect(X, Y, w, h); };
+    Rr(sh('#6d6558'), 0, gy - 6, W, 6); // gravel
+    for (let i = 0; i < 60; i++) Rr(sh(i % 2 ? '#7c7466' : '#5c5549'), (i * 97) % W, gy - 5 + (i % 3), 3, 2);
+    const cx = W * 0.3; // Gas-N-Go canopy + pumps
+    Rr(sh('#dedad2'), cx - 120, gy - 118, 240, 16); Rr(E.night ? '#ff8a3d' : sh('#d4602a'), cx - 120, gy - 104, 240, 4);
+    Rr(sh('#b8b4ac'), cx - 100, gy - 102, 6, 102); Rr(sh('#b8b4ac'), cx + 94, gy - 102, 6, 102);
+    [cx - 40, cx + 30].forEach((px) => { Rr(sh('#e8e4dc'), px, gy - 38, 20, 38); Rr(E.night ? '#ffcf6b' : sh('#333'), px + 4, gy - 32, 12, 7); });
+    x.font = 'bold 12px system-ui'; x.fillStyle = E.night ? '#ffb070' : sh('#b24a1c'); x.fillText('GAS-N-GO', cx - 30, gy - 107);
+    if (E.night) E.lamps.push([cx, gy - 100, 1.6]);
+    const bx = W * 0.62; // the painted board + crate bench
+    Rr(sh('#5a4632'), bx, gy - 70, 5, 70); Rr(sh('#5a4632'), bx + 95, gy - 70, 5, 70); Rr(sh('#e2d6b8'), bx - 6, gy - 96, 112, 34);
+    x.font = 'bold 11px system-ui'; x.fillStyle = sh('#b0261e'); x.fillText('RIDES · VANS', bx + 8, gy - 82); x.font = 'bold 9px system-ui'; x.fillStyle = sh('#2a2a2a'); x.fillText('TEMPOS · $ CASH', bx + 10, gy - 69);
+    Rr(sh('#8a6a3e'), bx + 10, gy - 16, 22, 16); Rr(sh('#8a6a3e'), bx + 70, gy - 16, 22, 16); Rr(sh('#a8844e'), bx + 4, gy - 21, 94, 5);
+    const b = soon()[0]; // something idling in the lot when a ride is due
+    if (b && b.dep - G().t <= 25) {
+      const t = b.rt.op.type, vx = W * 0.8, col = sh(b.rt.op.col || '#c9a227');
+      const w = t === 'bus' ? 190 : t === 'car' ? 90 : t === 'tempo' ? 80 : 120, h = t === 'bus' ? 46 : t === 'car' ? 24 : 36;
+      x.beginPath(); x.roundRect ? x.roundRect(vx - w / 2, gy - h - 8, w, h, 7) : x.rect(vx - w / 2, gy - h - 8, w, h); x.fillStyle = col; x.fill();
+      x.fillStyle = E.night ? 'rgba(255,230,170,.75)' : 'rgba(170,200,230,.7)'; for (let i = 0; i < Math.max(1, Math.floor(w / 36)); i++) x.fillRect(vx - w / 2 + 8 + i * 34, gy - h - 2, 24, h * 0.4);
+      x.fillStyle = '#0c0d10'; x.beginPath(); x.arc(vx - w / 2 + 16, gy - 6, 7, 0, 7); x.arc(vx + w / 2 - 16, gy - 6, 7, 0, 7); x.fill();
+    }
+  };
+})(window.SH);
+
+</script>
+<script>
+/* pip_ctx.js */
+/* SMALL HOURS — PIP with context. PIP remembers what you were just talking about (a place, a ride, a topic) so
+   follow-ups work the way people actually type them:
+     "bus to oakton" → "how much?" · "when does it leave?" · "where do i get on?" · "cheaper?" · "faster?"
+     "and tomorrow?" · "what about ashwood?" · "ashwood?" · "book it" · "is there a motel there?" · "how far is it?"
+   Town names are found anywhere in a sentence and forgive typos ("bus to oaktn tmrw").
+   Place questions for any town: motels, wifi/signal, police, hospital, shelter, stores, distance, "tell me about X".
+   Works in Harlow too, not only once you're away. Anything it doesn't own falls through to the older PIP layers. */
+(function (SH) {
+  const PIP = SH.PIP; if (!PIP || !PIP.reply) return;
+  const R = SH.Routes, A = SH.Atlas, T = SH.Tickets;
+  const G = () => SH.G, places = () => (A.data() ? A.data().places : []), here = () => A.here();
+  const C = () => { const g = G(); return (g.pipCtx = g.pipCtx || {}); };
+  const fmt = (t) => R.fmt(t), dayw = (t) => (SH.Rides ? ' ' + SH.Rides.day(t).toLowerCase() : '');
+  const SL = { tmrw: 'tomorrow', tmr: 'tomorrow', tmw: 'tomorrow', tmro: 'tomorrow', tomoro: 'tomorrow', tomorow: 'tomorrow', tommorow: 'tomorrow', '2moro': 'tomorrow', '2morrow': 'tomorrow', tonite: 'tonight', '2nite': 'tonight', tn: 'tonight', rn: 'now', hw: 'how', wat: 'what', wen: 'when', whn: 'when', wher: 'where', whr: 'where', hm: 'how much', chepest: 'cheapest', cheeper: 'cheaper', fastr: 'faster', motl: 'motel', hotl: 'hotel', wify: 'wifi' };
+  const norm = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9' ]/g, ' ').replace(/'/g, '').replace(/\s+/g, ' ').trim().split(' ').map((w) => SL[w] || w).join(' ');
+  const lev = (a, b) => { if (Math.abs(a.length - b.length) > 2) return 9; const d = Array.from({ length: b.length + 1 }, (_, i) => i); for (let i = 1; i <= a.length; i++) { let p = d[0]; d[0] = i; for (let j = 1; j <= b.length; j++) { const t = d[j]; d[j] = Math.min(d[j] + 1, d[j - 1] + 1, p + (a[i - 1] === b[j - 1] ? 0 : 1)); p = t; } } return d[b.length]; };
+  const STOP = new Set('to the a an in at is there any a from for of and or what about how much when where do does i get go going bus train ride ticket tempo van me my can could would should tonight tomorrow now it that this near far with have has any'.split(' '));
+
+  /* ---------- find a town anywhere in a sentence (exact, then fuzzy) ---------- */
+  function placeIn(text) {
+    const s = ' ' + norm(text) + ' ', P = places(); if (!P.length) return null;
+    if (/\bgrandma'?s?\b/.test(s)) return { p: P.find((x) => x.grandma), guess: false };
+    if (/\b(harlow|home)\b/.test(s)) return { p: P.find((x) => x.home), guess: false };
+    const byLen = P.slice().sort((a, b) => b.name.length - a.name.length);
+    for (const p of byLen) if (s.includes(' ' + norm(p.name) + ' ')) return { p, guess: false };
+    const w = s.trim().split(' ').filter((x) => x && !STOP.has(x)); let best = null, bd = 9;
+    for (let n = 1; n <= 2; n++) for (let i = 0; i + n <= w.length; i++) { const q = w.slice(i, i + n).join(' '); if (q.length < 4) continue;
+      for (const p of P) { const nm = norm(p.name), d = lev(q, nm), lim = nm.length <= 6 ? 1 : 2; if (d <= lim && d < bd) { bd = d; best = p; } } }
+    return best ? { p: best, guess: bd > 0 } : null;
+  }
+  PIP.placeIn = placeIn;
+
+  /* ---------- when ---------- */
+  function when(t) {
+    const g = G(), d0 = Math.floor(g.t / 1440) * 1440; let m = t.match(/\b(?:at|after|around)\s+(\d{1,2})(?::(\d\d))?\s*(am|pm)?\b/);
+    if (m) { let h = +m[1] % 12; if (m[3] === 'pm' || (!m[3] && h < 7)) h += 12; let x = d0 + h * 60 + (+m[2] || 0); if (/\btomorrow\b/.test(t) || x < g.t) x += 1440; return x; }
+    if (/\btomorrow\b/.test(t)) return d0 + 1440 + (/\b(afternoon)\b/.test(t) ? 13 * 60 : /\b(evening|night)\b/.test(t) ? 18 * 60 : 7 * 60);
+    if (/\b(tonight|this evening)\b/.test(t)) return Math.max(g.t, d0 + 18 * 60);
+    if (/\b(in the )?morning\b/.test(t)) return g.t % 1440 < 7 * 60 ? d0 + 7 * 60 : d0 + 1440 + 7 * 60;
+    if (/\blater\b/.test(t)) return g.t + 180;
+    return null;
+  }
+
+  /* ---------- rides ---------- */
+  const pts = (jr) => T ? T.ptxt(T.point(jr.legs[0].rt.stops[jr.legs[0].i], jr.legs[0].rt)) : 'the stop';
+  const ops = (jr) => jr.legs.map((l) => l.rt.op.icon + ' ' + l.rt.op.n).join(' → ');
+  const strict = (jr) => T && jr.legs.some((l) => T.checks(l.rt.op));
+  function best(to, t, pref) {
+    const js = R.journeys(here(), to, t, 6); if (!js.length) return null;
+    const k = pref === 'cheap' ? (j) => j.cost : pref === 'fast' ? (j) => j.arr - j.dep : (j) => j.arr;
+    return js.slice().sort((a, b) => k(a) - k(b))[0];
+  }
+  function ride(to, t, pref, guess) {
+    const c = C(), from = here();
+    if (from.id === to.id) return `You're already in ${to.name}.`;
+    const jr = best(to, t || G().t, pref);
+    c.place = to.id; c.intent = 'ride'; c.when = t || null; c.at = G().t;
+    const M = G().pipMem; if (M && !M.goal) M.goal = to.id;
+    if (!jr) { c.jr = null; return `${guess ? `(Guessing you mean ${to.name}.) ` : ''}No bus, tempo or train links ${from.name} and ${to.name}${t ? ' then' : ''}, even with changes. Feet, a bike, or someone's car.`; }
+    const same = pref && c.jr && c.jr.key === jr.key; c.jr = { key: jr.key, to: to.id };
+    if (same) return `That one's already the ${pref === 'cheap' ? 'cheapest' : 'fastest'}: ${fmt(jr.dep)}${dayw(jr.dep)}, $${jr.cost}. Nothing ${pref === 'cheap' ? 'cheaper' : 'faster'} goes to ${to.name}${t ? ' then' : ' today'}.`;
+    const tag = pref === 'cheap' ? 'Cheapest: ' : pref === 'fast' ? 'Fastest: ' : '';
+    return `${guess ? `(Guessing you mean ${to.name}.) ` : ''}${tag}${fmt(jr.dep)}${dayw(jr.dep)}, ${ops(jr)}, arrives ${fmt(jr.arr)}${dayw(jr.arr) !== dayw(jr.dep) ? dayw(jr.arr) : ''}. $${jr.cost}. Board at ${pts(jr)}.${strict(jr) ? ' They check ages.' : ''} Say "book it", "cheaper", "faster" or "tomorrow".`;
+  }
+  const cur = () => { const c = C(); if (!c.jr || G().t - (c.at || 0) > 720) return null; const jr = R.byKey(c.jr.key); return jr ? { jr, to: places().find((p) => p.id === c.jr.to) } : null; };
+
+  /* ---------- places ---------- */
+  function facts(p, t) {
+    const g = G(), mi = A.miles ? Math.round(A.miles(here(), p)) : null, tier = p.tier === 'small' ? 'small town' : p.tier;
+    const S = p.services || {}, net = SH.Net && SH.Net.cell ? SH.Net.cell(p) : null;
+    if (/\b(motel|hotel|room|sleep|stay|bed|inn)\b/.test(t)) { const M = SH.Motels ? SH.Motels.motels(p) : []; return M.length ? `${p.name}: ${M.map((m) => `${m.n} ($${m.rate}/night, ${m.k === 'pro' ? 'chain, wants ID' : m.k === 'loose' ? 'cash, no questions' : 'family-run, haggle'})`).join('; ')}.` : `No motel in ${p.name}.${S.shelter ? ' There is a shelter.' : ''}`; }
+    if (/\b(wifi|wi fi|internet|signal|service|bars|data)\b/.test(t)) return net ? `${p.name}: ${net.gen || 'weak'} signal${net.spot ? ', best at ' + net.spot : ''}.${(S.wifi || []).length ? ' Free wifi: ' + S.wifi.join(', ') + '.' : ' No free wifi.'}` : `${p.name}: ${(S.wifi || []).length ? 'free wifi at ' + S.wifi.join(', ') : 'no free wifi'}.`;
+    if (/\b(police|cops?|sheriff|officers?)\b/.test(t)) return p.hasPolice === false || !p.police ? `${p.name} has no police station. The county sheriff covers it, eventually.` : `${p.name}: ${typeof p.police === 'string' ? p.police.replace(/\.+$/, '') : 'a police department'}.`;
+    if (/\b(hospital|clinic|doctor|er)\b/.test(t)) return S.hospital ? `${p.name} has a hospital.` : `No hospital in ${p.name}. Nearest real one is a bigger town.`;
+    if (/\b(shelter|youth house|drop in)\b/.test(t)) return S.shelter ? `${p.name} has a shelter. They take kids.` : `No shelter in ${p.name}.`;
+    if (/\b(store|shop|food|grocery|buy|eat)\b/.test(t)) { const st = SH.Stores && SH.Stores.BY_TIER ? (SH.Stores.BY_TIER[p.tier] || []).map((k) => (SH.Stores.STORES[k] || {}).n || k) : []; return st.length ? `${p.name} has: ${st.slice(0, 6).join(', ')}.` : `${p.name} is too small for real stores.`; }
+    if (/\b(how far|distance|miles|how long)\b/.test(t)) return mi != null ? `${p.name} is about ${mi} miles from ${here().name}.` : `${p.name} is on the map. Far-ish.`;
+    return `${p.name}: ${tier}, pop. ${(p.pop || 0).toLocaleString()}${p.biome ? ', ' + p.biome : ''}${mi != null && p.id !== here().id ? `, ${mi} mi away` : ''}. ${S.hospital ? 'Hospital. ' : ''}${S.shelter ? 'Shelter. ' : ''}${p.police ? '' : 'No police station. '}${p.served ? 'Buses stop here.' : 'Nothing stops here.'}`;
+  }
+
+  /* ---------- the router ---------- */
+  const base = PIP.reply;
+  PIP.reply = function (raw) {
+    const t = norm(raw), c = C(), an = SH.NLP && SH.NLP.analyze ? SH.NLP.analyze(raw) : null; let r = null;
+    if (!G() || !A.data() || (an && an.has && an.has('selfharm'))) return base.apply(this, arguments);
+    try { r = route(t, c); } catch (e) { console.warn('pip_ctx', e); r = null; }
+    return r || base.apply(this, arguments);
+  };
+  function route(t, c) {
+    if (/\bmy tickets?\b|\bmy (trip|booking)\b/.test(t)) return null; // tickets answer lives in web_more
+    const found = placeIn(t), p = found && found.p, there = /\b(there|that (town|place)|it)\b/.test(t) && c.place ? places().find((x) => x.id === c.place) : null;
+    const X = cur(), tm = when(t);
+    // Harlow's three boarding spots
+    if (/\bwhere\b/.test(t) && /\b(tempos?|vans?|minivans?|car ?pools?|cheapride|cheap bus(es)?|unofficial|pickup|pick up)\b/.test(t)) return 'In Harlow: cheap buses, tempos, vans and car pools pick up at the Route 9 pickup (the gravel lot by the Gas-N-Go, Route 9 & Center Ave). Averline and County Transit leave from the Greyline depot. Trains from Harlow Station.';
+    // follow-ups about the ride we were just talking about
+    if (X) {
+      if (/^(ok |okay |yes |yeah |sure )?(book|reserve)( it| that| this| one| a seat| the seat)?( please)?$/.test(t) || /\bbook (it|that|this one)\b/.test(t)) { SH.Phone.open('browser'); SH.Browser.go('rides.av/trip/' + encodeURIComponent(X.jr.key) + '?to=' + X.to.id); return `Opened it on AverRides. Pick cash or card, then "Book seat".`; }
+      if (!p && /\b(how much|cost|price|fare|expensive)\b/.test(t)) return `$${X.jr.cost}${X.jr.legs.some((l) => l.rt.op.S && l.rt.op.S.cash) ? ', cash only' : ''}. You have $${Math.floor(G().money)}.`;
+      if (!p && /\b(when|what time)\b/.test(t) && /\b(leave|leaves|go|goes|depart|get there|arrive|arrives|it)\b/.test(t)) return `Leaves ${fmt(X.jr.dep)}${dayw(X.jr.dep)}, gets to ${X.to.name} at ${fmt(X.jr.arr)}${dayw(X.jr.arr)}.`;
+      if (!p && /\bwhere\b/.test(t) && /\b(get on|board|catch|leave from|leaves from|pick ?up|wait)\b/.test(t)) return `Board at ${pts(X.jr)}. Be there 10 minutes early.`;
+      if (!p && /\b(change|changes|transfer|direct)\b/.test(t)) return X.jr.legs.length > 1 ? `One change, at ${places().find((q) => q.id === X.jr.legs[1].rt.stops[X.jr.legs[1].i]).name} (${fmt(X.jr.legs[1].dep)}).` : 'Direct. No changes.';
+      if (!p && /\b(check|checks|id|age|alone|by myself)\b/.test(t)) return strict(X.jr) ? `${X.jr.legs.find((l) => T.checks(l.rt.op)).rt.op.n} checks IDs. Under 15 alone gets turned away.` : 'Nobody on that one checks ages. Driver\'s call, and they don\'t call.';
+      if (/\b(cheaper|cheapest|less money|budget)\b/.test(t)) return ride(p || X.to, tm || c.when, 'cheap');
+      if (/\b(faster|fastest|quicker|quickest|sooner)\b/.test(t)) return ride(p || X.to, tm || c.when, 'fast');
+      if (!p && tm != null && t.split(' ').length <= 5) return ride(X.to, tm);
+    }
+    // questions about a town ("is there a motel in X", "wifi there?", "tell me about X")
+    const tgt = p || there;
+    if (tgt && /\b(motel|hotel|room|sleep|stay|bed|inn|wifi|wi fi|internet|signal|service|bars|police|cops?|sheriff|hospital|clinic|doctor|shelter|store|shop|food|grocery|how far|distance|miles|tell me about|what'?s .* like|what is|whats)\b/.test(t) && !/\b(bus|train|ride|tempo|van|ticket|get to|go to|fare|how much)\b/.test(t)) { c.place = tgt.id; c.at = G().t; return (found && found.guess ? `(Guessing you mean ${tgt.name}.) ` : '') + facts(tgt, t); }
+    // rides: "bus to X", "how do i get there", "what about X", "X?"
+    const rideish = /\b(bus|buses|train|ride|rides|tempo|van|ticket|get to|go to|going to|travel|head to|way to|route|directions|fare)\b/.test(t) || /\bget there\b|\bhow much (is it )?(to|for)\b/.test(t);
+    if (tgt && rideish) return ride(tgt, tm, /\bcheap/.test(t) ? 'cheap' : /\bfast|quick/.test(t) ? 'fast' : null, found && found.guess);
+    if (p && c.intent === 'ride' && G().t - (c.at || 0) < 720 && (/^(and |what about |how about |or )/.test(t) || t.split(' ').length <= 3)) return ride(p, tm || c.when, null, found.guess);
+    return null;
+  }
+})(window.SH);
+
+</script>
+<script>
+/* famfix.js */
+/* SMALL HOURS — the rolled family everywhere.
+   family.js renames the default cast (Rick / Lily / Dana Reyes / Hollis / Grandma Rose / "stepdad") through SH.nm,
+   but lots of UI writes text straight to the page (scene header, hotspot labels, side panel, props, endings,
+   phone notes...) or paints it on the canvas, so the old default names leaked through.
+   This is a safety net: any text that reaches the page or the canvas goes through the same renamer.
+   It costs nothing when your family happens to use the default names. */
+(function (SH) {
+  const OLD = /\b(Rick|RICK|Lily|LILY|Dana|Hollis|Reyes|Rose|step-?dad|stepfather|Sam|SAM)\b/i;
+  const on = () => { const G = SH.G, f = G && G.fam; if (!f) return false; return f.rick !== 'Rick' || f.sib !== 'Lily' || f.mom !== 'Dana' || f.momS !== 'Reyes' || f.rickS !== 'Hollis' || f.gma !== 'Rose' || f.role !== 'stepdad' || (G.name && G.name !== 'Sam') || f.gender !== 'm'; };
+  const fix = (s) => (typeof s === 'string' && s && OLD.test(s) && on()) ? SH.nm(s) : s;
+  SH.famFix = fix;
+
+  /* ---------- the page ---------- */
+  const SKIP = /^(SCRIPT|STYLE|TEXTAREA|INPUT|NOSCRIPT)$/;
+  const ATTRS = ['title', 'placeholder', 'aria-label', 'alt'];
+  let busy = false;
+  const fixText = (n) => { const p = n.parentNode; if (!p || SKIP.test(p.nodeName) || (p.isContentEditable)) return; const v = n.nodeValue, w = fix(v); if (w !== v) n.nodeValue = w; };
+  const fixEl = (el) => { if (SKIP.test(el.nodeName)) return; for (const a of ATTRS) { const v = el.getAttribute && el.getAttribute(a); if (v) { const w = fix(v); if (w !== v) el.setAttribute(a, w); } } };
+  const walk = (root) => {
+    if (root.nodeType === 3) return fixText(root);
+    if (root.nodeType !== 1 || SKIP.test(root.nodeName)) return;
+    fixEl(root);
+    const tw = document.createTreeWalker(root, NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT);
+    let n; while ((n = tw.nextNode())) { if (n.nodeType === 3) fixText(n); else fixEl(n); }
+  };
+  const mo = new MutationObserver((list) => {
+    if (busy || !on()) return; busy = true;
+    try { for (const m of list) { if (m.type === 'characterData') fixText(m.target); else if (m.type === 'attributes') fixEl(m.target); else m.addedNodes.forEach(walk); } }
+    finally { mo.takeRecords(); busy = false; }
+  });
+  const start = () => { mo.observe(document.body, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ATTRS }); if (on()) walk(document.body); };
+  if (document.body) start(); else document.addEventListener('DOMContentLoaded', start);
+  SH.famFixAll = () => { if (on()) walk(document.body); };
+
+  /* ---------- the canvas (scene labels, speech bubbles, signs) ---------- */
+  const C = window.CanvasRenderingContext2D && CanvasRenderingContext2D.prototype;
+  if (C && !C._fam) { C._fam = 1; ['fillText', 'strokeText', 'measureText'].forEach((k) => { const f = C[k]; C[k] = function (t) { if (typeof t === 'string' && OLD.test(t)) { const a = [...arguments]; a[0] = fix(t); return f.apply(this, a); } return f.apply(this, arguments); }; }); }
+
+  /* after a load / new game, fix what's already on screen */
+  ['newGame', 'load'].forEach((k) => { const b = SH[k]; if (typeof b === 'function' && !b._fam) { SH[k] = function () { const r = b.apply(this, arguments); setTimeout(SH.famFixAll, 0); return r; }; SH[k]._fam = 1; } });
 })(window.SH);
 
 </script>

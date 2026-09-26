@@ -495,3 +495,9 @@ Tests: `tests/parts.js` (runs `tests/part2.js`…`part7.js`, fresh page each).
 - **Board**: go to that spot and tap 🎫 Board (town menu when away; the depot or station in Harlow). From home that's the moment you run away, possible only within 90 minutes of departure. Miss it and the ticket's gone.
 - **AverMaps** is a real maps site: explore, place pages, directions, and nearby filters. The ⛶ button makes any map fullscreen.
 - Browser home page, Seekr instant answers, TubeYou, and PIP ticket help. See FULLMEMORY #27/#28 for the APIs.
+
+## REQUEST #30 BUILT
+- Your rolled family's names now show everywhere: scene header, props, phone, and every ending's epilogue. No more default Rick/Lily/Dana/Rose leaking in.
+- Shoplifting stays, but getting caught on the run never ends the story. The clerk just deals with you.
+- **Route 9 Pickup** (Harlow, Gas-N-Go lot): cheap buses, tempos, van shuttles and car pools board here. The Greyline depot has only the official lines, and Harlow Station only trains. Every unofficial company in your story runs at least once from Harlow.
+- PIP understands follow-ups and context ("bus to oakton" → "how much?" → "tomorrow?" → "is there a motel there?" → "book it"), and typo'd town names.

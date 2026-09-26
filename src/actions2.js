@@ -85,7 +85,14 @@
   A.shoplift = function () {
     const G = SH.G; SH.advance(5, { interrupt: false });
     if (U.chance(0.35)) {
-      if (G.phase === 'run' && G.heat > 30) { SH.Endings.found('security'); return; }
+      if (G.phase === 'run') { // caught on the run: a scene, never a trip home (the story keeps going)
+        SH.st('stress', 12);
+        D({ title: 'Caught', text: ['A hand on your shoulder. The clerk. "Put it back, kid."', G.heat > 30 ? 'He squints at you like he\'s trying to place your face. Then a customer calls him over, and the moment passes.' : 'He looks at your backpack, then at you. "Just put it back."'],
+          choices: [{ t: 'Put it back and walk out', fn: () => { SH.st('mood', -4); log('You walk out fast. You don\'t look back until the next block.', 'warn'); } },
+            { t: '"I\'m just hungry."', fn: () => { if (U.chance(0.6)) { SH.addBag('granola', true); log('He sighs and waves it off. "Go on. Don\'t come back in here doing that."', 'sys'); } else { SH.st('mood', -3); log('"Everybody\'s hungry. Out." You go.', 'warn'); } } },
+            { t: 'Drop it and run', fn: () => { SH.st('energy', -4); log('You drop it and bolt. Nobody follows. Your heart takes three blocks to slow down.', 'warn'); } }] });
+        done(); return;
+      }
       SH.st('stress', 15); SH.susp(20, 'QuikMart called home');
       D({ title: 'Caught', text: ['A hand on your shoulder. The clerk, an older guy in a veteran\'s cap. "Put it back, kid." You put it back.', 'He looks at you for a long time. "You hungry?" You don\'t answer. He hands you the granola bar anyway. "Don\'t do that again. Next time I call somebody."'], choices: [{ t: 'Nod', fn: () => { SH.addBag('granola', true); } }] });
     } else { SH.addBag('granola', true); SH.st('stress', 6); SH.st('mood', -3); SH.tag('stole'); log('It\'s in your sleeve before you can think. Your heart doesn\'t slow down for two blocks.', 'warn'); }

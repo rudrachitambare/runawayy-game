@@ -59,6 +59,8 @@
 
   /* ---------- build the whole network for this seed ---------- */
   let NET = null;
+  // official = the pro intercity/county/pro buses (Greyline depot) and rail; everything else on the road uses the Route 9 pickup
+  R.informal = (o) => !!o && (o.type === 'tempo' || o.type === 'minivan' || o.type === 'car' || (o.type === 'bus' && o.style !== 'pro'));
   R.net = function () { const D = A.data(); if (!D) return null; if (NET && NET.seed === D.seed) return NET; NET = build(D); return NET; };
 
   function build(D) {
@@ -144,6 +146,16 @@
         });
       }
     });
+    // Harlow's Route 9 pickup: every unofficial bus and every tempo / minivan / car pool runs at least once from Harlow
+    // (added after everything else so the rest of the network and its timetables stay exactly the same)
+    const H = D.places.find((p) => p.home);
+    if (H) ops.forEach((o) => {
+      if (!R.informal(o) || routes.some((rt) => rt.op === o && rt.stops.includes(H.id))) return;
+      const lim = o.type === 'bus' ? [35, 150] : o.type === 'minivan' ? [20, 80] : [10, 55];
+      const ok = o.type === 'tempo' ? (p) => p.tier === 'village' || p.tier === 'small' : o.type === 'minivan' ? (p) => p.tier !== 'city' : o.type === 'bus' ? non : all;
+      const c = within(H.id, lim[0], lim[1], ok).sort(() => r() - 0.5);
+      for (const q of c) if (roadRoute(o, H.id, q.id, o.type === 'car' ? () => false : o.type === 'bus' ? (p) => non(p) || r() < 0.4 : all)) break;
+    });
     // who stops where
     const at = {}; routes.forEach((rt) => rt.stops.forEach((id, i) => (at[id] = at[id] || []).push([rt, i])));
     D.places.forEach((p) => { const L = at[p.id] || []; p.busStop = L.some(([rt]) => !rt.op.T.rail); p.served = L.length > 0; });
@@ -178,7 +190,7 @@
   };
   /* departures from a place in the next `win` minutes (falls back to the first ones tomorrow) */
   R.board = function (place, t, win) {
-    const N = R.net(); const L = (N && N.at[place.id]) || [], out = [];
+    const N = R.net(); const L = ((N && N.at[place.id]) || []).filter(([rt]) => !R.only || R.only(rt.op)), out = []; // R.only: set by pickup.js for Harlow's per-spot boards
     L.forEach(([rt, i]) => { if (i >= rt.stops.length - 1) return; let dep = R.next(rt, i, t); for (let n = 0; n < 3 && dep != null && dep <= t + (win || 360); n++) { out.push({ rt, i, dep }); dep = R.next(rt, i, dep + 1); } });
     if (!out.length) L.forEach(([rt, i]) => { if (i < rt.stops.length - 1) { const dep = R.next(rt, i, t); if (dep != null) out.push({ rt, i, dep }); } });
     return out.sort((a, b) => a.dep - b.dep).slice(0, 12);
