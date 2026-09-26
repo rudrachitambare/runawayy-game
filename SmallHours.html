@@ -6773,7 +6773,7 @@ window.SH = window.SH || {};
     if (k === 'work' && (SH.hour() < 7 || SH.hour() >= 20)) return D('Work', 'Everything that might need a kid to sweep or stack or pick is closed. A dog barks at you from behind a fence. Try in the morning.');
     if (k === 'work') { SH.advance(120, { interrupt: false }); if (noticed(p, 0.9)) return; const job = pick2(p.kidjobs), ok = Math.random() < (p.tier === 'city' ? 0.35 : 0.55);
       if (!ok) return D('Work', `You ask about "${job}". ${pick2(['"How old are you, hon? ...Where are your folks?" You leave before the second question gets a follow-up.', '"Sorry kid, I can\'t pay a minor. I\'d lose my license." He says it kindly. It doesn\'t help.', '"You should be in school," the woman says, and reaches for her phone, and you are already walking.'])}`);
-      const pay = 5 + Math.floor(Math.random() * 11); SH.money(pay); SH.st('energy', -15); SH.st('mood', 4);
+      const pay = (SH.BAL ? SH.BAL.jobMin : 5) + Math.floor(Math.random() * (SH.BAL ? SH.BAL.jobSpread : 11)); SH.money(pay); SH.st('energy', -15); SH.st('mood', 4);
       return D('Work', `You ${job.replace(/ \(.+\)$/, '')} for two hours. Your back hurts. ${pick2(p.people).n} pays you $${pay} in crumpled bills and gives you a look that says they know. They don't say it. Yet.`); }
     if (k === 'talk') { const who = pick2(p.people); Object.assign(SH.NPCS_META.local, { n: who.n, ini: who.n[0], full: who.n + ', ' + p.name }); return SH.Talk.open('local', { first: localOpen(who), turnsMax: 7, local: who, place: p, onEnd: (c) => { if (c.result === 'help') return SH.Endings.found(p.hasPolice ? 'self' : 'sheriff'); if (c.result === 'call') { G.awayNotice = 100; noticed(p, 0); return; } back(); } }); }
     if (k === 'sleep') { const dark = SH.hour() >= 20 || SH.hour() < 6; const mins = dark ? 7 * 60 : 120; SH.st('warmth', p.tier === 'village' ? -18 : -10); SH.advance(mins, { interrupt: false }); SH.st('energy', dark ? 40 : 18); if (G.ended) return; if (noticed(p, dark ? 0.6 : 0.3)) return; return D('Rest', dark ? `You sleep in ${pick2(p.tier === 'village' ? ['a bus shelter with one wall missing', 'the church doorway', 'a hay barn that smells like summer'] : ['a 24-hour laundromat, curled on a plastic chair', 'a bench behind the library', 'the stairwell of a parking garage'])}. Badly. You wake up every time a car passes.` : 'You close your eyes for a while. It helps a little.'); }
@@ -8520,7 +8520,7 @@ window.SH = window.SH || {};
     const g = G(); if (!g || !from || !to || from.id === to.id) return out;
     R.journeys(from, to, g.t, 5).forEach((jr) => {
       const L = jr.legs, o = L[0].rt.op, stops = L.reduce((s, l) => s + l.j - l.i, 0), cost = jr.cost * grp();
-      const ch = L.length > 1 ? ` · change at ${P(L[0].rt.stops[L[0].j]).name} (${L[1].rt.op.n}, ${fmt(L[1].dep)})` : '';
+      const ch = L.length > 1 ? ' · ' + L.slice(1).map((l, n) => `${n ? 'then ' : 'change at '}${P(L[n].rt.stops[L[n].j]).name} (${l.rt.op.n}, ${fmt(l.dep)})`).join(', ') : '';
       out.push({ k: jr.key, jr, n: `${o.icon} ${o.n}${L.length > 1 ? ' + ' + L[1].rt.op.icon : ''}`, mins: jr.arr - g.t, cost, e: 2 * L.length,
         note: `Leaves ${fmt(jr.dep)}${day(jr.dep)} · arrives ${fmt(jr.arr)}${day(jr.arr)} · ${stops} stop${stops > 1 ? 's' : ''} · ${styleTag(o)}${ch}${night(jr.dep) ? ' · ⚠️ night run' : ''}${grp() > 1 ? ` · $${jr.cost} each` : ''}` });
     });
@@ -8801,6 +8801,51 @@ window.SH = window.SH || {};
     box.querySelectorAll('.apl').forEach((g) => (g.onclick = (e) => { if (moved) { moved = false; return; } A.sel = g.dataset.id; re(); }));
   }
   P.V.atlas = view;
+})(window.SH);
+
+</script>
+<script>
+/* routes2.js */
+/* SMALL HOURS — two-change trip planning. When there's no direct or one-change journey (or fewer than asked),
+   search journeys with two changes: from → hub1 → hub2 → destination. Each hub must get you closer to where you're going,
+   and every connection needs at least 10 minutes. Same journey objects as routes.js, so boarding/tickets just work. */
+(function (SH) {
+  const R = SH.Routes; if (!R || !R.journeys) return;
+  const base = R.journeys;
+  R.journeys2 = function (from, to, t, max) {
+    const N = R.net(); if (!N || from.id === to.id) return [];
+    const P = N.P, d = (a) => Math.hypot(P[a].x - to.x, P[a].y - to.y), d0 = Math.hypot(from.x - to.x, from.y - to.y);
+    const out = [], start = t + 5, reach = {}; // reach[stopId] = legs to get there with ≤1 change... we only need hub2 routes that contain `to`
+    const toRoutes = new Map(); (N.at[to.id] || []).forEach(([rt, b]) => toRoutes.set(rt, b));
+    if (!toRoutes.size) return [];
+    // stops from which a route reaches `to` directly: stopId -> [[rt, a, b]]
+    const feeders = {}; toRoutes.forEach((b, rt) => { for (let a = 0; a < b; a++) (feeders[rt.stops[a]] = feeders[rt.stops[a]] || []).push([rt, a, b]); });
+    (N.at[from.id] || []).forEach(([r1, i]) => {
+      const dep1 = R.next(r1, i, start); if (dep1 == null) return;
+      for (let k = i + 1; k < r1.stops.length; k++) {
+        const h1 = r1.stops[k]; if (d(h1) >= d0) continue; const arr1 = dep1 + r1.off[k] - r1.off[i];
+        (N.at[h1] || []).forEach(([r2, a2]) => {
+          if (r2 === r1 || toRoutes.has(r2)) return; const dep2 = R.next(r2, a2, arr1 + 10); if (dep2 == null) return;
+          for (let m = a2 + 1; m < r2.stops.length; m++) {
+            const h2 = r2.stops[m], fs = feeders[h2]; if (!fs || h2 === from.id || d(h2) >= d(h1)) continue; const arr2 = dep2 + r2.off[m] - r2.off[a2];
+            fs.forEach(([r3, a3, b3]) => { if (r3 === r2 || r3 === r1) return; const dep3 = R.next(r3, a3, arr2 + 10); if (dep3 == null || dep3 - start > 2 * 1440) return;
+              out.push({ legs: [{ rt: r1, i, j: k, dep: dep1, arr: arr1 }, { rt: r2, i: a2, j: m, dep: dep2, arr: arr2 }, { rt: r3, i: a3, j: b3, dep: dep3, arr: dep3 + r3.off[b3] - r3.off[a3] }] }); });
+          }
+        });
+      }
+    });
+    out.forEach((jr) => { jr.dep = jr.legs[0].dep; jr.arr = jr.legs[2].arr; jr.cost = jr.legs.reduce((s, l) => s + R.price(l.rt, l.i, l.j), 0); jr.key = 'rt:' + jr.legs.map((l) => [l.rt.id, l.i, l.j, l.dep].join('/')).join('|'); });
+    out.sort((a, b) => a.arr - b.arr || a.cost - b.cost);
+    const pick = [], sig = new Set();
+    for (const jr of out) { const s = jr.legs.map((l) => l.rt.op.id + '@' + l.rt.stops[l.j]).join('+'), s2 = jr.dep + '>' + jr.arr; if (sig.has(s) || sig.has(s2)) continue; sig.add(s); sig.add(s2); pick.push(jr); if (pick.length >= (max || 3)) break; }
+    return pick;
+  };
+  R.journeys = function (from, to, t, max) {
+    const r = base.apply(this, arguments); max = max || 4;
+    if (r.length >= Math.min(2, max)) return r;
+    let extra = []; try { extra = R.journeys2(from, to, t, max - r.length); } catch (e) { console.warn(e); }
+    return r.concat(extra).sort((a, b) => a.arr - b.arr || a.cost - b.cost).slice(0, max);
+  };
 })(window.SH);
 
 </script>
@@ -10013,6 +10058,55 @@ window.SH = window.SH || {};
 
 </script>
 <script>
+/* balance.js */
+/* SMALL HOURS — balance pass (money + notice).
+   Before: being noticed (G.awayNotice) only ever went UP while you stayed somewhere, and dropped to 0 the moment you
+   arrived anywhere (even back in a town that had nearly caught you). So staying put was impossible and ping-ponging
+   between two towns was free. Now:
+   - People get used to you. Every day you stay, notice fades: village 12, small town 8, town 7, city 6 a day,
+     ×1.5 with a cover story there, ×1.4 with a room or base there, halved while police are hunting hard (heat ≥ 60).
+   - Familiar face: in villages everyone soon knows the new kid (after 2 days −40%, after 6 days −60% attention per thing
+     you do); small towns −30% / −50%; towns after 4 / 10 days −20% / −35%; cities −15% / −30%.
+   - Towns remember. Leave a town and come back later and people still remember you: notice picks up where you left it,
+     minus 8 a day you were gone. (Brand-new places still start at 0.)
+   - Odd jobs pay $7–18 instead of $5–15 (they cost you notice; they should be worth it).
+   Odd-job pay reads SH.BAL in atlas.js. The rest is K.daily / A.mods / an A.arrive wrapper. Numbers live in BAL so they're easy to tune. */
+(function (SH) {
+  const K = SH.K, A = SH.Atlas; if (!K || !A) return;
+  const G = () => SH.G;
+  const BAL = SH.BAL = { fade: { village: 12, small: 8, town: 7, city: 6 }, coverX: 1.5, roomX: 1.4, hotX: 0.5, memFade: 8, fam: { village: [[6, 0.4], [2, 0.6]], small: [[7, 0.5], [3, 0.7]], town: [[10, 0.65], [4, 0.8]], city: [[10, 0.7], [4, 0.85]] }, jobMin: 7, jobSpread: 12 };
+  const store = () => { const g = G(); return (g.noticeAt = g.noticeAt || {}); };
+  /* arrive: save where you left, restore where you're going */
+  const bArrive = A.arrive;
+  A.arrive = function (to) {
+    const g = G(), from = g.away, n0 = g.awayNotice || 0, t0 = g.t;
+    if (from && from !== 'p0') store()[from] = { n: n0, t: t0 };
+    const r = bArrive.apply(this, arguments);
+    try {
+      if (g.away && g.away !== from && !g.ended) {
+        g.hereSince = g.t;
+        const s = store()[g.away]; if (s) { const days = (g.t - s.t) / 1440; g.awayNotice = Math.max(g.awayNotice || 0, Math.round(s.n - days * BAL.memFade)); }
+      }
+    } catch (e) { console.warn('balance arrive', e); }
+    return r;
+  };
+  /* people get used to you */
+  K.daily.push((BAL.day = () => {
+    const g = G(); if (!g.away || g.away === 'p0' || !g.awayNotice) return;
+    const p = A.here(); if (!p) return;
+    let d = BAL.fade[p.tier] || 5;
+    if ((g.cover || {})[p.id]) d *= BAL.coverX;
+    if ((g.room && g.room.pid === p.id && g.room.until > g.t) || (g.base && g.base.pid === p.id)) d *= BAL.roomX;
+    if ((g.heat || 0) >= 60) d *= BAL.hotX;
+    g.awayNotice = Math.max(0, Math.round((g.awayNotice - d) * 10) / 10);
+  }));
+  /* familiar face */
+  A.mods = A.mods || [];
+  A.mods.push((p) => { const g = G(); if (g.hereSince == null || !p) return 1; const days = (g.t - g.hereSince) / 1440; for (const [n, x] of (BAL.fam[p.tier] || [])) if (days >= n) return x; return 1; });
+})(window.SH);
+
+</script>
+<script>
 /* okafor.js */
 /* SMALL HOURS — Ms. Okafor v2: an actual counselor.
    She tracks what you've told her (this visit AND past visits), reflects your specifics back, asks the NEXT
@@ -10374,7 +10468,7 @@ window.SH = window.SH || {};
   const NP = (id) => { const m = MS(); return (m.npc[id] = m.npc[id] || { met: SH.G.t, n: 0, qa: [], ops: {}, said: [] }); };
   const when = (t) => (SH.Mem && SH.Mem.when ? SH.Mem.when(t) : 'before');
   const cap = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
-  const nm = (id) => (SH.NPCS_META && SH.NPCS_META[id] ? SH.NPCS_META[id].n.split(' ')[0] : id);
+  const nm = (id) => { const m = SH.NPCS_META && SH.NPCS_META[String(id).split(':')[0]]; const p = String(id).split(':')[1]; return p ? p.split(/[ ,]/)[0] : m ? m.n.split(' ')[0] : id; };
   const fill = (tpl, o) => tpl.replace(/\{(\w+)\}/g, (_, k) => (o[k] != null ? o[k] : ''));
   const pick = (c, key, arr) => (c && N.pick ? N.pick(c, 'mind_' + key, arr) : U.pick(arr));
   const hash = (s) => { let h = 7; for (const ch of String(s)) h = (h * 31 + ch.charCodeAt(0)) >>> 0; return h; };
@@ -10543,9 +10637,9 @@ window.SH = window.SH || {};
   }
 
   /* ---------- the wrapper around every character ---------- */
-  function wrap(id, base) {
+  function wrap(id0, base) {
     return function (an, c) {
-      c = c || {}; const P = NP(id), G = SH.G, heavy = an.has('selfharm');
+      c = c || {}; const id = SH.Mind.who ? SH.Mind.who(id0, c) : id0; const P = NP(id), G = SH.G, heavy = an.has('selfharm');
       if (c._mindTurn !== c.turn) { c._mindTurn = c.turn; }
       if (heavy) { const r = base.call(this, an, c); remember(id, c, an, r); return r; }
       // facts are always learned, whoever handles the reply
@@ -10616,7 +10710,7 @@ window.SH = window.SH || {};
 
   /* ---------- install ---------- */
   function install() {
-    Object.keys(SH.Brain).forEach((id) => { if (SKIP.includes(id) || SH.Brain[id]._mind) return; const w = wrap(id, SH.Brain[id]); w._mind = true; SH.Brain[id] = w; });
+    Object.keys(SH.Brain).forEach((id) => { if (SKIP.includes(id) || SH.Brain[id]._mind) return; const w = wrap(id, SH.Brain[id]); w._mind = true; w._base = SH.Brain[id]; SH.Brain[id] = w; });
     if (SH.Mem) {
       const bg = SH.Mem.greeting; SH.Mem.greeting = function (npc) { let g = null; try { g = followUp(npc); } catch (e) {} const r = g || bg.apply(this, arguments); const nick = MS().nick; return r && nick && known(npc, 'nick') ? nickify(String(r), nick) : r; };
       const bs = SH.Mem.summary; SH.Mem.summary = function (npc) { const base = bs.apply(this, arguments) || []; const facts = listOf(npc, null).slice(0, 6).map((f) => ({ when: when(f.by[npc]), text: describe(f), src: 'fact' })); return facts.concat(base).slice(0, 12); };
@@ -10635,7 +10729,7 @@ window.SH = window.SH || {};
       };
     }
   }
-  SH.Mind = { install, describe, learn, known, opinion, facts: () => MS().facts };
+  SH.Mind = { install, describe, learn, known, knownBy, opinion, NP, facts: () => MS().facts };
   install();
 })(window.SH);
 
@@ -10921,6 +11015,443 @@ window.SH = window.SH || {};
   const SELF = ['okafor']; // brains that track topics themselves
   const SKIP = ['lighthouse', 'class', 'railagent', 'conductor'];
   Object.keys(SH.Brain).forEach((id) => { if (SKIP.includes(id) || SH.Brain[id]._conv) return; const w = wrap(id, SH.Brain[id]); w._conv = true; w._mind = SH.Brain[id]._mind; SH.Brain[id] = w; });
+})(window.SH);
+
+</script>
+<script>
+/* mind2.js */
+/* SMALL HOURS — mind 2: who-you-said-you-were memory + sharper understanding. Sits on top of mind.js / converse.js.
+   MEMORY
+   - Every person is their own person: each local, clerk, cop and runaway kid has separate memory (SH.Mind.who).
+   - CLAIMS (G.claims[person]): your name, age, where you're from, where you're going, who you're with, where your
+     parents are, your story, your school. Each person remembers what YOU told THEM, so different lies to different
+     people stay straight — and a person catches it when you change your story ("You said your name was Jordan.").
+     Catching you out makes strangers warier (more notice on the road).
+   - Short answers to their question count: "What's your name?" → "jordan" = you told them Jordan.
+   - Nobody re-asks what you already told them: the question is swapped for a line that uses it ("Jordan, right?").
+   - "what's my name / how old am I / where did I say I was going" is answered from what you told THAT person.
+   - Small places talk: tell one local your name and the next one in town may already know it.
+   - People who actually know you know your real name ("My name is Jordan." → Mom: "Baby, your name is Sam.").
+   UNDERSTANDING (wraps NLP.analyze)
+   - more negation: "you're not stupid", "i never ran away", "i'm not going home" stop reading as hostile / run / home
+   - "i don't feel safe" = scared; "my name is Jordan" is a name, not talk about your friend Jordan
+   - numbers + money + nights ("can i pay 40", "3 nights", "a week") → an.money / an.nights / an.nums
+   - he/she/they after someone was mentioned → an.ref = that person (an.people gets them too) */
+(function (SH) {
+  const N = SH.NLP, MI = SH.Mind; if (!N || !MI) return;
+  const G = () => SH.G, cap = (s) => { s = s == null ? '' : String(s); return s ? s.charAt(0).toUpperCase() + s.slice(1) : s; };
+  const pick = (a) => a[Math.floor(Math.random() * a.length)];
+  /* ---------- who is this, really ---------- */
+  const SHARED = /^(local|clerk|cop|officer|agent|conductor|driver|rk|rkGroup)$/;
+  MI.who = function (id, c) {
+    const npc = (c && c.npc) || id;
+    if (!SHARED.test(npc)) return npc;
+    const m = (SH.NPCS_META || {})[npc] || {}; return npc + ':' + (m.full || m.n || '?');
+  };
+  const isCore = (k) => !/[:]/.test(k) && !/^(rk_|host_|local|clerk|cop|dex|pip)/.test(k) && !!(SH.NPCS_META || {})[k];
+  const knowsReal = (k) => isCore(k) || /^host_/.test(k);
+  const stranger = (k) => /[:]/.test(k) || /^rk_/.test(k);
+  /* ---------- claims: what you say about yourself ---------- */
+  const NAMEBAD = /^(a|an|the|not|so|just|fine|okay|ok|good|here|there|scared|sad|sorry|tired|hungry|lost|alone|home|going|from|with|staying|visiting|new|back|done|sure|really|in|at|safe|cold|waiting|looking|leaving|running|serious|kidding|joking|bored|hurt|sick|only|still|also|gonna|trying|like|nobody|nothing|no|yes|yeah|nope|idk|what|who|why|hi|hey|hello|thanks|twelve|eleven|thirteen|ten|fourteen|fifteen)$/i;
+  const NUMW = { ten: 10, eleven: 11, twelve: 12, thirteen: 13, fourteen: 14, fifteen: 15, sixteen: 16, seventeen: 17, eighteen: 18, nineteen: 19, twenty: 20 };
+  const PLACE = "([a-z][a-z .'-]{1,24}?)(?=[.,!?]|$| and | but | because | with | to see| tonight| tomorrow| for )";
+  N.claims = function (raw) {
+    const r = String(raw || ''), t = r.toLowerCase().replace(/\bim\b/g, "i'm"), f = {};
+    let m = r.match(/\b(?:my name is|my name's|name's|call me|i go by|the name's)\s+([A-Za-z][A-Za-z'-]{1,14})/i) || r.match(/\b(?:i'?m|I am)\s+([A-Z][a-z'-]{1,14})\b(?!\s*(?:years|yrs))/) || r.match(/\b(?:no,? |wait,? )+it'?s\s+([A-Z][a-z'-]{1,14})\b/);
+    if (m && !NAMEBAD.test(m[1])) f.name = cap(m[1].toLowerCase());
+    m = t.match(/\b(?:i'm|i am)\s+(1[0-9]|20|[5-9]|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty)\b(?!\s*(?:dollars|bucks|minutes|min|miles|%))/) || t.match(/\b(1[0-9]|[5-9])\s*(?:years?|yrs?) old\b/);
+    if (m) f.age = NUMW[m[1]] || +m[1];
+    m = t.match(new RegExp("\\b(?:i'm from|i am from|i come from|i live in|we live in|i used to live in|i grew up in)\\s+" + PLACE)); if (m) f.from = m[1].trim();
+    m = t.match(new RegExp("\\b(?:going to|heading to|on my way to|trying to get to|want to go to|traveling to|headed to|going up to|going down to)\\s+(?:see\\s+)?" + PLACE));
+    if (m && !/^(be|do|sleep|bed|get|go|school|stay|eat|the bathroom|bathroom|buy|try|call|tell|pay|ask|talk|need|have|run|walk|find|make|take|look|wait|work|say|kill|die|cry|hit|hurt|leave|miss)\b/.test(m[1].trim()) && !/\bhome\b/.test(m[1])) f.going = m[1].trim().replace(/^the /, '');
+    m = t.match(/\b(?:i'm|i am|we're|we are|i'm here|i'm staying|staying)\s+with\s+(my\s+[a-z]+|[a-z]+(?: and [a-z]+)?)/); if (m && !/^(you|it|that|him|her|them)$/.test(m[1])) f.with = m[1];
+    m = t.match(/\bmy (mom|dad|mother|father|parents|aunt|uncle|grandma|grandpa|folks)\s+(?:is|are|'s|'re)\s+((?:in|at|out|over|parking|getting|waiting|inside|outside|coming|picking|on|just|working|back|busy|asleep)[a-z ,']{0,36}?)(?=[.!?]|$| so | but )/); if (m) f.parents = `${m[1]} ${/s$/.test(m[1]) || m[1] === 'folks' ? 'are' : 'is'} ${m[2].trim()}`;
+    m = t.match(/\b(?:i'm|i am|we're)\s+(visiting (?:my )?[a-z]+(?: [a-z]+)?|homeschooled|new here|new in town|on (?:a )?(?:field|school|band|class) trip|staying at the campground|here for the summer|doing a school project|on vacation)/); if (m) f.story = m[1];
+    m = t.match(/\bi go to\s+([a-z .'-]{2,30}?(?:school|academy|middle|elementary|junior high))\b/); if (m) f.school = m[1];
+    return f;
+  };
+  const CL = (k) => { const g = G(); g.claims = g.claims || {}; return (g.claims[k] = g.claims[k] || { f: {}, asks: {}, n: 0 }); };
+  const TOWN = (pid) => { const g = G(); g.townTalk = g.townTalk || {}; return (g.townTalk[pid] = g.townTalk[pid] || {}); };
+  const here = () => (G().away && SH.Atlas && SH.Atlas.here ? SH.Atlas.here() : null);
+  MI.claims = (k) => CL(k).f; MI.claim = (k, key) => { const f = CL(k).f[key]; return f ? f.v : key === 'name' && knowsReal(k) ? G().name : null; };
+  /* ---------- understanding ---------- */
+  const NEGATABLE = ['hostile', 'run', 'love', 'sad', 'scared', 'angry', 'tired', 'food', 'disclose'];
+  const NEG_RE = /\b(not|never|no longer|isn't|aren't|wasn't|weren't|ain't|didn't|don't|won't|not really|never ever)\s+(?:(?:so|very|that|really|even|too|at all|a|an|going|gonna|ever|been|being)\s+){0,2}([a-z']+)/g;
+  const baseA = N.analyze;
+  let focus = null; // last person mentioned in the current conversation
+  N.analyze = function (raw) {
+    const an = baseA.apply(this, arguments), t = an.t;
+    // negation (selfharm never gets dropped)
+    if (NEG_RE.test(t)) { NEG_RE.lastIndex = 0; const t2 = t.replace(NEG_RE, ' '), r2 = baseA.call(this, t2); an.negated = an.negated || [];
+      NEGATABLE.forEach((k) => { if (an.I[k] && !r2.I[k] && !(k === 'disclose' && /\b(hit|hurt|grab|touch)/.test(t))) { delete an.I[k]; an.negated.push(k); } });
+      if (/\b(don't|do not|never|not) (feel )?safe\b/.test(t)) { an.I.scared = 1; an.I.unsafe = 1; delete an.I.safe; delete an.I.deflect; } }
+    NEG_RE.lastIndex = 0;
+    if (/\b(not|never|won't|ain't) (going|gonna|go) (back )?home\b|\bnever going back\b/.test(t)) an.I.refuseHome = 1;
+    if (/\b(don't|do not|dont) have (any |much )?(money|cash)|\bno money\b|\bi'm broke\b|\bout of money\b/.test(t)) an.I.broke = 1;
+    // claims
+    an.claims = N.claims(raw);
+    if (an.claims.name) { const nl = an.claims.name.toLowerCase(); delete an.I[nl]; if (an.people) an.people = an.people.filter((p) => p !== nl); if (an.facts) an.facts = an.facts.filter((f) => f.kind !== 'nick' || f.v.toLowerCase() !== nl || /call me/.test(t)); }
+    if (an.claims.age) delete an.I.age;
+    // memory questions about claims
+    if (/\bhow old (am i|did i say i was|i said i was)\b/.test(t)) an.memq = { kind: 'claim', key: 'age' };
+    else if (/\bwhere (am i from|did i say i('m| was| am) from|i said i('m| was) from)\b/.test(t)) an.memq = { kind: 'claim', key: 'from' };
+    else if (/\bwhere (am i going|am i headed|did i say i was going|was i going)\b/.test(t)) an.memq = { kind: 'claim', key: 'going' };
+    else if (/\b(what'?s|what is|what did i say) my name( was| is)?\b|\bdo you (know|remember) my name\b/.test(t)) an.memq = { kind: 'claim', key: 'name' };
+    else if (/\bwhat (was|is) my story\b|\bwhat did i tell you about me\b/.test(t)) an.memq = { kind: 'claim', key: '*' };
+    // numbers, money, nights
+    const nums = (t.match(/\$?\b\d+(?:\.\d+)?\b/g) || []).map((x) => +x.replace('$', '')); an.nums = nums;
+    let mm = t.match(/\$\s?(\d+)|\b(\d+)\s*(?:dollars|bucks|usd)\b|\b(?:pay|give you|offer|do|how about|what about|make it)\s+\$?(\d+)\b/); if (mm) an.money = +(mm[1] || mm[2] || mm[3]);
+    mm = t.match(/\b(\d+|one|two|three|four|five|six|a couple|a few)\s+(nights?|days?)\b/); if (mm) an.nights = { one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, 'a couple': 2, 'a few': 3 }[mm[1]] || +mm[1];
+    if (/\b(a|one|the|for a|whole) week\b|\bweekly\b/.test(t)) an.nights = 7; if (/\b(a|one|the|for a|whole) month\b|\bmonthly\b/.test(t)) an.nights = 30;
+    // he / she / they
+    if (an.people && an.people.length) focus = an.people[an.people.length - 1];
+    else if (an.pron && focus) { const F = { mom: 'f', grandma: 'f', lily: 'f', okafor: 'f', patel: 'f', rick: 'm', jordan: 'm', tyler: 'm', dex: 'm' }; if (!F[focus] || F[focus] === an.pron || an.pron === 'n') { an.ref = focus; an.people = [focus]; } }
+    return an;
+  };
+  /* ---------- the NPC's question → which claim it asks for ---------- */
+  const ASKS = [['name', /\b(what'?s|what is|and) your (first |real )?name\b|\byour name\b[^.!]*\?|\bwhat do (they|people|your friends) call you\b|\bwho might you be\b|\bgot a name\b/i],
+    ['age', /\bhow old are you\b|\bwhat are you,? (like )?(ten|eleven|twelve|\d+)\?|\byour age\b/i],
+    ['family', /\bwhose (kid|child|boy|girl|young'?un) are you\b|\bwho are your (folks|people|parents)\b/i], ['from', /\bwhere (are you|you) from\b|\bwhere do you live\b|\bwhere('s| is) home\b|\bnot from (around )?here\b[^.!]*\?/i],
+    ['going', /\bwhere (are you|you|ya) (going|headed|heading|off to)\b|\bwhere to\b[^.!]*\?|\bwhat brings you\b/i],
+    ['parents', /\bwhere are your (parents|folks|mom|dad|mother|father|people)\b|\bdo(es)? your (mom|mother|dad|father|parents|folks) know\b|\bis there (a|an) (grown-?up|adult) with you\b|\bwho'?s looking after you\b/i],
+    ['school', /\b(shouldn'?t you be in school|what school|which school|no school today)\b/i], ['with', /\bwho are you (with|here with|traveling with)\b|\bjust you\?|\ball by yourself\b[^.!]*\?/i]];
+  const askOf = (s) => { for (const [k, re] of ASKS) if (re.test(s)) return k; return null; };
+  MI.askOf = askOf;
+  const ACK = {
+    name: (v) => pick([`${v}, right?`, `You said ${v}, yeah?`, `${v}. I remember.`]), age: (v) => pick([`You said you're ${v}.`, `${v}, you said.`]), from: (v) => pick([`${cap(v)}, you said.`, `You said ${v}, right?`]),
+    going: (v) => pick([`${cap(v)}, you said. Still the plan?`, `Still headed to ${v}?`]), parents: (v) => `You said your ${v}.`, family: (v) => /visiting|staying/.test(v) ? `${cap(v)}, you said.` : pick([`The ${cap(v)} kid, you said.`, `${cap(v)}'s kid, right?`]), school: (v) => `${cap(v)}, you said.`, with: (v) => `With ${v}, you said.`,
+  };
+  const STORYV = { from: (s) => /visiting|campground|vacation|summer|trip/.test(s) ? s : null };
+  const knownV = (k, key) => { const F = CL(k).f; if (F[key]) return F[key].v; if (key === 'family' && F.story && /visiting|staying/.test(F.story.v)) return F.story.v; if (key === 'from' && F.story && STORYV.from(F.story.v)) return F.story.v; return null; };
+  /* swap already-answered questions for a line that uses what you told them */
+  MI.noReask = function (k, say) {
+    if (!say || typeof say !== 'string') return say; const parts = say.match(/[^.!?]+[.!?]*["”]?\s*/g) || [say]; let ch = false;
+    const out = parts.map((s) => { if (!/\?/.test(s)) return s; const key = askOf(s); if (!key) return s; const v = knownV(k, key); if (v == null) return s; ch = true; return ACK[key](v) + ' '; });
+    return ch ? out.join('').replace(/\s+/g, ' ').trim() : say;
+  };
+  const CONTRA = {
+    name: (a, b) => pick([`Wait. You told me your name was ${a}. Now it's ${b}?`, `Hold on. ${a}, you said before. Which is it?`]), age: (a, b) => `Hang on, you said you were ${a}. Now you're ${b}?`,
+    from: (a, b) => `I thought you said you were from ${a}.`, going: (a, b) => `You said you were going to ${a} before.`, story: (a, b) => `Before, you said you were ${a}.`, parents: (a) => `Earlier you said your ${a}.`,
+  };
+  const NEWR = {
+    name: (v) => pick([`${v}. Okay.`, `${v}, huh.`, `Nice to meet you, ${v}.`]), age: (v) => pick([`${v}. Huh.`, `${v}? You look about that.`, `Only ${v}.`]),
+    going: (v) => pick([`${cap(v)}? That's a ways.`, `${cap(v)}, huh.`, `${cap(v)}. Long trip for somebody your size.`]), from: (v) => pick([`${cap(v)}. Never been.`, `${cap(v)}, huh.`]),
+    story: (v) => pick([`${cap(v)}. Okay.`, `Oh, ${v}.`]), with: (v) => `With ${v}. Okay.`, parents: () => pick(['Mm-hm.', 'Okay.']),
+  };
+  const REAL = { mom: (n) => `Baby, your name is ${n}. I picked it. Are you okay?`, grandma: (n) => `Your name is ${n}, sweet pea. I was there the day you got it.`, lily: (n) => `no it's NOT. it's ${n}. you're being weird.`, jordan: (n) => `lmao ok. ur ${n}. u good??`, rick: () => 'Real funny.', okafor: (n) => `If you'd like me to call you something else, I will. But I know you as ${n}. Is something going on?` };
+  function recallClaim(k, key) {
+    const F = CL(k).f, nm = knowsReal(k) ? G().name : F.name ? F.name.v : null;
+    if (key === 'name') return nm ? (F.name && !knowsReal(k) ? pick([`${nm}. That's what you told me.`, `You said ${nm}.`]) : `...${nm}. Are you feeling okay?`) : pick(['You never told me.', "You didn't say. I noticed."]);
+    if (key !== '*') { const v = F[key] && F[key].v; return v != null ? { age: `You said ${v}.`, from: `${cap(v)}. That's what you said.`, going: `${cap(v)}, you said.` }[key] : pick(["You never said.", "You didn't tell me that."]); }
+    const b = []; if (nm && !knowsReal(k)) b.push(`you're ${nm}`); if (F.age) b.push(`you're ${F.age.v}`); if (F.story) b.push(`you're ${F.story.v}`); if (F.from) b.push(`you're from ${F.from.v}`); if (F.going) b.push(`you're headed to ${F.going.v}`); if (F.with) b.push(`you're with ${F.with.v}`); if (F.parents) b.push(`your ${F.parents.v}`);
+    return b.length ? `You told me ${b.join(', ')}.` : "You haven't told me much about you. I noticed.";
+  }
+  /* ---------- claims layer around every brain ---------- */
+  const raw = SH.Brain, cache = new Map();
+  function layer(id, fn) {
+    if (cache.has(fn)) return cache.get(fn);
+    const w = function (an, c) {
+      if (!an || !an.claims || (c && c._cl)) return fn.apply(this, arguments);
+      c = c || {}; c._cl = true;
+      try {
+        const k = MI.who(id, c), rec = CL(k), g = G(), now = g.t; rec.n++;
+        if (an.has && an.has('selfharm')) return fn.call(this, an, c);
+        // short answer to their last question
+        const la = rec.lastAsk && now - rec.lastAskT < 12 * 60 ? rec.lastAsk : null; rec.lastAsk = null;
+        if (la && an.len && an.len <= 5 && !Object.keys(an.claims).length && !an.q && !(an.has('no') || an.has('deflect') || an.I.idk || an.I.hostile)) {
+          const ans = String(an.raw).replace(/^(it'?s|i'?m|um+|uh+|well|my name is|i am|like)\s+/i, '').replace(/[.!]+$/, '').trim(), fx = {};
+          if (la === 'name' && /^[A-Za-z][A-Za-z'-]{1,14}$/.test(ans) && !NAMEBAD.test(ans)) fx.name = cap(ans.toLowerCase());
+          else if (la === 'age' && /^(1[0-9]|[5-9]|ten|eleven|twelve|thirteen|fourteen|fifteen)$/i.test(ans)) fx.age = NUMW[ans.toLowerCase()] || +ans;
+          else if (['from', 'going', 'school', 'with', 'family'].includes(la) && ans.length > 1 && !/^(yes|yeah|no|nope|idk|nowhere|none|why)\b/i.test(ans)) fx[la] = ans.toLowerCase().replace(/^(to|from|with) /, '');
+          if (Object.keys(fx).length) { an.claims = fx; if (fx.name) an.I.name = 1; }
+        }
+        // contradictions + storing
+        let contra = null;
+        Object.entries(an.claims).forEach(([key, v]) => {
+          const old = rec.f[key], lv = String(v).toLowerCase();
+          if (key === 'name' && knowsReal(k) && lv !== String(g.name).toLowerCase()) { if (!old) contra = REAL[k] ? REAL[k](g.name) : `...Your name is ${g.name}. I know you.`; rec.f.name = { v, t: now, fake: true }; return; }
+          if (old && CONTRA[key] && String(old.v).toLowerCase() !== lv && !an.I.correction && !/^(i mean|actually|sorry,? i meant|wait,? no)\b/.test(an.t)) {
+            contra = contra || CONTRA[key](old.v, v); if (c.mem) c.mem.sus = (c.mem.sus || 0) + 15;
+            if (stranger(k)) { g.awayNotice = (g.awayNotice || 0) + 4; rec.caught = (rec.caught || 0) + 1; }
+          }
+          rec.f[key] = { v, t: now, n: old && String(old.v).toLowerCase() === lv ? (old.n || 1) + 1 : 1 };
+          const p = here(); if (p && (key === 'name' || key === 'story') && /village|small|town/.test(p.tier || '') && stranger(k)) TOWN(p.id)[key] = { v, by: k, t: now };
+        });
+        if (an.memq && an.memq.kind === 'claim') return { say: (contra ? contra + ' ' : '') + recallClaim(k, an.memq.key), fx: {} };
+        if (an.memq && an.memq.key === 'nick' && !knowsReal(k)) return { say: recallClaim(k, 'name'), fx: {} };
+        const r = fn.call(this, an, c) || { say: '...', fx: {} };
+        if (typeof r.say === 'string') {
+          r.say = MI.noReask(k, r.say);
+          // strangers react to something new you told them (if their brain didn't)
+          if (!contra && stranger(k) && !r.end) { const nk = Object.keys(an.claims).find((x) => NEWR[x] && rec.f[x] && rec.f[x].n === 1 && !String(r.say).toLowerCase().includes(String(an.claims[x]).toLowerCase().split(' ')[0])); if (nk) r.say = NEWR[nk](an.claims[nk]) + ' ' + r.say; }
+          if (contra && !r.say.includes(contra)) r.say = contra + ' ' + r.say;
+          if (stranger(k)) r.say = r.say.charAt(0).toUpperCase() + r.say.slice(1);
+          const q = r.say.match(/[^.!?]*\?/g); const key = q && askOf(q[q.length - 1]); if (key) { rec.lastAsk = key; rec.lastAskT = now; rec.asks[key] = now; }
+        }
+        return r;
+      } finally { c._cl = false; }
+    };
+    Object.keys(fn).forEach((x) => { w[x] = fn[x]; });
+    cache.set(fn, w); return w;
+  }
+  SH.Brain = new Proxy(raw, { get(t, key) { const f = t[key]; return typeof f === 'function' && typeof key === 'string' ? layer(key, f) : f; } });
+  /* ---------- openers: names remembered; small towns talk ---------- */
+  const T = SH.Talk, bOpen = T && T.open;
+  if (bOpen) T.open = function (npc, opts) {
+    opts = opts || {}; arguments[1] = opts;
+    try {
+      const k = MI.who(npc, { npc }), rec = CL(k), p = here();
+      if (stranger(k) && typeof opts.first === 'string') {
+        const nm = rec.f.name && rec.f.name.v;
+        if (nm && rec.n > 0 && !opts.first.includes(nm)) opts.first = pick([`${nm}! `, `Hey, ${nm}. `, `${nm}, right? `]) + opts.first.replace(/^(well,? )?(hey|hi|hello)( there)?[.!,]?\s*/i, '');
+        else if (!rec.n && p && /village|small|town/.test(p.tier || '')) { const tw = TOWN(p.id); if (tw.name && tw.name.by !== k) { const who = String(tw.name.by).split(':')[1]; const wn = who ? who.split(/[ ,]/)[0] : 'Someone'; opts.first = `You must be ${tw.name.v}. ${wn} mentioned you.` + (tw.story ? ` ${cap(tw.story.v)}, right?` : '') + ' ' + opts.first.replace(/\b(what'?s your name|who are you)[^?]*\?\s*/i, '').replace(/\s*I don'?t think I know you\.?/i, ''); rec.f.name = { v: tw.name.v, t: G().t, heard: wn }; if (tw.story && !rec.f.story) rec.f.story = { v: tw.story.v, t: G().t, heard: wn }; } }
+      }
+      if (typeof opts.first === 'string') { opts.first = MI.noReask(k, opts.first); const key = askOf(opts.first); if (key) { rec.lastAsk = key; rec.lastAskT = G().t; } }
+    } catch (e) { console.warn('mind2 open', e); }
+    focus = null;
+    return bOpen.apply(this, arguments);
+  };
+  /* texts: re-asks swapped, questions remembered */
+  const P = SH.Phone, bPush = P.push;
+  P.push = function (id, from, text) { try { if (from === id && typeof text === 'string' && (SH.NPCS_META || {})[id]) { arguments[2] = MI.noReask(id, text); const key = askOf(arguments[2]); if (key) { const rec = CL(id); rec.lastAsk = key; rec.lastAskT = G().t; } } } catch (e) {} return bPush.apply(this, arguments); };
+  /* what people remember about you (contact view / "what do you know about me") includes your claims */
+  if (SH.Mem && SH.Mem.summary) { const bs = SH.Mem.summary; SH.Mem.summary = function (npc) { const r = bs.apply(this, arguments) || []; try { const F = CL(npc).f, W = SH.Mem.when; ['name', 'age', 'story', 'from', 'going', 'with', 'parents'].forEach((key) => { const f = F[key]; if (!f || (key === 'name' && knowsReal(npc) && !f.fake)) return; r.unshift({ when: W(f.t), text: f.heard ? `${f.heard} says your ${key === 'name' ? 'name is' : 'story is'} ${f.v}` : key === 'name' ? `you said your name is ${f.v}` : key === 'age' ? `you said you're ${f.v}` : key === 'story' ? `you said you're ${f.v}` : key === 'from' ? `you said you're from ${f.v}` : key === 'going' ? `you said you're going to ${f.v}` : key === 'with' ? `you said you're with ${f.v}` : `you said your ${f.v}`, src: f.heard ? 'heard' : 'claim' }); }); } catch (e) {} return r.slice(0, 10); }; }
+})(window.SH);
+
+</script>
+<script>
+/* pip2.js */
+/* SMALL HOURS — PIP, actually useful. PIP now knows the whole road, not just Harlow:
+   - "how do I get to Port Aldine" → real journeys from where you are (times, changes, cost for your whole group)
+   - "what's leaving" / "next bus" → the departure board here
+   - "where can I sleep" → your room / base / this town's motels ranked by price, what each kind will ask, side streets
+   - "motel tips" → how check-in works here (ID? haggling? the floor price, week/month prepay), your fake ID if you have one
+   - "where can I buy a sleeping bag" → which store here sells it and for how much (or which bigger town will)
+   - "money" → cash, what a day costs your group, how many days that lasts, and ways to earn in this place
+   - "am I safe / is anyone looking" → how noticed you are here, heat, posters + how online this place is, your cover
+   - "I feel sick" → health + the nearest clinic
+   - "can I disappear" → the four pillars, which you have, what to do about the rest
+   - "how are my friends' parents" → how worried each one is, and what helps
+   - "what do I say to the clerk / a cop" → coaching that matches the story you've already told
+   - PIP remembers: tell it your goal ("I want to get to Cedar Falls") and it keeps it, plans toward it, and brings it up.
+     "what was I doing / remind me" gives you your goal + where things stand.
+   - The "what should I do" plan is built from your actual situation on the road (warmth, food, battery, sleep, money
+     runway, health, notice, your goal's next departure, pillars).
+   - Replies in conversations (◉ PIP) know clerks, cops, locals, runaway kids and friends' parents, and keep your story straight. */
+(function (SH) {
+  const PIP = SH.PIP, A = SH.Atlas, R = SH.Routes, K = SH.K; if (!PIP || !A) return;
+  const G = () => SH.G, pick = (a) => a[Math.floor(Math.random() * a.length)];
+  const fmt = (t) => { const m = ((t % 1440) + 1440) % 1440, h = Math.floor(m / 60), mm = m % 60; return `${(h % 12) || 12}:${String(mm).padStart(2, '0')} ${h < 12 ? 'AM' : 'PM'}`; };
+  const dayw = (t) => { const d = Math.floor(t / 1440) - Math.floor(G().t / 1440); return d <= 0 ? '' : d === 1 ? ' tomorrow' : ` in ${d} days`; };
+  const grp = () => (K ? K.grp() : 1), $ = (n) => '$' + Math.round(n);
+  const mem = () => { const g = G(); return (g.pipMem = g.pipMem || { goal: null, asked: {}, last: null }); };
+  const away = () => { const g = G(); return !!(g.away && g.away !== 'p0'); };
+  const here = () => A.here();
+  const places = () => (A.data() ? A.data().places : []);
+  /* ---------- find a place by name (forgiving) ---------- */
+  function findPlace(q) {
+    q = String(q || '').toLowerCase().replace(/[^a-z ]/g, ' ').replace(/\b(the|town|of|city|village|please|tonight|tomorrow|now|asap|from here|by bus|by train)\b/g, ' ').replace(/\s+/g, ' ').trim(); if (q.length < 3) return null;
+    if (/\bgrandma|grandmas\b/.test(q)) return places().find((p) => p.grandma) || null;
+    if (/\bhome\b|\bharlow\b/.test(q)) return places().find((p) => p.id === 'p0');
+    let best = null, bs = 0;
+    places().forEach((p) => { const n = p.name.toLowerCase(); let s = 0; if (n === q) s = 100; else if (n.startsWith(q) || q.startsWith(n)) s = 60; else if (n.includes(q) || q.includes(n)) s = 40; else { const qw = q.split(' '), nw = n.split(' '); s = qw.filter((w) => w.length > 2 && nw.some((x) => x.startsWith(w) || w.startsWith(x))).length * 15; } if (s > bs) { bs = s; best = p; } });
+    return bs >= 15 ? best : null;
+  }
+  PIP.findPlace = findPlace;
+  /* ---------- journeys ---------- */
+  function legTxt(jr) {
+    const P = (id) => places().find((x) => x.id === id), L = jr.legs;
+    const ch = L.length > 1 ? ', change at ' + L.slice(1).map((l, n) => `${P(L[n].rt.stops[L[n].j]).name} (${fmt(l.dep)})`).join(' then ') : ', direct';
+    return `${fmt(jr.dep)}${dayw(jr.dep)} → ${fmt(jr.arr)}${dayw(jr.arr) && dayw(jr.arr) !== dayw(jr.dep) ? dayw(jr.arr) : ''}: ${L[0].rt.op.n} ${L[0].rt.op.T ? L[0].rt.op.T.v : ''}${ch}, ${$(jr.cost * grp())}${grp() > 1 ? ' for ' + grp() : ''}`;
+  }
+  function route(to) {
+    const from = here(); if (!from || !R) return 'I can\'t see the map right now.';
+    if (from.id === to.id) return `You're already in ${to.name}. Achievement unlocked: arriving.`;
+    const js = R.journeys(from, to, G().t, 3), strict = js.filter((j) => j.legs.some((l) => l.rt.op.strict)).length;
+    const dist = Math.round(Math.hypot(from.x - to.x, from.y - to.y));
+    if (!js.length) return `No bus or train links ${from.name} and ${to.name}, even with changes. That leaves feet, a bike, or someone's car. Open the Atlas map for the roads. It's roughly ${dist} map-miles, so plan for food and a night somewhere.`;
+    const money = G().money, cheap = Math.min(...js.map((j) => j.cost)) * grp();
+    const viaHome = from.id !== 'p0' && to.id !== 'p0' && js.every((j) => j.legs.some((l, n) => n > 0 && l.rt.stops[l.i] === 'p0'));
+    return `${from.name} → ${to.name}:\n` + js.map((j, i) => `${i + 1}) ${legTxt(j)}`).join('\n') + `\n${viaHome ? 'Heads up: that changes in Harlow. People there know your face. ' : ''}${money < cheap ? `You have ${$(money)}, which isn't enough for the cheapest one. ` : ''}${strict ? 'The big companies check ages. The scrappy ones mostly don\'t. ' : ''}Buy tickets from "Travel" in the town menu.`;
+  }
+  function board() {
+    const p = here(); if (!R || !p) return 'No departures I can see.';
+    const L = R.board(p, G().t, 300).slice(0, 6); if (!L.length) return `Nothing leaves ${p.name}. It's that kind of place.`;
+    const P = (id) => places().find((x) => x.id === id);
+    return `Leaving ${p.name}:\n` + L.map((b) => `${fmt(b.dep)}${dayw(b.dep)}: ${b.rt.op.n} to ${P(b.rt.stops[b.rt.stops.length - 1]).name}`).join('\n');
+  }
+  /* ---------- sleeping / motels ---------- */
+  function sleep() {
+    const g = G(), p = here(), out = [], n = grp();
+    if (g.room && g.room.pid === p.id && g.room.until > g.t) { const nn = Math.max(1, Math.round((g.room.until - g.t) / 1440)); out.push(`You have a room at ${g.room.n}, paid for about ${nn} more night${nn > 1 ? 's' : ''}. Use it. Showers are free when you already paid.`); }
+    if (g.base && g.base.pid === p.id) out.push(`Your base is here (${g.base.up.length} upgrade${g.base.up.length === 1 ? '' : 's'}). ${g.base.up.length < 3 ? 'Still pretty rough. Cold nights will hurt.' : 'Honestly? Decent.'}`);
+    const ms = SH.Motels ? SH.Motels.motels(p) : [];
+    ms.slice().sort((a, b) => a.rate - b.rate).forEach((m) => out.push(`${m.n} (${m.k === 'pro' ? 'chain, wants ID + a card' : m.k === 'loose' ? 'family-run, asks questions, haggles' : 'cash, no questions'}): ${$(m.rate)}/night${n > 1 ? ` (+$5 a head if you all share)` : ''}, ${$(m.rate * 6)}/week.`));
+    if (!ms.length) out.push(`${p.name} has no motels. Villages don't.`);
+    if (!g.base && /village|small/.test(p.tier)) out.push('No base yet. Woods or an old barn could be one. "Find a base" in the town menu.');
+    if (/town|city/.test(p.tier) && !ms.some((m) => m.rate <= g.money)) out.push('Can\'t afford a room? The side streets have people who look out for regulars. Being a regular takes time.');
+    out.push(SH.World2 && SH.World2.season && SH.World2.season(g.t) === 'winter' ? 'It\'s winter. A night outside isn\'t a plan, it\'s a gamble.' : 'Outside is free. Free has a cost.');
+    return out.join('\n');
+  }
+  function motelTips() {
+    const g = G(), p = here(), ms = SH.Motels ? SH.Motels.motels(p) : [];
+    const K2 = { pro: 'Chains want ID and a card. No haggling, and they spot bad fakes. Skip unless you have a good fake ID.', loose: 'Family-run places ask questions but bargain. A believable story ("my mom\'s parking the car") plus a lower offer works. They go down to about 70%. Prepay a week and it\'s 6 nights\' price for 7.', sloppy: 'Cash places don\'t ask. Cheapest, loudest, and managers get spooked if trouble shows up.' };
+    const kinds = [...new Set(ms.map((m) => m.k))];
+    return (ms.length ? `In ${p.name}: ` + ms.map((m) => `${m.n} (${m.k}, ${$(m.rate)})`).join(', ') + '.\n' : `No motels in ${p.name}.\n`) + (kinds.length ? kinds : ['pro', 'loose', 'sloppy']).map((k) => K2[k]).join('\n') +
+      `\nA week costs 6 nights, a month about 22.${g.fakeId ? ` Your fake ID says "${g.fakeId.name}". It's ${g.fakeId.q === 'good' ? 'decent' : 'bad. A chain clerk will notice'}.` : ''} Never tell two clerks different names in the same town.`;
+  }
+  /* ---------- buying ---------- */
+  function buy(q) {
+    const C = SH.Catalog, S = SH.Stores, p = here(); if (!C || !S) return 'My shopping database is on strike.';
+    q = q.replace(/\b(a|an|some|the|new|cheap|good)\b/g, ' ').replace(/[?.!]/g, '').trim(); const hits = C.search(q).slice(0, 3); if (!hits.length) return `"${q}"? Not something stores out here carry. Try other words.`;
+    const it = hits[0]; if (it.cat === 'adult') return 'That\'s grown-up stuff. You\'re not buying that. Next.';
+    const list = (S.BY_TIER[p.tier] || ['general']).filter((s) => S.STORES[s].cats.includes(it.cat) && (!S.STORES[s].max || it.price <= S.STORES[s].max || it.cat === 'food'));
+    if (list.length) return `${it.n}: ${list.map((s) => `${S.STORES[s].n} (${$(S.price(it, s, p))})`).join(', ')}, here in ${p.name}.${hits[1] ? ` Also: ${hits.slice(1).map((h) => h.n).join(', ')}.` : ''} Buying stuff gets you noticed${p.tier === 'city' ? ', but barely here' : ''}.`;
+    const big = places().filter((x) => /town|city/.test(x.tier)).sort((a, b) => Math.hypot(a.x - p.x, a.y - p.y) - Math.hypot(b.x - p.x, b.y - p.y))[0];
+    return `Nobody in ${p.name} sells ${it.n}. The nearest bigger place is ${big ? big.name : 'far'}. Or the Shoply app delivers, if you have an address and patience.`;
+  }
+  /* ---------- money ---------- */
+  function money() {
+    const g = G(), p = here(), n = grp(), ms = SH.Motels ? SH.Motels.motels(p) : [];
+    const food = 9 * n, bed = g.room && g.room.until > g.t ? 0 : g.base ? 0 : ms.length ? Math.min(...ms.map((m) => m.rate)) + (n - 1) * 5 : 0, day = food + bed;
+    const runway = day ? Math.floor(g.money / day) : 99;
+    const earn = [];
+    if (p.kidjobs && p.kidjobs.length) earn.push('odd jobs here (' + p.kidjobs.slice(0, 3).join(', ') + ')');
+    earn.push(n > 1 ? 'a group business (one per town): more of you, more money' : 'a business, like a stand. Better with friends');
+    if (/town|city/.test(p.tier)) earn.push('the pawn shop, for things you own and don\'t need');
+    return `You have ${$(g.money)}. Out here a day costs your group about ${$(day)} (${$(food)} food${bed ? `, ${$(bed)} for the cheapest bed` : ', bed already covered'}). That's ${runway >= 99 ? 'plenty of days' : runway + ' day' + (runway === 1 ? '' : 's')}. ${runway <= 2 ? 'That\'s not a runway, that\'s a cliff. ' : ''}Ways to earn in ${p.name}: ${earn.join('; ')}.`;
+  }
+  /* ---------- noticed? ---------- */
+  function safety() {
+    const g = G(), p = here(), an = g.awayNotice || 0, heat = g.heat || 0, cv = (g.cover || {})[p.id], look = g.look ? Object.values(g.look).filter(Boolean).length : 0;
+    const sig = SH.Net && SH.Net.cell ? SH.Net.cell(p) : null, pm = SH.Net && SH.Net.posterMult ? SH.Net.posterMult(p) : 1;
+    const lv = an >= 70 ? 'People here are watching you. Leave soon.' : an >= 40 ? 'You\'re getting noticed here. Folks talk.' : an >= 15 ? 'A few people have clocked you. Normal for a new face.' : 'Nobody here is paying you much attention.';
+    const hv = heat >= 60 ? 'Police are actively looking. Your photo is out.' : heat >= 30 ? 'Your case is open and your name is on lists.' : g.reported ? 'You\'ve been reported missing, but it\'s quiet.' : 'Nobody official is looking hard yet.';
+    const tips = [];
+    if (!cv) tips.push('you have no cover story here (set one up in "You & your group")');
+    if (look < 2 && heat >= 30) tips.push('a haircut or a new look makes posters less useful');
+    if (an >= 40) tips.push('another town would reset how noticed you are');
+    const caught = Object.entries(g.claims || {}).filter(([k, c]) => c.caught && k.includes(p.name)).length; if (caught) tips.push(`${caught} person${caught > 1 ? 's' : ''} here caught you changing your story`);
+    return `${lv} ${hv} ${pm < 0.8 ? `${p.name} is barely online, so posters don't travel far.` : pm > 1.1 ? `${p.name} is very online. Posters spread.` : ''}${cv ? ` Here you're "${cv.name}".` : ''}${tips.length ? ' PIP says: ' + tips.join('; ') + '.' : ''}`;
+  }
+  function health() {
+    const p = here(), W2 = SH.World2, h = G().hp || {}, clinic = /town|city/.test(p.tier) || (p.services && p.services.clinic);
+    return `${W2 && W2.hpLine ? W2.hpLine() : 'You seem okay.'} ${h.cold >= 70 ? 'That\'s a fever. Fevers end runs. ' : ''}${h.cold || h.blist >= 30 ? (clinic ? `${p.name} has a clinic (about $25). Go.` : `No clinic in ${p.name}. The nearest town has one.`) : ''} ${h.debt >= 2 ? 'Sleep somewhere with walls tonight.' : ''} ${h.blist ? 'Dry socks and better shoes help blisters.' : ''}`.replace(/\s+/g, ' ').trim();
+  }
+  function pillars() {
+    const NF = SH.NotFound, p = here(); if (!NF) return 'Disappearing is not a feature. Yet.';
+    const ps = NF.pillars(p), d = Math.floor(K ? K.days() : 0), fix = { 'A place to sleep': 'a base with 3+ upgrades, or a room paid a week ahead', 'A way to eat': '$120 saved, a business that has made $100, or regulars on the side streets', 'A story people believe': 'a cover story in this town, or two changes to how you look', 'People who\'d vouch for you': 'a good name in town, a close runaway friend, or helping someone' };
+    return `Day ${d} away. ` + ps.map(([n, ok]) => `${ok ? '✓' : '✗'} ${n}${ok ? '' : ': ' + fix[n]}`).join('\n') + `\n${d < 21 ? `It's too soon. Everyone's still looking for ${21 - d} more days.` : NF.ready(p) ? 'You could stay gone. It\'s in "You & your group". I won\'t be dramatic about it. Much.' : 'Not yet. Need 3 of 4, and nobody close.'}`;
+  }
+  function parents() {
+    const g = G(), P = SH.Parents, party = K ? K.party() : []; if (!party.length || !P) return 'No friends with you, so no parents to worry about. Except yours. Yours definitely worry.';
+    return party.map((id) => { const w = P.W(id), lv = w.w >= 85 ? 'frantic' : w.w >= 60 ? 'very worried' : w.w >= 35 ? 'worried' : 'uneasy'; return `${K.nm(id)}'s parent: ${lv}${w.chirp ? ', posting online' : ''}${w.sched ? ', gets the nightly "I\'m safe" text' : ''}.`; }).join('\n') + '\nA nightly "I\'m safe" text slows the worry. Every ping is a small risk.';
+  }
+  function coach(who) {
+    const g = G(), p = here(), cv = (g.cover || {})[p.id], cl = SH.Mind && SH.Mind.claims ? SH.Mind.claims : () => ({}), ex = (g.excuse || {})[p.id];
+    if (/clerk|motel/.test(who)) return motelTips();
+    if (/cop|police|officer/.test(who)) return `Cops: stay calm, short answers, no fake details you'll forget. ${ex ? `You already told police here it's "${ex}". Stick to it.` : 'Pick ONE excuse (school project, fundraiser, helping family, youth group) and keep it.'} Charities get checked. If home isn't safe, saying so is always an option. It changes what they're supposed to do.`;
+    if (/kid|runaway/.test(who)) return 'Runaway kids are wary. Don\'t push. Share a bit of your story first, offer food, and ask what they need. They can join you, or you can help them get to a safe adult.';
+    return `Locals: ${cv ? `you're "${cv.name}" here${cv.story ? '. Keep the same story' : ''}.` : 'pick a name and a reason to be here, and use the same one with everyone. Small towns talk.'} Short, friendly, boring. Boring is invisible.`;
+  }
+  /* ---------- plan on the road ---------- */
+  const basePlan = PIP.plan;
+  PIP.plan = function () {
+    if (!away()) return basePlan.apply(this, arguments);
+    const g = G(), s = g.s, p = here(), out = [], h = SH.hour(), M = mem();
+    if ((s.warmth != null && s.warmth < 45) || (SH.tempF && SH.tempF() < 38 && (h >= 19 || h < 7))) out.push(`It's ${SH.tempF ? SH.tempF() + '°F' : 'cold'} and you're cold. Get indoors: ${g.room && g.room.pid === p.id ? 'your room' : SH.Motels && SH.Motels.motels(p).length ? 'a motel, the library, anywhere with heat' : 'the store, a church, a barn'}.`);
+    if (s.full < 40) out.push(`Fullness ${Math.round(s.full)}%. ${SH.foodInBag && SH.foodInBag().length ? 'You have food. Eat it.' : 'Buy food. The store here has it.'}`);
+    if (g.phone && g.phone.bat < 25) out.push(`I'm at ${Math.round(g.phone.bat)}%. ${g.room && g.room.pid === p.id ? 'Your room has an outlet.' : 'Find an outlet: library, diner, motel.'}`);
+    if (s.energy < 30 || h >= 22 || h < 5) out.push('Sleep soon. ' + sleep().split('\n')[0]);
+    if (M.goal) { const to = places().find((x) => x.id === M.goal); if (to && to.id !== p.id && R) { const j = R.journeys(p, to, g.t, 1)[0]; out.push(j ? `Your goal: ${to.name}. Next way there: ${legTxt(j)}.` : `Your goal: ${to.name}. No transit connects. Walk, bike, or rethink.`); } else if (to && to.id === p.id) out.push(`You made it to ${to.name}. Your goal. Now what?`); }
+    const hh = g.hp || {}; if (hh.cold >= 70) out.push('You have a fever. Clinic, today.'); else if (hh.cold || hh.blist >= 30) out.push(`${hh.cold ? 'You\'re sick' : 'Your feet are wrecked'}. ${/town|city/.test(p.tier) || (p.services && p.services.clinic) ? 'The clinic here costs about $25.' : 'Rest somewhere warm.'}`);
+    const mline = money(), md = (mline.match(/That's (\d+) day/) || [])[1]; if (md != null && +md <= 2) out.push(`Money: ${$(g.money)} lasts about ${md} day${md === '1' ? '' : 's'} here. Earn something (ask me "money").`);
+    if ((g.awayNotice || 0) >= 40 || (g.heat || 0) >= 60) out.push(`${(g.awayNotice || 0) >= 70 ? 'People here are watching you. Move on soon.' : 'You\'re getting noticed here.'}${!(g.cover || {})[p.id] ? ' Set up a cover story.' : ''}`);
+    if (K && K.days() >= 14) out.push(pillars().split('\n').slice(0, 1).join(''));
+    if (!out.length) out.push(pick([`Things are okay. ${p.name} is quiet. Earn something, eat something, charge me.`, 'Nothing\'s on fire. Rare. Enjoy it.']));
+    return out;
+  };
+  /* ---------- the reply router ---------- */
+  const base = PIP.reply;
+  const RX = {
+    route: /\b(?:how (?:do|can|would|should) (?:i|we) (?:get|go) to|how to get to|way to|route to|directions to|(?:bus|train|ride|ticket)s? to|get (?:me|us) to|travel to|how far (?:is|to))\s+(.+)/,
+    board: /\b(what'?s leaving|next (bus|train|ride)|departures?|timetable|schedule here|what leaves|when'?s the (next )?(bus|train))\b/,
+    sleep: /\b(where|somewhere).{0,20}\b(sleep|stay|crash)\b|\bsleep tonight\b|\bstay tonight\b|\bneed a bed\b/,
+    motel: /\b(motel|check ?in|get a room|haggle|clerk)\b/,
+    buy: /\b(?:where (?:can|do|could) (?:i|we) (?:buy|get|find)|do (?:they|stores?) (?:sell|have)|i need to buy|buy (?:a|an|some))\s+(.+)/,
+    money: /\b(money|cash|afford|broke|earn|budget|how long can i last|runway|job)\b/,
+    safe: /\b(am i safe|noticed|looking for me|posters?|heat|wanted|being searched|am i (?:hidden|found)|do they know|suspicious)\b/,
+    health: /\b(sick|fever|cold\b|blisters?|feet hurt|clinic|doctor|health|coughing|i feel (?:bad|awful|sick))\b/,
+    pillars: /\b(disappear|stay gone|for good|never be found|never found|pillars|settle down|stop running)\b/,
+    parents: /\b(parents?|worried|worry)\b.*\b(friends?|nia|marco|priya|eli|theo|hazel|their)\b|\b(nia|marco|priya|eli|theo|hazel)'?s (mom|dad|parents?)\b/,
+    coach: /\b(?:what (?:do|should) i (?:say|tell)|how (?:do|should) i talk to|help me talk to|what to say to)\s+(?:to\s+)?(?:the\s+|a\s+)?(clerk|motel|cop|police|officer|local|people|kid|runaway)/,
+    where: /\b(where am i|what is this place|what'?s here|tell me about (this|here))\b/,
+    remind: /\b(remind me|what was i doing|what'?s my (goal|plan)|what am i doing|where was i going)\b/,
+    goal: /\b(?:i want to (?:go|get) to|my goal is(?: to (?:go|get) to)?|i'?m (?:going|heading|trying to get) to|we need to get to|plan is to (?:go|get) to)\s+(.+)/,
+  };
+  PIP.reply = function (raw) {
+    const g = G(), t = String(raw || '').toLowerCase(), M = mem(), a = SH.NLP.analyze(raw);
+    if (a.has && a.has('selfharm')) return base.apply(this, arguments);
+    let m, r = null;
+    try {
+      if ((m = t.match(RX.goal))) { const to = findPlace(m[1]); if (to) { M.goal = to.id; r = `Goal saved: ${to.name}. I'll keep it in mind${away() ? '' : ' for when you\'re out there'}. ` + (away() ? route(to) : ''); } }
+      if (!r && (m = t.match(RX.route))) { const to = findPlace(m[1]); r = to ? route(to) : `"${m[1].trim()}"? Not on my map. Spell it like the Atlas does.`; if (to && !M.goal) M.goal = to.id; }
+      if (!r && RX.remind.test(t)) { const to = M.goal && places().find((x) => x.id === M.goal); r = to ? `Your goal: ${to.name}.${away() && here().id !== to.id && R ? ' ' + (R.journeys(here(), to, g.t, 1).map(legTxt)[0] || 'No transit goes there from here.') : ''} ${M.last ? `Last thing you asked me about: ${M.last}.` : ''}` : `You haven't told me a goal. Say "I want to get to ___".${M.last ? ` Last thing you asked about: ${M.last}.` : ''}`; }
+      if (!r && away()) {
+        if (RX.board.test(t)) { r = board(); M.last = 'departures'; }
+        else if ((m = t.match(RX.buy))) { r = buy(m[1]); M.last = 'buying ' + m[1].slice(0, 20); }
+        else if ((m = t.match(RX.coach))) { r = coach(m[1]); M.last = 'talking to ' + m[1]; }
+        else if (RX.pillars.test(t)) { r = pillars(); M.last = 'disappearing'; }
+        else if (RX.parents.test(t)) { r = parents(); M.last = 'the parents'; }
+        else if (RX.sleep.test(t)) { r = sleep(); M.last = 'where to sleep'; }
+        else if (RX.motel.test(t)) { r = motelTips(); M.last = 'motels'; }
+        else if (RX.health.test(t)) { r = health(); M.last = 'health'; }
+        else if (RX.safe.test(t)) { r = safety(); M.last = 'being noticed'; }
+        else if (RX.money.test(t)) { r = money(); M.last = 'money'; }
+        else if (RX.where.test(t)) { const p = here(), sig = SH.Net && SH.Net.signal ? SH.Net.signal() : null; r = `${p.name}: a ${p.tier === 'small' ? 'small town' : p.tier}${p.biome ? ' (' + p.biome + ')' : ''}. ${(SH.Stores ? (SH.Stores.BY_TIER[p.tier] || []).map((s) => SH.Stores.STORES[s].n).join(', ') : '')}. ${SH.Motels && SH.Motels.motels(p).length ? SH.Motels.motels(p).length + ' motel(s).' : 'No motels.'} ${p.hasPolice ? 'Has its own police.' : 'No police station.'}${sig ? ` Signal: ${sig.bars} bar${sig.bars === 1 ? '' : 's'} ${sig.gen}.` : ''}`; M.last = 'this place'; }
+      }
+    } catch (e) { console.warn('pip2', e); r = null; }
+    if (r) { M.asked[M.last || 'route'] = (M.asked[M.last || 'route'] || 0) + 1; return r; }
+    // otherwise: the old PIP, but its "I didn't get that" becomes a real menu
+    const conv = (g.convMem.pip = g.convMem.pip || {}); conv._fb = false;
+    const out = base.apply(this, arguments);
+    if (conv._fb) return away() ? `Not sure what you mean. Out here I can do: "how do I get to ___", "what's leaving", "where can I sleep", "motel tips", "where can I buy ___", "money", "am I safe", "I feel sick", "can I disappear", "what do I say to a cop"${K && K.party().length ? ', "how are the parents"' : ''}. Or "what should I do".` : out + ' Also try: "how do I get to Cedar Falls", "what should I do", "money".';
+    return out;
+  };
+  /* greet with the goal when you open PIP after a while (used by phone PIP view if present) */
+  PIP.nudge = function () { const M = mem(), to = M.goal && places().find((x) => x.id === M.goal); return to && away() && here().id !== to.id ? `Still headed to ${to.name}? Ask me "remind me".` : null; };
+  /* ---------- suggestions for the new people ---------- */
+  const baseS = PIP.suggest;
+  PIP.suggest = function (npc, lastText, ctx) {
+    const S = (h, s, d) => [{ tone: 'honest', t: h }, { tone: 'smartass', t: s }, { tone: 'dodge', t: d }];
+    const g = G(), p = away() ? here() : null, cv = p && (g.cover || {})[p.id], c = SH.Talk && SH.Talk.cur, last = String(lastText || '');
+    const k = SH.Mind && SH.Mind.who ? SH.Mind.who(npc, { npc }) : npc, cl = SH.Mind && SH.Mind.claims ? SH.Mind.claims(k) : {};
+    const myName = (cl.name && cl.name.v) || (cv && cv.name) || null, ask = SH.Mind && SH.Mind.askOf ? SH.Mind.askOf(last) : null;
+    const nameAns = myName ? `I'm ${myName}.` : `I'm Jordan.`;
+    try {
+      if (npc === 'clerk') {
+        const m = c && c.opts && c.opts.m, rate = m ? m.rate : 49, low = Math.round(rate * (m && m.k === 'loose' ? 0.75 : m && m.k === 'sloppy' ? 0.65 : 1));
+        if (ask === 'name') return S(nameAns, `${myName || 'Jordan'}. Like the river. Not really, I just like it.`, `${myName || 'Jordan'}. How much for a night?`);
+        if (ask === 'age' || /\b(how old|id|identification|card)\b/i.test(last)) return S('I\'m 12. I just need somewhere safe to sleep tonight.', 'Old enough to pay cash. Young enough to be polite about it.', g.fakeId ? 'Here\'s my ID.' : 'My mom has the card, she\'s parking the car.');
+        if (ask === 'parents' || /\b(parents?|mom|dad|adult|grown)\b/i.test(last)) return S('It\'s just me. Things at home aren\'t safe.', 'My mom\'s in the car. She\'s had a day. You don\'t want to meet her like this.', 'My mom\'s parking. She said to get the room.');
+        if (m && m.k === 'pro') return S('I\'m on my own and I need a room. Please.', 'Do you have a kids\' rate? Asking for me.', 'Never mind, thanks.');
+        return S(`Could you do $${low} a night? It's all I've got.`, `What about a week, cash up front? $${Math.round(rate * 6 * 0.8)}.`, `How much for one night?`);
+      }
+      if (npc === 'cop') {
+        const ex = (g.excuse || {})[p && p.id];
+        return S('Honestly? I ran away. Home isn\'t safe.', ex ? `Like I said last time, it's a ${ex}. Same as always.` : 'It\'s a school project. We\'re learning about small business.', ex ? `It's for the ${ex}.` : 'Just helping my family out.');
+      }
+      if (npc === 'local') {
+        if (ask === 'name') return S(nameAns + (cv && cv.story ? ` ${cv.story}.` : ''), `${myName || 'Jordan'}. I'm new. Like, very new.`, `${myName || 'Jordan'}.`);
+        if (ask === 'family' || ask === 'from') return S(cl.story ? `I'm ${cl.story.v}.` : (cv && cv.story ? `${cv.story}.` : 'I\'m visiting my aunt for a bit.'), 'Nobody you\'d know. We keep to ourselves.', 'Just passing through.');
+        if (ask === 'going') return S('I\'m not sure yet, honestly.', 'Wherever the bus goes. Adventure!', 'Just walking around.');
+        return S('Is there anywhere warm to sit around here?', 'Nice town. Very... quiet.', 'Have a good one.');
+      }
+      if (/^rk_|^rk$/.test(npc)) return S('I left too. My stepdad. You don\'t have to tell me yours.', 'Rate this bench out of ten. I say four.', 'Want some food? I have extra.');
+      if (/^host_/.test(npc)) { const kid = npc.slice(5), nm = K ? K.nm(kid) : 'they'; return S(`${nm} is safe. We're together. I promise.`, `${nm} is fine. Eating vegetables, even. Some.`, `${nm} will text you tonight.`); }
+    } catch (e) { console.warn('pip2 suggest', e); }
+    return baseS.apply(this, arguments);
+  };
 })(window.SH);
 
 </script>

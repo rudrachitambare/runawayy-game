@@ -254,3 +254,31 @@ Say: *"Continue Small Hours from FULLMEMORY.md and FULLGAME.md."* Then: read bot
 Built Parts 2 (rest) through 7; see FULLGAME.md "PARTS 2–7 BUILT" table. Key APIs: `SH.K` (kit.js), `SH.Atlas.mods[]` + `SH.Atlas.noticed`, `SH.Lessons`, `SH.Stores`, `SH.Motels`, `SH.Alley`, `SH.Parents`, `SH.Identity`, `SH.Police`, `SH.Runaways`, `SH.Group`, `SH.Bases`, `SH.Biz`, `SH.World2` (cal/season/halloween/rep/ACH), `SH.NotFound`. State: G.lessons, G.room, G.roomEvt, G.fakeId, G.street, G.pw, G.cover, G.look, G.excuse, G.watch, G.rk, G.rkids (NOT G.crew: that's the bank crew), G.att, G.stay, G.base, G.biz, G.hp, G.helped. Flags used by endings: clerkCalled, fakeCaught, toldParentPlace, charityExposed, creepDiner, goneOffered, goneForGood, trickOrTreat, disguise.
 Tests: `node tests/parts.js [n…]` + p1, p1b, p2, e2, bot, cell all pass. (e2 can rarely flake when a random incoming call screen covers a click.)
 Next ideas (not started, need "go"): two-change trip planning; balance pass on money and notice numbers after real playtesting.
+
+## Request #22 — "go, also add proper memory to speech engine and understanding and make pip actually useful" ✅ DONE
+- **Two-change trips** (`src/routes2.js`): `R.journeys2` searches from → hub1 → hub2 → destination (each hub closer, ≥10 min connections, ≤2 days); `R.journeys` falls back to it when it has fewer than 2 results. Coverage of sampled place pairs went from ~27% to ~56%. The trip label in routes_go lists every change.
+- **Speech memory** (`src/mind2.js`, on top of the original mind.js/converse.js/lex.js; mind.js now keys memory by `SH.Mind.who(id, c)`):
+  - Each local/clerk/cop/runaway kid is their own person (`local:Name, Place`, `rk_3`).
+  - CLAIMS per person in `G.claims[who]`: name, age, from, going, with, parents, story, school, family. Contradictions are caught ("You told me your name was X"; +4 notice for strangers; `rec.caught`); "actually / I mean" counts as a correction.
+  - Short answers to the NPC's last question are understood. NPCs never re-ask a claim (`SH.Mind.noReask`), whether in talk replies, openers or texts.
+  - "what's my name / how old am I / where am I going" is answered from that person's memory. Core characters know the real name.
+  - Small places talk (`G.townTalk[pid]`): the next local may already know your name/story. Strangers react to new claims. Contact summary includes claims.
+  - `SH.Brain` is now a Proxy that adds the claims layer on read (re-entrancy guarded with `c._cl`). Assign brains as before.
+- **Understanding** (analyze wrapper in mind2.js):
+  - More negation ("you're not stupid", "i never ran away"); "don't feel safe" → scared+unsafe; `refuseHome`, `broke`.
+  - A name claim ("my name is Jordan") no longer reads as talk about friend Jordan.
+  - Parsing of `an.claims`, `an.money`, `an.nights` (week=7, month=30) and `an.nums`; pronoun → `an.ref` (last person mentioned).
+- **PIP** (`src/pip2.js`), on the road it covers:
+  - Routes to any place (fuzzy names, group cost, warns when a change is in Harlow) and the departure board.
+  - Where to sleep, motel tips, where to buy an item (store + price here, or the nearest bigger town).
+  - Money runway plus ways to earn, how noticed you are, health/clinic, the Disappear pillars, friends' parents' worry, and coaching for cops/clerks/locals/kids.
+  - PIP memory in `G.pipMem` (goal, last topic): "I want to get to X" is saved; "remind me" recalls it.
+  - The road plan is short and ordered by need, with the goal's next departure. Unknown input gets a real menu.
+  - ◉ suggestions for clerk (price offers based on the motel kind), cop (the excuse already told), local (the cover name/story), rk_*, host_*.
+- **Balance** (`src/balance.js`, numbers in `SH.BAL`):
+  - Notice now fades daily while you stay (village 12 / small 8 / town 7 / city 6; ×1.5 with a cover, ×1.4 with a room/base, ×0.5 at heat ≥ 60).
+  - Familiar-face `A.mods` apply per tier. Towns remember your notice when you come back (−8/day away, `G.noticeAt`), with arrival time kept in `G.hereSince`.
+  - Odd jobs pay $7–18.
+  - 21-day sim (tests/part11): a village without a cover is found around day 5, with one it settles; a small town with a cover stays around 42; a town reported with a friend, cover and room stays around 48 (before: found on day 9).
+- Tests: `tests/part8.js` (trips), `part9.js` (memory + understanding), `part10.js` (PIP), `part11.js` (balance). parts.js now accepts multi-digit part numbers; `TPMAX=n` env raises the print limit. All parts plus p1, p1b, p2, e2, bot and cell pass.
+- ⚠️ Lesson: `src/mind.js` already existed (the original Mind). Always `ls`/grep before creating a file.

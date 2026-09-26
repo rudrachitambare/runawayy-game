@@ -20,7 +20,7 @@
     const g = G(); if (!g || !from || !to || from.id === to.id) return out;
     R.journeys(from, to, g.t, 5).forEach((jr) => {
       const L = jr.legs, o = L[0].rt.op, stops = L.reduce((s, l) => s + l.j - l.i, 0), cost = jr.cost * grp();
-      const ch = L.length > 1 ? ` · change at ${P(L[0].rt.stops[L[0].j]).name} (${L[1].rt.op.n}, ${fmt(L[1].dep)})` : '';
+      const ch = L.length > 1 ? ' · ' + L.slice(1).map((l, n) => `${n ? 'then ' : 'change at '}${P(L[n].rt.stops[L[n].j]).name} (${l.rt.op.n}, ${fmt(l.dep)})`).join(', ') : '';
       out.push({ k: jr.key, jr, n: `${o.icon} ${o.n}${L.length > 1 ? ' + ' + L[1].rt.op.icon : ''}`, mins: jr.arr - g.t, cost, e: 2 * L.length,
         note: `Leaves ${fmt(jr.dep)}${day(jr.dep)} · arrives ${fmt(jr.arr)}${day(jr.arr)} · ${stops} stop${stops > 1 ? 's' : ''} · ${styleTag(o)}${ch}${night(jr.dep) ? ' · ⚠️ night run' : ''}${grp() > 1 ? ` · $${jr.cost} each` : ''}` });
     });

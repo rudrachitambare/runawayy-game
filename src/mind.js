@@ -12,7 +12,7 @@
   const NP = (id) => { const m = MS(); return (m.npc[id] = m.npc[id] || { met: SH.G.t, n: 0, qa: [], ops: {}, said: [] }); };
   const when = (t) => (SH.Mem && SH.Mem.when ? SH.Mem.when(t) : 'before');
   const cap = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
-  const nm = (id) => (SH.NPCS_META && SH.NPCS_META[id] ? SH.NPCS_META[id].n.split(' ')[0] : id);
+  const nm = (id) => { const m = SH.NPCS_META && SH.NPCS_META[String(id).split(':')[0]]; const p = String(id).split(':')[1]; return p ? p.split(/[ ,]/)[0] : m ? m.n.split(' ')[0] : id; };
   const fill = (tpl, o) => tpl.replace(/\{(\w+)\}/g, (_, k) => (o[k] != null ? o[k] : ''));
   const pick = (c, key, arr) => (c && N.pick ? N.pick(c, 'mind_' + key, arr) : U.pick(arr));
   const hash = (s) => { let h = 7; for (const ch of String(s)) h = (h * 31 + ch.charCodeAt(0)) >>> 0; return h; };
@@ -181,9 +181,9 @@
   }
 
   /* ---------- the wrapper around every character ---------- */
-  function wrap(id, base) {
+  function wrap(id0, base) {
     return function (an, c) {
-      c = c || {}; const P = NP(id), G = SH.G, heavy = an.has('selfharm');
+      c = c || {}; const id = SH.Mind.who ? SH.Mind.who(id0, c) : id0; const P = NP(id), G = SH.G, heavy = an.has('selfharm');
       if (c._mindTurn !== c.turn) { c._mindTurn = c.turn; }
       if (heavy) { const r = base.call(this, an, c); remember(id, c, an, r); return r; }
       // facts are always learned, whoever handles the reply
@@ -254,7 +254,7 @@
 
   /* ---------- install ---------- */
   function install() {
-    Object.keys(SH.Brain).forEach((id) => { if (SKIP.includes(id) || SH.Brain[id]._mind) return; const w = wrap(id, SH.Brain[id]); w._mind = true; SH.Brain[id] = w; });
+    Object.keys(SH.Brain).forEach((id) => { if (SKIP.includes(id) || SH.Brain[id]._mind) return; const w = wrap(id, SH.Brain[id]); w._mind = true; w._base = SH.Brain[id]; SH.Brain[id] = w; });
     if (SH.Mem) {
       const bg = SH.Mem.greeting; SH.Mem.greeting = function (npc) { let g = null; try { g = followUp(npc); } catch (e) {} const r = g || bg.apply(this, arguments); const nick = MS().nick; return r && nick && known(npc, 'nick') ? nickify(String(r), nick) : r; };
       const bs = SH.Mem.summary; SH.Mem.summary = function (npc) { const base = bs.apply(this, arguments) || []; const facts = listOf(npc, null).slice(0, 6).map((f) => ({ when: when(f.by[npc]), text: describe(f), src: 'fact' })); return facts.concat(base).slice(0, 12); };
@@ -273,6 +273,6 @@
       };
     }
   }
-  SH.Mind = { install, describe, learn, known, opinion, facts: () => MS().facts };
+  SH.Mind = { install, describe, learn, known, knownBy, opinion, NP, facts: () => MS().facts };
   install();
 })(window.SH);

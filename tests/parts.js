@@ -19,7 +19,7 @@ const want = process.argv.slice(2).map(Number);
   };
   const run = async (n, name, fn) => { if (want.length && !want.includes(n)) return; console.log(`\n=== PART ${n}: ${name}`); try { await fn(); } catch (e) { console.log('FAIL', e.message); errs.push('part' + n + ': ' + e.message); } };
   const ev = (f, a) => p.evaluate(f, a);
-  const tp = (x) => console.log(typeof x === 'string' ? x.slice(0, 600) : JSON.stringify(x));
-  for (const f of require('fs').readdirSync(__dirname).filter((x) => /^part\d\.js$/.test(x)).sort()) { const n = +f.match(/\d/)[0]; if (want.length && !want.includes(n)) continue; await fresh(); await require('./' + f)(run, ev, tp, p); await p.close(); }
+  const tp = (x) => console.log(typeof x === 'string' ? x.slice(0, +(process.env.TPMAX || 600)) : JSON.stringify(x));
+  for (const f of require('fs').readdirSync(__dirname).filter((x) => /^part\d+\.js$/.test(x)).sort((a, b) => +a.match(/\d+/)[0] - +b.match(/\d+/)[0])) { const n = +f.match(/\d+/)[0]; if (want.length && !want.includes(n)) continue; await fresh(); await require('./' + f)(run, ev, tp, p); await p.close(); }
   console.log('\nerrors', errs.filter((e) => !/no ending for/.test(e))); await b.close();
 })();

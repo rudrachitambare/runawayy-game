@@ -478,3 +478,11 @@ Shared helpers: `src/kit.js` (`SH.K`: dialogs `K.D`, `K.pay`, `K.ask` free-text 
 | 6 | worldsys.js | Real calendar past November, seasons, winter nights, Halloween (trick-or-treat, costume = best disguise). Town reputation (derived, never a number). Health: colds, blisters, sleep debt, clinics; fever/exhaustion endings. 20 achievements (localStorage). |
 | 7 | notfound.js, endx_gone.js, endx_found.js, endx_more.js | **Disappear for good** (after 21 days: low heat + 3 of 4 pillars: a place to sleep, a way to eat, a believable story, people who'd vouch). 35 never-found endings incl. **The House on the Edge of Town**; 37 context "found" endings; health endings. ~96 new ending defs total. |
 Tests: `tests/parts.js` (runs `tests/part2.js`…`part7.js`, fresh page each).
+
+## REQUEST #22 BUILT — memory, understanding, useful PIP, trips, balance
+| File | What it does |
+|---|---|
+| `routes2.js` | Two-change journeys (from → hub → hub → destination) when direct/one-change routes are missing; about 2× more place pairs reachable |
+| `mind2.js` | Per-person identity memory (name/age/from/going/story…), contradiction catching, no re-asking, "what's my name?", small-town gossip, core characters know your real name; better negation, money/nights parsing, pronouns |
+| `pip2.js` | PIP for the road: routes, departures, sleep, motels, buying, money runway, notice, health, Disappear pillars, parents, coaching, remembered goal, context-aware ◉ replies for clerks/cops/locals/kids/parents |
+| `balance.js` | Notice fades while you stay (more with a cover/room), familiar-face discount per town size, towns remember you when you return, odd jobs $7–18 (`SH.BAL`) |
