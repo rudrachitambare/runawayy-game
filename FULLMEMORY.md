@@ -3,7 +3,7 @@
 The complete working memory of this project: what the player asked for (every turn), standing rules, design decisions, current state, the next steps, what failed, research sources, and all technical facts. **A new session should read this file plus `FULLGAME.md` before doing anything.**
 
 - Repo: https://github.com/rudrachitambare/runawayy-game (branch `main`)
-- Project root in workspace: `/home/user/smallhours/` · play by opening `src/index.html`
+- Project root in workspace: `/home/user/runawayy-game/` (was `/home/user/smallhours/`; tests still hardcode the old path) · play by opening `src/index.html`
 - Game info / design doc: `FULLGAME.md` · this file: working memory
 
 ---
@@ -18,7 +18,13 @@ The complete working memory of this project: what the player asked for (every tu
   2. In `tests/p2.js`, the drive trip couldn't be confirmed (the junkyard dialog was still showing), so drive-mode travel through `A.go` needs checking.
   3. `lessons.js` was deleted because it kept getting truncated; it needs rewriting in small pieces.
 
+### Found in turn 17 (health check)
+- **Drive bug (confirmed):** travel3's `A.go` sets `veh.at = to.id` BEFORE calling the base `A.go`, which re-runs `A.modes` and no longer finds 'drive', so it returns silently: the car moves and Sam doesn't. On a soft scare it's the other way round: Sam arrives and the car stays behind. Fix: move veh.at / fuel updates after the base go succeeds.
+- `cheapDriver` (and other trigger keys) have no ending text yet, so they fall back to found('police').
+- Tests hardcode `/home/user/smallhours` and need `/home/user/runawayy-game`.
+
 ### Immediate next steps
+0. Fix the drive bug + test paths. Then **E2 transport network & bigger Averland** (FULLGAME.md §2 E2): ~110 places, a road/rail graph, 7 randomized companies (tempo traveller / minivan / shared car / bus / rare train × professional / unprofessional / sketchy-but-safe), real routes, stops, timetables, seats, transfers.
 1. **lessons.js:**
    - A village farmer teaches driving on private land: +15 per lesson up to 100, in exchange for 2h of chores. You choose which learner (you or a party friend); friend skill goes in `G.lessons.fsk`.
    - "Ask to stay" leads to the farm never-found ending.
@@ -56,6 +62,8 @@ A deep, fun narrative life-sim for **16+** players. Vanilla JS / canvas (anythin
 14. Add a **NOT-FOUND ending**: reaches adulthood with friends, happy, healthy, no family contact, financially stable, living in an abandoned house renovated into a home. Then: "add not found and more I said and more add more not found endings" → MANY never-found endings.
 15. Push; make FULLGAME.md contain every game info → done.
 16. Write this FULLMEMORY.md and upload it.
+17. New session: re-read the memory, read the repo, ran a health check (found the drive bug).
+18. Add to the md: 7 more randomized travel companies (tempo traveller, minivan, car, bus, train rarer), each professional / unprofessional / sketchy-but-safe, with times etc.; many more towns and villages in the Atlas; transport must actually go to specific cities (routes). → planned as E2, not built yet.
 
 ---
 
@@ -94,7 +102,7 @@ A deep, fun narrative life-sim for **16+** players. Vanilla JS / canvas (anythin
 **Browser:** ✅ search (Seekr), news with missing posters (The Ledger), weather (SkyCast), maps (AverMaps), transport booking, motel listings (StayFinder), marketplace (SwapSpot), store that sells anything (Everything), forums (Threadly), REAL job board (WorkNow, not odd jobs), help site (Safeline → reachedOut ending), GiveTogether, social media (Chirp).
 **Money:** ✅ cash only by default · ✅ digital banking (PocketPal) locked unless data is recharged · ✅ group account (Crew Pot) · ✅ borrowing, pawn · lending.
 **Buying:** ✅ any product online, every category including electronics · ⬜ physical stores (shops.js).
-**Transport:** ✅ multiple companies · ✅ manual vs electric scooters (dramatic price difference) and bikes · ✅ junkyard car / tempo / minivan / camper (junkyards everywhere, size varies) · ✅ rain slowdown · ⬜ farmer + go-kart driving practice · night buses (✅ as an incident) · hitchhiking risk · rideshare.
+**Transport:** ⬜ E2: 7 randomized companies with real routes/timetables + ~110-place Atlas with a road/rail graph · ✅ multiple companies · ✅ manual vs electric scooters (dramatic price difference) and bikes · ✅ junkyard car / tempo / minivan / camper (junkyards everywhere, size varies) · ✅ rain slowdown · ⬜ farmer + go-kart driving practice · night buses (✅ as an incident) · hitchhiking risk · rideshare.
 **Motels:** ⬜ professional / loose / sloppy tiers, bargaining per night / week / month, may kick you out (never for crowding), tiny room (mattress, one outlet, a window), a group needs separate rooms or pays to join someone's room. (`SH.motels()` data exists; the booking flow isn't built.)
 **Sketchy alleys:** ⬜ grimy hotels and restaurants, fake IDs, etc.
 **Friends' parents:** ⬜ worried like the main family, textable; text friends to leave a note on THEIR bed; text parents to do things; change identity.
@@ -196,9 +204,9 @@ The ending is a years-later time skip showing adulthood with friends: happy, hea
 - **Big writes get truncated / time out.** Keep each file ≤ 8KB (writes have been cut at ~1.5–5KB when the conversation is long). `node --check` after every write. To fix truncation: cut at a marker with python and close the IIFE. For big docs, append with bash heredocs in chunks.
 - Complex sed / inline python with nested quotes fails → write python to `/tmp/*.py` via a heredoc, using an asserting patch helper (a failed assert aborts all later replacements).
 - edit_file fails if the text has already changed → grep first.
-- Playwright's bundled chromium lacks libraries → use `/usr/bin/chromium`. After an environment reset run `bash tests/setup.sh` (reinstalls playwright-core).
+- Playwright's bundled chromium lacks libraries → use `/usr/bin/chromium`. If apt and the playwright CDN are blocked: `npm i @sparticuz/chromium@129` in /tmp, run its executablePath() (extracts /tmp/chromium), brotli-decompress bin/al2023.tar.br + swiftshader.tar.br into /tmp/al, and symlink /usr/bin/chromium to a wrapper that sets LD_LIBRARY_PATH=/tmp/al/lib:/tmp/al. After an environment reset run `bash tests/setup.sh` (reinstalls playwright-core).
 - **git identity AND remote are lost on every reset** (.git/config isn't snapshotted) → `git config user.name "Small Hours Dev"; git config user.email dev@smallhours.local; git remote add origin https://github.com/rudrachitambare/runawayy-game.git`.
-- **Push needs a token:** push to `https://x-access-token:<T>@github.com/...` directly, never saved into config. There's no gh CLI, and the Arena GitHub connector didn't show up in the chat's tools.
+- **(Turn 17+: Arena now has gh/git auth configured, so no token is needed. Push to the session branch.)** Old note: **Push needs a token:** push to `https://x-access-token:<T>@github.com/...` directly, never saved into config. There's no gh CLI, and the Arena GitHub connector didn't show up in the chat's tools.
 - `#daycard` blocks clicks on day 1 → tests remove it and hide `#modal`.
 - In convo.js, a string setup passed to p.evaluate must be an invoked IIFE.
 - EN.found opens a dialog → use `SH.Endings.show`. There's no Map.travelTo → use `SH.travel(id, option)`.

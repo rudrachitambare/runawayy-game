@@ -108,6 +108,43 @@ Vanilla JS + canvas (no React). Entertainment, **not** a guide for real runaways
 39. **Driving skill:** TubeYou theory + **a farmer teaching on private farmland in a village** (legal on private land) + go-kart tracks in bigger towns. Choose which friend in the group learns.
 40. Hitchhiking (dangerous; triggers safety events).
 
+### E2. Transport network & a bigger Averland (added turn 18: planned, not built)
+**Why:** right now companies "go anywhere" within their allowed town sizes. There are no real routes, stops or departure times, and only 37 places.
+
+**Bigger Atlas (seeded, same every replay of a seed):**
+- About **110 places** instead of 37: 5 cities · 15 towns · 30 small towns · 60 villages. Villages cluster around market towns. Farm hamlets sit near the coast, forest and prairie.
+- A **road graph**:
+  - Highways link cities and towns. County roads link small towns. Dirt and farm roads reach villages.
+  - Distances follow the road, not a straight line.
+- **Rail lines:** 2–3 lines through the cities and some towns. Most places have no station.
+- The Atlas map gets zoom and pan (like the Harlow map), road and rail layers, a search box, and route lines drawn for the ride you pick.
+- New places reuse the tier data: police by size, jobs, people, services, junkyard size, internet share in villages.
+
+**7 randomized travel companies per story** (added on top of Averline / CheapRide / Regional Rail / County Transit):
+- Every seed draws 7 operators from name pools, so names, colors and slogans change each playthrough.
+- Each gets a **vehicle type**:
+  - 🚐 **Tempo traveller**: 12–17 seats, village ↔ market town, leaves when full.
+  - 🚙 **Minivan shuttle**: 7 seats, small town ↔ town, cheap, a few runs a day.
+  - 🚗 **Shared car / taxi-pool**: 4 seats, any short hop, pricey, driver's choice of route.
+  - 🚌 **Bus line**: 40+ seats, town ↔ city, fixed timetable.
+  - 🚆 **Train**: **rare**, at most 1 of the 7. Only on rail lines, fast, strict.
+- Each gets a **style**:
+  - **Professional**: timetable kept, ID and age rules enforced, calls someone about a kid alone.
+  - **Unprofessional**: late, overbooked, rules on paper only, the driver decides.
+  - **Sketchy but safe**: cash only, no questions, rattly, smoky, blasting radio, stops wherever. The operator is **never** the danger: no theft, nothing bad from the crew. The risks are delays, breakdowns and being seen.
+- Each gets **real routes**:
+  - A list of stops along the road or rail graph, with daily departure times (e.g. 06:10, 09:40, 17:15) and a trip time from road distance, vehicle speed and a stop count.
+  - Price by distance and style, delays by style, weekend and night gaps, and "last one's gone, wait till morning".
+- **Group fit:** seats limit how many of your crew fit (a minivan might take only 3 of you; the rest wait for the next run). Groups are noticed less, per the group rule.
+- **Transfers:** A → hub town → B. Missed connections mean a night in the hub town.
+- **Booking:**
+  - Walk to the stop, stand, or haggle with the driver (free text for sketchy ones).
+  - Or book on the company's page in the browser (listed in Seekr, with a timetable).
+  - Rain slows every line (×1.4) but never cancels one.
+- **Ending hooks** (plug into the ending engine): tempo breakdown in a village, a minivan driver who recognizes the poster, a sketchy-but-kind driver who drops you at a shelter, a missed last train, a sleepover in a depot.
+
+**Build files (≤8KB each):** `atlas2.js` (more places + road/rail graph), `atlas_map.js` (zoom/pan/layers), `routes.js` (company generator + timetables), `routes_go.js` (stops, boarding, transfers, seats), `routes_web.js` (company pages). Fix the drive bug in `travel3.js` first (see memory §8).
+
 ### F. Motels & hotels
 41. Tiers: **Professional** (ID, calls police on kids) / **Unprofessional** (some questions, persuadable) / **Really sloppy & cheap** (cash, no questions, 1 tiny room: mattress, one outlet, window; mold, noise).
 42. **Free-text haggling** per night / week / month. Prepay = cheaper but you can be kicked out without refund.
@@ -183,7 +220,7 @@ Vanilla JS + canvas (no React). Entertainment, **not** a guide for real runaways
 
 ## 3. Build plan
 1. Phone, data, browser, money & banking (A, B, D)
-2. Shopping, transport, scooters, junkyard vehicles, driving (C, E)
+2. Shopping, transport, scooters, junkyard vehicles, driving (C, E) + **E2 transport network & bigger Averland**
 3. Motels & sketchy alleys (F, G)
 4. Friends' parents, notes, identity, police (H, I, J, K)
 5. Runaway kids, group life & attachment, bases, business (L, M, N)
