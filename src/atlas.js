@@ -159,7 +159,7 @@
       <div class="arow">🧒 A kid might find: ${esc(p.kidjobs.join('; '))}</div>
       <div class="arow">🏥 ${sv.hospital ? 'Hospital' : 'No hospital (nearest clinic is a drive)'} · ${sv.shelter ? '🏠 Youth shelter' : 'No youth shelter'} · ${sv.library ? '📚 Library' : 'No library'}</div>
       <div class="arow">📶 Free wifi: ${sv.wifi.length ? esc(sv.wifi.join(', ')) : 'none. Bring data.'} · ${p.station ? '🚆 Station' : ''} ${p.busStop ? '🚌 Bus stop' : 'No bus'}</div>
-      <div class="arow">👥 ${p.people.map((x) => `<b>${esc(x.n)}</b> ${esc(x.role)} <i>(${esc(x.mood)})</i>`).join('; ')}</div>
+      <div class="arow">👥 ${p.people.map((x) => `<b>${esc(x.n)}</b> ${esc(x.role)}`).join('; ')}</div>
       ${p.grandma ? `<div class="arow">💗 Grandma lives here.${SH.f('grandmaAddr') ? ' 41 Larkspur Lane.' : ' You don\'t know the exact address.'}</div>` : ''}
       ${modes.length ? `<div class="sech" style="margin-top:8px">GETTING THERE</div>${modes.map((m) => m.blocked ? `<div class="arow muted">🚫 ${m.n}: ${esc(m.blocked)}</div>` : `<div class="arow">${/^[\w ]/.test(m.n) ? (m.k === 'walk' ? '🚶' : m.k === 'bike' ? '🚲' : '🚌') + ' ' : ''}${m.n}: ${Math.floor(m.mins / 60)}h ${m.mins % 60}m${m.cost ? ' · $' + m.cost : ''} ${m.note ? '<i>' + esc(m.note) + '</i>' : ''} ${canGo ? `<button class="btn small" onclick="SH.Atlas.go('${p.id}','${m.k}')">Go</button>` : ''}</div>`).join('')}${G.phase !== 'run' ? '<div class="muted" style="font-size:11.5px">Just looking. (You haven\'t left home.)</div>' : ''}` : ''}</div>`;
   };
@@ -189,11 +189,9 @@
     SH.st('energy', -m.e); SH.st('full', -Math.round(m.mins / 30));
     SH.advance(m.mins, { interrupt: false });
     if (G.ended) return;
-    if (extraLog) SH.UI.log(extraLog, 'sys');
-    G.away = id; G.awayVisits = G.awayVisits || {}; G.awayVisits[id] = (G.awayVisits[id] || 0) + 1; G.awayNotice = 0;
-    SH.UI.log(`You arrive in ${to.name}. ${to.tier === 'village' ? 'One street, a church, a grain elevator. A dog watches you like it\'s going to report you.' : to.tier === 'small' ? 'A main street with a diner, a hardware store, and a lot of people who know each other\'s trucks.' : to.tier === 'town' ? 'Bigger than Harlow. Nobody looks twice. Yet.' : 'Noise, traffic, a thousand strangers. Invisible feels good for about ten minutes.'}`, 'day');
-    if (to.grandma) SH.UI.log(SH.f('grandmaAddr') ? 'Grandma\'s street is ten minutes from here. 41 Larkspur Lane.' : 'Grandma is somewhere in this town. You don\'t know the address.', 'sys');
-    SH.Phone.render(); A.hub();
+    G.away = id; G._arrLog = extraLog || ''; G.awayVisits = G.awayVisits || {}; G.awayVisits[id] = (G.awayVisits[id] || 0) + 1; G.awayNotice = 0;
+    if (SH.Town && SH.Town.enter) SH.Town.enter(to, m); // puts you at a real spot in town and writes the arrival
+    SH.Phone.render(); SH.UI.afterAction();
   };
 
   /* the town view: a place isn't a location on the Harlow map, so it gets its own menu */

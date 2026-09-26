@@ -26,9 +26,9 @@
     if (!SHARED.test(npc)) return npc;
     const m = (SH.NPCS_META || {})[npc] || {}; return npc + ':' + (m.full || m.n || '?');
   };
-  const isCore = (k) => !/[:]/.test(k) && !/^(rk_|host_|local|clerk|cop|dex|pip)/.test(k) && !!(SH.NPCS_META || {})[k];
+  const isCore = (k) => !/[:]/.test(k) && !/^(rk_|tw_|host_|local|clerk|cop|dex|pip)/.test(k) && !!(SH.NPCS_META || {})[k];
   const knowsReal = (k) => isCore(k) || /^host_/.test(k);
-  const stranger = (k) => /[:]/.test(k) || /^rk_/.test(k);
+  const stranger = (k) => /[:]/.test(k) || /^(rk|tw)_/.test(k);
   /* ---------- claims: what you say about yourself ---------- */
   const NAMEBAD = /^(a|an|the|not|so|just|fine|okay|ok|good|here|there|scared|sad|sorry|tired|hungry|lost|alone|home|going|from|with|staying|visiting|new|back|done|sure|really|in|at|safe|cold|waiting|looking|leaving|running|serious|kidding|joking|bored|hurt|sick|only|still|also|gonna|trying|like|nobody|nothing|no|yes|yeah|nope|idk|what|who|why|hi|hey|hello|thanks|twelve|eleven|thirteen|ten|fourteen|fifteen)$/i;
   const NUMW = { ten: 10, eleven: 11, twelve: 12, thirteen: 13, fourteen: 14, fifteen: 15, sixteen: 16, seventeen: 17, eighteen: 18, nineteen: 19, twenty: 20 };
@@ -161,7 +161,7 @@
         if (typeof r.say === 'string') {
           r.say = MI.noReask(k, r.say);
           // strangers react to something new you told them (if their brain didn't)
-          if (!contra && stranger(k) && !r.end) { const nk = Object.keys(an.claims).find((x) => NEWR[x] && rec.f[x] && rec.f[x].n === 1 && !String(r.say).toLowerCase().includes(String(an.claims[x]).toLowerCase().split(' ')[0])); if (nk) r.say = NEWR[nk](an.claims[nk]) + ' ' + r.say; }
+          if (!contra && stranger(k) && !r.end && !r.ack) { const nk = Object.keys(an.claims).find((x) => NEWR[x] && rec.f[x] && rec.f[x].n === 1 && !String(r.say).toLowerCase().includes(String(an.claims[x]).toLowerCase().split(' ')[0])); if (nk) r.say = NEWR[nk](an.claims[nk]) + ' ' + r.say; }
           if (contra && !r.say.includes(contra)) r.say = contra + ' ' + r.say;
           if (stranger(k)) r.say = r.say.charAt(0).toUpperCase() + r.say.slice(1);
           const q = r.say.match(/[^.!?]*\?/g); const key = q && askOf(q[q.length - 1]); if (key) { rec.lastAsk = key; rec.lastAskT = now; rec.asks[key] = now; }

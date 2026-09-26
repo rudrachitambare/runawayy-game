@@ -354,3 +354,17 @@ Next ideas (not started, need "go"): two-change trip planning; balance pass on m
   - Works in Harlow too. "my ticket" is passed through to web_more.
 - Tests: part15 (pickup, per-spot boards, shoplift), part16 (PIP context), famscan.js. All parts 2–16 pass; bot runs have 0 errors.
 - Sandbox resets happen mid-session: re-run the chromium setup, and `git fetch; git reset <pushed sha>` (mixed) when HEAD shows d467fc4.
+
+## Requests #31–33: audit, then "away towns must be real places like Harlow, not a menu" (user asleep; I played and fixed it myself)
+- Turn 31 audit correction: the suspected "family bug" (the intro showing a different story/family than the game) was **not a game bug**. It came from comparing two separate browser sessions (look.js vs drive.js), each with its own random seed.
+- **Town system** (loaded after famfix.js): `town_gen.js` (SH.Town: procedural map per place from the atlas data; locations main/stop/gas/diner/library/church/park/laundromat/police/clinic/motel/work/edge/station/grandma/shelter/backst by tier and services; townies = atlas people + staff, ids `tw_<pid>_*`), `town_text.js` (arrival, walk lines, blurbs, notice board, work text, all time/weather/biome-aware), `town_play.js` (arrive into a real spot, per-location actions, walking/city-bus travel, work, library computer, timetables, sleep spots), `town_talk.js` (one townie brain: remembers name/age/cover story, never re-asks, asks "who's your aunt?" in small places, notices you faster once you're reported; the "too friendly" stranger is the danger and a gut "no" is right), `town_map.js` (town map + header + label collision), `town_art.js` (scene art `tw_*`).
+- `A.arrive` calls `SH.Town.enter`. Town travel **bypasses** base `SH.travel`/passBy so no Harlow text leaks. Atlas biomes normalized by `TW.biome()` (coast, hill country, forest, lakeshore, river valley, prairie, farmland → coast/hills/forest/lake/river/fields).
+- Walk minutes accumulate (`g._twc`) so a 3-min walk isn't a 10-min clock jump.
+- Bus stop timetable shows road services only; station shows trains only (R.board wrapper sets `R.only` inside); the Atlas hub board still shows all.
+- Notice board "ask for X at the <work>" uses the real foreman's name and guarantees that job once.
+- Walking up to Grandma's door has its own ending intro (`Endings.grandma('walk')`); grandma name in town text uses `G.fam.gma`.
+- Townie names never collide with Sam's family/Harlow regulars. Church/work roles name the real building; city librarians aren't part-time.
+- mind2: townies (`tw_`) are strangers (don't know Sam's real name); brain replies can set `ack:1` to skip the generic "12. Huh." echo.
+- Bugs fixed on the way: **G.room collision** (Harlow sub-room string 'bedroom' vs motel room object) made endings `Checkout Time`/`Room 14` fire with "undefined", gave the motel achievement for free, and crashed EndX; all guarded with `typeof g.room === 'object'`. Mobile map tab opened off-screen when the story log was scrolled (mobile.js now parks #center scroll while on the map tab). Atlas card no longer shows people's moods (spoiler). Junkyard "Hollis barn" (family surname leak) → Pruitt.
+- Tests: tests/drive.js + d.sh (interactive driver), random away-town bot runs in the driver: 0 page errors after fixes. parts.js and bot.js d/m: 0 errors.
+- Known leftovers: the floating scene "Map" chip overlaps the map's Close button (pre-existing). The random bot mostly ends in "The Ride Home" because it clicks everything; not balanced yet for real play.

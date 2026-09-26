@@ -56,7 +56,7 @@
   const AK = 'smallhours_ach';
   const ACH = [
     ['farmhand', '🚜 Farmhand', 'Take 5 driving lessons at a farm', (g) => g.lessons && g.lessons.n >= 5], ['kart', '🏎️ Speed Racer', 'Race go-karts', (g) => g.lessons && g.lessons.kart >= 1],
-    ['room', '🛏️ Do Not Disturb', 'Get a motel room', (g) => !!g.room], ['haggle', '💸 Haggler', 'Get a motel room below the asking price', (g) => g.room && SH.Motels && g.room.rate < SH.Motels.KIND[g.room.k].rate * 0.85],
+    ['room', '🛏️ Do Not Disturb', 'Get a motel room', (g) => !!g.room && typeof g.room === 'object'], ['haggle', '💸 Haggler', 'Get a motel room below the asking price', (g) => g.room && SH.Motels && g.room.rate < SH.Motels.KIND[g.room.k].rate * 0.85],
     ['fakeid', '🪪 Taylor Swift, Age 18', 'Buy a fake ID', (g) => !!g.fakeId], ['regular', '☕ The Usual', 'Become a regular somewhere', (g) => Object.values(g.street || {}).some((x) => x >= 30)],
     ['note', '📝 A Good Note', 'Help a friend write a note that actually helps', (g) => Object.values(g.pw || {}).some((x) => x.note && x.note.s >= 3)], ['cover', '🎭 Method Actor', 'Keep a cover story in 3 towns', (g) => Object.keys(g.cover || {}).length >= 3],
     ['disguise', '🪞 Stranger in the Mirror', 'Change your look 4 ways', (g) => (g.flags.disguise || 0) >= 4], ['rk', '🧒 Found Family', 'Another runaway joins your group', (g) => (g.rkids || []).length >= 1],

@@ -42,3 +42,13 @@
     setInterval(Mo.badge, 1500);
   });
 })(window.SH);
+/* the map sits absolutely inside #center, so if the story log was scrolled down the map opened off-screen.
+   Park the story scroll at the top while the map tab is showing, and give it back afterwards. */
+(function (SH) {
+  let prev = document.body.dataset.tab, saved = 0;
+  new MutationObserver(() => {
+    const t = document.body.dataset.tab, c = document.getElementById('center'); if (!c || t === prev) { prev = t; return; }
+    if (t === 'map') { saved = c.scrollTop; c.scrollTop = 0; } else if (prev === 'map' && t === 'story') { requestAnimationFrame(() => { c.scrollTop = saved; }); }
+    prev = t;
+  }).observe(document.body, { attributes: true, attributeFilter: ['data-tab'] });
+})(window.SH);

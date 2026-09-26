@@ -130,6 +130,7 @@
   };
   PL.house2 = PL.house;
   SH.ScenePL = PL; // other files add art for new location types (pickup.js)
+  SH.SceneKit = { R, rr, glow, win, facade, tree, lamp, bench, hydrant, bin, mailbox, car, rng, hs, mix }; // shared drawing helpers (town_art.js)
 
   /* ---------------- interiors (home, before you leave) ---------------- */
   function interior(x, E, room) {
@@ -216,7 +217,12 @@
     if (cond !== 'clear') { x.fillStyle = cond === 'fog' ? 'rgba(160,168,182,.4)' : cond === 'cloudy' ? 'rgba(70,78,96,.35)' : 'rgba(40,46,60,.5)'; x.fillRect(0, 0, W, H); }
     // far skyline (seeded by the city)
     const r = rng(11 + (G.city && G.city.seed ? G.city.seed % 997 : 0)); const far = mix('#2a3448', amb, 0.55 - 0.3 * dl);
-    for (let px = -10; px < W;) { const bw = 18 + r() * 44, bh = 26 + r() * 64; x.fillStyle = far; x.fillRect(px, E.gy - 30 - bh, bw, bh + 30); if (r() < 0.2) x.fillRect(px + bw / 2, E.gy - 40 - bh, 1.5, 12); if (night) { for (let k = 0; k < bw * bh / 180; k++) if (r() < 0.35) { x.fillStyle = r() < 0.8 ? 'rgba(255,210,130,.45)' : 'rgba(160,200,255,.4)'; x.fillRect(px + 3 + r() * (bw - 6), E.gy - 26 - r() * bh, 2, 2.5); } } px += bw + 2 + r() * 6; }
+    const twT = L.town && SH.Town && SH.Town.cache[L.town] ? SH.Town.cache[L.town].tier : null, hMul = twT === 'city' ? 1.8 : twT === 'town' ? 0.7 : 1;
+    if (twT === 'village' || twT === 'small') { // open country: hills, a tree line, maybe a water tower
+      x.fillStyle = far; x.beginPath(); x.moveTo(0, E.gy - 20); for (let px = 0; px <= W; px += 40) x.lineTo(px, E.gy - 34 - Math.sin(px / 170 + (G.away || '').length) * 16 - r() * 6); x.lineTo(W, E.gy); x.lineTo(0, E.gy); x.fill();
+      if (r() < 0.8) { const wx = W * (0.15 + r() * 0.7); x.fillRect(wx - 1, E.gy - 110, 3, 70); x.fillRect(wx + 19, E.gy - 110, 3, 70); x.beginPath(); x.ellipse(wx + 10, E.gy - 118, 22, 14, 0, 0, 7); x.fill(); }
+    } else
+    for (let px = -10; px < W;) { const bw = 18 + r() * 44, bh = (26 + r() * 64) * hMul; x.fillStyle = far; x.fillRect(px, E.gy - 30 - bh, bw, bh + 30); if (r() < 0.2) x.fillRect(px + bw / 2, E.gy - 40 - bh, 1.5, 12); if (night) { for (let k = 0; k < bw * bh / 180; k++) if (r() < 0.35) { x.fillStyle = r() < 0.8 ? 'rgba(255,210,130,.45)' : 'rgba(160,200,255,.4)'; x.fillRect(px + 3 + r() * (bw - 6), E.gy - 26 - r() * bh, 2, 2.5); } } px += bw + 2 + r() * 6; }
     // near row of trees / roofs
     x.fillStyle = mix('#1f2a2a', amb, 0.6 - 0.35 * dl); for (let px = 0; px < W; px += 22) { x.beginPath(); x.arc(px + r() * 10, E.gy - 18 - r() * 16, 14 + r() * 10, 0, 7); x.fill(); } x.fillRect(0, E.gy - 20, W, 20);
     // sidewalk + street

@@ -12,7 +12,7 @@
     const n = { village: 1 + Math.floor(r() * 2), small: 2 + Math.floor(r() * 2), town: 4, city: 6 }[p.tier];
     const keys = Object.keys(TYPES), out = [];
     for (let i = 0; i < n; i++) { const t = i === 0 && p.tier === 'city' ? 'camper' : keys[Math.floor(r() * keys.length)], T = TYPES[t]; out.push({ id: p.id + 'v' + i, type: t, n: T.n, price: Math.round(T.price[0] + r() * (T.price[1] - T.price[0])), need: keys.length ? Object.keys(PARTS).filter(() => r() < 0.75) : [] }); }
-    return { name: { village: 'a field of dead cars behind the Hollis barn', small: 'Dale\'s Scrap & Salvage', town: 'County Auto Salvage', city: 'Metro U-Pull-It' }[p.tier], owner: ['Dale', 'Bev', 'Gus', 'Rosa', 'Big Earl'][Math.floor(r() * 5)], cars: out };
+    return { name: { village: 'a field of dead cars behind the Pruitt barn', small: 'Dale\'s Scrap & Salvage', town: 'County Auto Salvage', city: 'Metro U-Pull-It' }[p.tier], owner: ['Dale', 'Bev', 'Gus', 'Rosa', 'Big Earl'][Math.floor(r() * 5)], cars: out };
   };
   const sold = () => (G().junkSold = G().junkSold || {});
 

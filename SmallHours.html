@@ -4903,6 +4903,7 @@ window.SH = window.SH || {};
   };
   PL.house2 = PL.house;
   SH.ScenePL = PL; // other files add art for new location types (pickup.js)
+  SH.SceneKit = { R, rr, glow, win, facade, tree, lamp, bench, hydrant, bin, mailbox, car, rng, hs, mix }; // shared drawing helpers (town_art.js)
 
   /* ---------------- interiors (home, before you leave) ---------------- */
   function interior(x, E, room) {
@@ -4989,7 +4990,12 @@ window.SH = window.SH || {};
     if (cond !== 'clear') { x.fillStyle = cond === 'fog' ? 'rgba(160,168,182,.4)' : cond === 'cloudy' ? 'rgba(70,78,96,.35)' : 'rgba(40,46,60,.5)'; x.fillRect(0, 0, W, H); }
     // far skyline (seeded by the city)
     const r = rng(11 + (G.city && G.city.seed ? G.city.seed % 997 : 0)); const far = mix('#2a3448', amb, 0.55 - 0.3 * dl);
-    for (let px = -10; px < W;) { const bw = 18 + r() * 44, bh = 26 + r() * 64; x.fillStyle = far; x.fillRect(px, E.gy - 30 - bh, bw, bh + 30); if (r() < 0.2) x.fillRect(px + bw / 2, E.gy - 40 - bh, 1.5, 12); if (night) { for (let k = 0; k < bw * bh / 180; k++) if (r() < 0.35) { x.fillStyle = r() < 0.8 ? 'rgba(255,210,130,.45)' : 'rgba(160,200,255,.4)'; x.fillRect(px + 3 + r() * (bw - 6), E.gy - 26 - r() * bh, 2, 2.5); } } px += bw + 2 + r() * 6; }
+    const twT = L.town && SH.Town && SH.Town.cache[L.town] ? SH.Town.cache[L.town].tier : null, hMul = twT === 'city' ? 1.8 : twT === 'town' ? 0.7 : 1;
+    if (twT === 'village' || twT === 'small') { // open country: hills, a tree line, maybe a water tower
+      x.fillStyle = far; x.beginPath(); x.moveTo(0, E.gy - 20); for (let px = 0; px <= W; px += 40) x.lineTo(px, E.gy - 34 - Math.sin(px / 170 + (G.away || '').length) * 16 - r() * 6); x.lineTo(W, E.gy); x.lineTo(0, E.gy); x.fill();
+      if (r() < 0.8) { const wx = W * (0.15 + r() * 0.7); x.fillRect(wx - 1, E.gy - 110, 3, 70); x.fillRect(wx + 19, E.gy - 110, 3, 70); x.beginPath(); x.ellipse(wx + 10, E.gy - 118, 22, 14, 0, 0, 7); x.fill(); }
+    } else
+    for (let px = -10; px < W;) { const bw = 18 + r() * 44, bh = (26 + r() * 64) * hMul; x.fillStyle = far; x.fillRect(px, E.gy - 30 - bh, bw, bh + 30); if (r() < 0.2) x.fillRect(px + bw / 2, E.gy - 40 - bh, 1.5, 12); if (night) { for (let k = 0; k < bw * bh / 180; k++) if (r() < 0.35) { x.fillStyle = r() < 0.8 ? 'rgba(255,210,130,.45)' : 'rgba(160,200,255,.4)'; x.fillRect(px + 3 + r() * (bw - 6), E.gy - 26 - r() * bh, 2, 2.5); } } px += bw + 2 + r() * 6; }
     // near row of trees / roofs
     x.fillStyle = mix('#1f2a2a', amb, 0.6 - 0.35 * dl); for (let px = 0; px < W; px += 22) { x.beginPath(); x.arc(px + r() * 10, E.gy - 18 - r() * 16, 14 + r() * 10, 0, 7); x.fill(); } x.fillRect(0, E.gy - 20, W, 20);
     // sidewalk + street
@@ -6780,7 +6786,7 @@ window.SH = window.SH || {};
       <div class="arow">🧒 A kid might find: ${esc(p.kidjobs.join('; '))}</div>
       <div class="arow">🏥 ${sv.hospital ? 'Hospital' : 'No hospital (nearest clinic is a drive)'} · ${sv.shelter ? '🏠 Youth shelter' : 'No youth shelter'} · ${sv.library ? '📚 Library' : 'No library'}</div>
       <div class="arow">📶 Free wifi: ${sv.wifi.length ? esc(sv.wifi.join(', ')) : 'none. Bring data.'} · ${p.station ? '🚆 Station' : ''} ${p.busStop ? '🚌 Bus stop' : 'No bus'}</div>
-      <div class="arow">👥 ${p.people.map((x) => `<b>${esc(x.n)}</b> ${esc(x.role)} <i>(${esc(x.mood)})</i>`).join('; ')}</div>
+      <div class="arow">👥 ${p.people.map((x) => `<b>${esc(x.n)}</b> ${esc(x.role)}`).join('; ')}</div>
       ${p.grandma ? `<div class="arow">💗 Grandma lives here.${SH.f('grandmaAddr') ? ' 41 Larkspur Lane.' : ' You don\'t know the exact address.'}</div>` : ''}
       ${modes.length ? `<div class="sech" style="margin-top:8px">GETTING THERE</div>${modes.map((m) => m.blocked ? `<div class="arow muted">🚫 ${m.n}: ${esc(m.blocked)}</div>` : `<div class="arow">${/^[\w ]/.test(m.n) ? (m.k === 'walk' ? '🚶' : m.k === 'bike' ? '🚲' : '🚌') + ' ' : ''}${m.n}: ${Math.floor(m.mins / 60)}h ${m.mins % 60}m${m.cost ? ' · $' + m.cost : ''} ${m.note ? '<i>' + esc(m.note) + '</i>' : ''} ${canGo ? `<button class="btn small" onclick="SH.Atlas.go('${p.id}','${m.k}')">Go</button>` : ''}</div>`).join('')}${G.phase !== 'run' ? '<div class="muted" style="font-size:11.5px">Just looking. (You haven\'t left home.)</div>' : ''}` : ''}</div>`;
   };
@@ -6810,11 +6816,9 @@ window.SH = window.SH || {};
     SH.st('energy', -m.e); SH.st('full', -Math.round(m.mins / 30));
     SH.advance(m.mins, { interrupt: false });
     if (G.ended) return;
-    if (extraLog) SH.UI.log(extraLog, 'sys');
-    G.away = id; G.awayVisits = G.awayVisits || {}; G.awayVisits[id] = (G.awayVisits[id] || 0) + 1; G.awayNotice = 0;
-    SH.UI.log(`You arrive in ${to.name}. ${to.tier === 'village' ? 'One street, a church, a grain elevator. A dog watches you like it\'s going to report you.' : to.tier === 'small' ? 'A main street with a diner, a hardware store, and a lot of people who know each other\'s trucks.' : to.tier === 'town' ? 'Bigger than Harlow. Nobody looks twice. Yet.' : 'Noise, traffic, a thousand strangers. Invisible feels good for about ten minutes.'}`, 'day');
-    if (to.grandma) SH.UI.log(SH.f('grandmaAddr') ? 'Grandma\'s street is ten minutes from here. 41 Larkspur Lane.' : 'Grandma is somewhere in this town. You don\'t know the address.', 'sys');
-    SH.Phone.render(); A.hub();
+    G.away = id; G._arrLog = extraLog || ''; G.awayVisits = G.awayVisits || {}; G.awayVisits[id] = (G.awayVisits[id] || 0) + 1; G.awayNotice = 0;
+    if (SH.Town && SH.Town.enter) SH.Town.enter(to, m); // puts you at a real spot in town and writes the arrival
+    SH.Phone.render(); SH.UI.afterAction();
   };
 
   /* the town view: a place isn't a location on the Harlow map, so it gets its own menu */
@@ -8237,7 +8241,7 @@ window.SH = window.SH || {};
     const n = { village: 1 + Math.floor(r() * 2), small: 2 + Math.floor(r() * 2), town: 4, city: 6 }[p.tier];
     const keys = Object.keys(TYPES), out = [];
     for (let i = 0; i < n; i++) { const t = i === 0 && p.tier === 'city' ? 'camper' : keys[Math.floor(r() * keys.length)], T = TYPES[t]; out.push({ id: p.id + 'v' + i, type: t, n: T.n, price: Math.round(T.price[0] + r() * (T.price[1] - T.price[0])), need: keys.length ? Object.keys(PARTS).filter(() => r() < 0.75) : [] }); }
-    return { name: { village: 'a field of dead cars behind the Hollis barn', small: 'Dale\'s Scrap & Salvage', town: 'County Auto Salvage', city: 'Metro U-Pull-It' }[p.tier], owner: ['Dale', 'Bev', 'Gus', 'Rosa', 'Big Earl'][Math.floor(r() * 5)], cars: out };
+    return { name: { village: 'a field of dead cars behind the Pruitt barn', small: 'Dale\'s Scrap & Salvage', town: 'County Auto Salvage', city: 'Metro U-Pull-It' }[p.tier], owner: ['Dale', 'Bev', 'Gus', 'Rosa', 'Big Earl'][Math.floor(r() * 5)], cars: out };
   };
   const sold = () => (G().junkSold = G().junkSold || {});
 
@@ -9375,7 +9379,7 @@ window.SH = window.SH || {};
   }
   /* ---------- daily motel life: payment + trouble ---------- */
   K.daily.push(() => {
-    const g = G(), r = g.room; if (!r) return;
+    const g = G(), r = g.room; if (!r || typeof r !== 'object') return;
     if (g.t > r.until) { r.late = (r.late || 0) + 1; if (r.late > (r.k === 'sloppy' ? 2 : 1)) g.roomEvt = 'late'; return; }
     const risk = { pro: 0.07, loose: 0.08, sloppy: 0.1 }[r.k]; if (!K.chance(risk)) return;
     const ev = ['spooked', 'police', 'newclerk']; if (K.party().length >= 2) ev.push('noise'); if (!g.reported) ev.splice(0, 1);
@@ -9968,7 +9972,7 @@ window.SH = window.SH || {};
   const AK = 'smallhours_ach';
   const ACH = [
     ['farmhand', '🚜 Farmhand', 'Take 5 driving lessons at a farm', (g) => g.lessons && g.lessons.n >= 5], ['kart', '🏎️ Speed Racer', 'Race go-karts', (g) => g.lessons && g.lessons.kart >= 1],
-    ['room', '🛏️ Do Not Disturb', 'Get a motel room', (g) => !!g.room], ['haggle', '💸 Haggler', 'Get a motel room below the asking price', (g) => g.room && SH.Motels && g.room.rate < SH.Motels.KIND[g.room.k].rate * 0.85],
+    ['room', '🛏️ Do Not Disturb', 'Get a motel room', (g) => !!g.room && typeof g.room === 'object'], ['haggle', '💸 Haggler', 'Get a motel room below the asking price', (g) => g.room && SH.Motels && g.room.rate < SH.Motels.KIND[g.room.k].rate * 0.85],
     ['fakeid', '🪪 Taylor Swift, Age 18', 'Buy a fake ID', (g) => !!g.fakeId], ['regular', '☕ The Usual', 'Become a regular somewhere', (g) => Object.values(g.street || {}).some((x) => x >= 30)],
     ['note', '📝 A Good Note', 'Help a friend write a note that actually helps', (g) => Object.values(g.pw || {}).some((x) => x.note && x.note.s >= 3)], ['cover', '🎭 Method Actor', 'Keep a cover story in 3 towns', (g) => Object.keys(g.cover || {}).length >= 3],
     ['disguise', '🪞 Stranger in the Mirror', 'Change your look 4 ways', (g) => (g.flags.disguise || 0) >= 4], ['rk', '🧒 Found Family', 'Another runaway joins your group', (g) => (g.rkids || []).length >= 1],
@@ -10003,7 +10007,7 @@ window.SH = window.SH || {};
     E('goneCamp', 3, (c) => B(c) && B(c).type === 'camp' && B(c).up.length >= 4, 'The Clearing', 'never found · the forest camp', (c) => [`The camp got better every week: a tarp roof, a real bed, a lantern that made the pines glow. You learned which mushrooms not to touch, how to hang food from a branch, how to tell rain from wind by the sound.${grp(c)}`, `In March a ranger named Tomás found it. He didn't call anyone that day. He came back the next day with a thermos, and the day after that with a form for a youth conservation program that had housing, school, and no questions it didn't need to ask.`, `You're a ranger now. There's a clearing in your district you check every spring, just in case. ${tail(c)}`]),
     E('goneBuilding', 3, (c) => B(c) && B(c).type === 'building' && B(c).up.length >= 4, 'The Laundromat', 'never found · the abandoned building', (c) => [`The old laundromat had curtains now, a padlock, a heater that ran off a solar panel on the roof. The neighborhood kids called it "the clubhouse" and never told a single adult. Kids are good at that.${grp(c)}`, `A woman from the church across the street figured it out in January. Instead of calling anyone, she bought the building. Instead of kicking you out, she turned it into a drop-in center and hired a real social worker, and let you choose, every single step.`, `The sign over the door still says WASH & FOLD. It's the first thing you look at in the morning. ${tail(c)}`]),
     E('goneBarn', 3, (c) => B(c) && B(c).type === 'barn' && B(c).up.length >= 3, 'The Hayloft', 'never found · the old barn', (c) => [`The barn belonged to a widower named Earl who hadn't been up to the hayloft in eleven years. His knees wouldn't allow it. When he finally climbed up, in April, looking for a ladder, he found a bed, a lantern, a bucket of apples, and ${c.n ? 'a group of kids' : 'a kid'} frozen like deer.`, `"Well," Earl said. "You'd better come have breakfast. Barn's cold." It was the first of about four thousand breakfasts.${grp(c)}`, `Earl taught you to fix fences, drive the tractor, and wait out a storm. He left you the barn. You still sleep in the loft some summer nights, for old times' sake. ${tail(c)}`]),
-    E('goneMotel', 3, (c) => c.g.room && c.g.room.k !== 'pro', 'Room 14', (c) => `never found · ${c.g.room.n}`, (c) => [`${c.g.room.clerk} stopped charging you for the room in the second month. "You fold towels faster than my nephew," was the explanation. You folded towels, restocked soap, learned to fix an ice machine with a butter knife.${grp(c)}`, `The motel was full of people passing through, and nobody ever looks at a kid who works there. People look through the kid who works there, which turned out to be the best disguise of all.`, `When ${c.g.room.clerk} retired, ${c.g.room.n} got a new owner: you. The vacancy sign still flickers. You never fixed it. ${tail(c)}`]),
+    E('goneMotel', 3, (c) => c.g.room && typeof c.g.room === 'object' && c.g.room.k !== 'pro', 'Room 14', (c) => `never found · ${c.g.room.n}`, (c) => [`${c.g.room.clerk} stopped charging you for the room in the second month. "You fold towels faster than my nephew," was the explanation. You folded towels, restocked soap, learned to fix an ice machine with a butter knife.${grp(c)}`, `The motel was full of people passing through, and nobody ever looks at a kid who works there. People look through the kid who works there, which turned out to be the best disguise of all.`, `When ${c.g.room.clerk} retired, ${c.g.room.n} got a new owner: you. The vacancy sign still flickers. You never fixed it. ${tail(c)}`]),
     E('goneStand', 3, (c) => bz(c) && bz(c).total >= 120, (c) => bz(c).name, 'never found · a small business', (c) => [`${bz(c).name} started as a folding table and a hand-painted sign. By November the whole town knew it. People came for the ${bz(c).kind === 'lemonade' ? 'cocoa' : 'service'} and stayed to talk. Nobody asks where "the ${bz(c).name} kids" came from. They're just from here now.${grp(c)}`, `The Hendersons from the church took you in "temporarily," then permanently, then legally, with a judge who had bought something from ${bz(c).name} the week before.`, `It's a real storefront now, on Main Street. There's a framed dollar by the register: the first one. ${tail(c)}`]),
     E('goneFix', 4, (c) => bz(c) && bz(c).kind === 'fix' && bz(c).total >= 80, 'Chain Grease', 'never found · the fix-it table', (c) => [`An old man with a bike shop two blocks over watched your fix-it table for a week before he came over. "You're doing that derailleur wrong," he said, and showed you how to do it right.`, `By Christmas you were sweeping his shop. By spring you were fixing bikes in the back. He had a spare room and a daughter who was a family lawyer, which turned out to matter a lot.`, `His name is still on the sign. Yours is under it, smaller. ${tail(c)}`]),
     E('goneRk', 3, (c) => (c.g.rkids || []).length >= 1, 'Found Family', 'never found · together', (c) => [`${c.pl}. Nobody ever looked for some of you, and nobody ever found the rest of you. You made your own kind of family out of the leftover pieces.`, 'It was hard. It was cold, then less cold. Somebody always had a charger, and somebody always stayed awake. When one of you got sick, the others went to the free clinic and lied beautifully.', `Years later, you all still have a group chat. It's called "the base." Every Thanksgiving you rent a cabin and cook a terrible turkey. ${tail(c)}`]),
@@ -10047,9 +10051,9 @@ window.SH = window.SH || {};
   const safeLine = (c) => (c.base === 'foundSafe' ? ` And because you told Officer Lowe the truth, you don't go back to the house with ${c.rick} in it. Mom meets you somewhere else.` : '');
   const E = (k, on, p, w, t, sub, x) => ({ k, on, p, w, t, sub, x });
   X.add([
-    E('fMotel', HS, 3, (c) => !!c.g.room, 'Checkout Time', (c) => `found · ${c.g.room.n}`, (c) => [`The knock on Room ${10 + (c.g.room.n.length % 30)} comes at 7 AM. Not housekeeping. You know before you open the door.`, `${c.g.room.clerk} is behind the officer, twisting a dish towel. "I'm sorry, kid. I'm sorry. I have a daughter." You find out later ${c.g.room.k === 'sloppy' ? 'Stu lost his license over renting to you, and didn\'t complain once' : 'the clerk called because she\'d stopped sleeping, worrying about you'}.`, `The officer lets you shower first. Lets you pack. Lets you take the little soaps. ${safeLine(c)}`]),
-    E('fMotel2', HS, 3, (c) => c.g.room && c.g.room.how !== 'solo', 'Two Rooms, Side by Side', 'found · a motel, all of you', (c) => [`They find you in the morning: two rooms with the connecting door propped open, ${c.pl} asleep across three beds and a pile of blankets.`, 'The officer counts heads twice and sits down on the edge of a bed, suddenly tired. "Okay. Okay. Everybody\'s here. Everybody\'s okay. That\'s the whole job today."', `The families arrive one by one all afternoon, each hug longer than the last. ${safeLine(c)}`]),
-    E('fBase', HS, 3, (c) => c.g.base && c.g.base.up.length >= 2, 'Somebody Built This', (c) => `found · your ${c.g.base.type === 'camp' ? 'camp' : c.g.base.type === 'barn' ? 'hayloft' : 'hideout'}`, (c) => [`The deputy stands in the middle of your base for a long time: the tarp roof, the bedding, the lantern, the bucket with a lid. "You built this?" You nod.`, `"I've seen grown men do worse." She takes pictures, not for evidence. "My kid'll never believe me." She helps you carry the lantern to the car. You insist.${c.n ? ` ${c.pl} carry the rest.` : ''}`, `It's a strange thing, to be proud and caught at the same time. ${safeLine(c)}`]),
+    E('fMotel', HS, 3, (c) => !!c.g.room && typeof c.g.room === 'object' && !!c.g.room.n, 'Checkout Time', (c) => `found · ${c.g.room.n}`, (c) => [`The knock on Room ${10 + (c.g.room.n.length % 30)} comes at 7 AM. Not housekeeping. You know before you open the door.`, `${c.g.room.clerk} is behind the officer, twisting a dish towel. "I'm sorry, kid. I'm sorry. I have a daughter." You find out later ${c.g.room.k === 'sloppy' ? 'Stu lost his license over renting to you, and didn\'t complain once' : 'the clerk called because she\'d stopped sleeping, worrying about you'}.`, `The officer lets you shower first. Lets you pack. Lets you take the little soaps. ${safeLine(c)}`]),
+    E('fMotel2', HS, 3, (c) => c.g.room && typeof c.g.room === 'object' && c.g.room.how !== 'solo', 'Two Rooms, Side by Side', 'found · a motel, all of you', (c) => [`They find you in the morning: two rooms with the connecting door propped open, ${c.pl} asleep across three beds and a pile of blankets.`, 'The officer counts heads twice and sits down on the edge of a bed, suddenly tired. "Okay. Okay. Everybody\'s here. Everybody\'s okay. That\'s the whole job today."', `The families arrive one by one all afternoon, each hug longer than the last. ${safeLine(c)}`]),
+    E('fBase', HS, 3, (c) => c.g.base && (c.g.base.up || []).length >= 2, 'Somebody Built This', (c) => `found · your ${c.g.base.type === 'camp' ? 'camp' : c.g.base.type === 'barn' ? 'hayloft' : 'hideout'}`, (c) => [`The deputy stands in the middle of your base for a long time: the tarp roof, the bedding, the lantern, the bucket with a lid. "You built this?" You nod.`, `"I've seen grown men do worse." She takes pictures, not for evidence. "My kid'll never believe me." She helps you carry the lantern to the car. You insist.${c.n ? ` ${c.pl} carry the rest.` : ''}`, `It's a strange thing, to be proud and caught at the same time. ${safeLine(c)}`]),
     E('fBiz', HS, 3, (c) => bz(c) && bz(c).total >= 40, (c) => `${bz(c).name}: Closed`, 'found · at your business', (c) => [`The cruiser pulls up while there's a line at ${bz(c).name}. The officer waits. He actually waits until you've served everyone, and then buys one himself.`, `"Kid, you've got the best-run operation in ${c.town}," he says. "Also you've been missing for ${Math.max(1, Math.round(c.days))} days." The customers in line try to argue on your behalf. One of them offers to be your lawyer. She's a dentist.`, `The town takes up a collection. It pays for your bus ticket home and there's forty dollars left over, which you split with ${c.n ? c.pl : 'the officer, who refuses it'}. ${safeLine(c)}`]),
     E('fRk', HS, 3, (c) => (c.g.rkids || []).length >= 1, 'Everybody Gets a Blanket', 'found · with the other runaways', (c) => [`When they find you, they find all of you. The officer calls for a van, then a second one. There are more of you than the paperwork expected.`, `Some of you have families pacing at home. Some of you don't, and those are the hardest calls: to a caseworker, a group home, an aunt nobody has talked to in years. You refuse to get in the van until you know where ${c.pn.filter((_, i) => i >= (c.g.party || []).length)[0] || 'everyone'} is going.`, `The officer makes the calls in front of you, on speaker, so you can hear. It's the most respectful thing an adult has done for you in weeks. ${safeLine(c)}`]),
     E('fFakeId', HS, 3, (c) => !!c.g.fakeId, 'Casey Reed, Age 18', 'found · the fake ID', (c) => [`At the station, the officer empties your backpack onto the desk. Out slides a laminated card that says you're ${c.g.fakeId.name}, eighteen years old.`, `${c.mom === 'Mom' ? 'Mom' : c.mom} picks it up. Looks at the photo. Looks at you. Then she starts laughing: really laughing, the helpless kind, until she's crying, and then she's hugging you with the card still in her hand.`, `"Eighteen," she keeps saying into your hair. "Eighteen. You don't even have armpit hair." The officer confiscates the card. Later, much later, she asks for it back, and frames it. ${safeLine(c)}`]),
@@ -11154,9 +11158,9 @@ window.SH = window.SH || {};
     if (!SHARED.test(npc)) return npc;
     const m = (SH.NPCS_META || {})[npc] || {}; return npc + ':' + (m.full || m.n || '?');
   };
-  const isCore = (k) => !/[:]/.test(k) && !/^(rk_|host_|local|clerk|cop|dex|pip)/.test(k) && !!(SH.NPCS_META || {})[k];
+  const isCore = (k) => !/[:]/.test(k) && !/^(rk_|tw_|host_|local|clerk|cop|dex|pip)/.test(k) && !!(SH.NPCS_META || {})[k];
   const knowsReal = (k) => isCore(k) || /^host_/.test(k);
-  const stranger = (k) => /[:]/.test(k) || /^rk_/.test(k);
+  const stranger = (k) => /[:]/.test(k) || /^(rk|tw)_/.test(k);
   /* ---------- claims: what you say about yourself ---------- */
   const NAMEBAD = /^(a|an|the|not|so|just|fine|okay|ok|good|here|there|scared|sad|sorry|tired|hungry|lost|alone|home|going|from|with|staying|visiting|new|back|done|sure|really|in|at|safe|cold|waiting|looking|leaving|running|serious|kidding|joking|bored|hurt|sick|only|still|also|gonna|trying|like|nobody|nothing|no|yes|yeah|nope|idk|what|who|why|hi|hey|hello|thanks|twelve|eleven|thirteen|ten|fourteen|fifteen)$/i;
   const NUMW = { ten: 10, eleven: 11, twelve: 12, thirteen: 13, fourteen: 14, fifteen: 15, sixteen: 16, seventeen: 17, eighteen: 18, nineteen: 19, twenty: 20 };
@@ -11289,7 +11293,7 @@ window.SH = window.SH || {};
         if (typeof r.say === 'string') {
           r.say = MI.noReask(k, r.say);
           // strangers react to something new you told them (if their brain didn't)
-          if (!contra && stranger(k) && !r.end) { const nk = Object.keys(an.claims).find((x) => NEWR[x] && rec.f[x] && rec.f[x].n === 1 && !String(r.say).toLowerCase().includes(String(an.claims[x]).toLowerCase().split(' ')[0])); if (nk) r.say = NEWR[nk](an.claims[nk]) + ' ' + r.say; }
+          if (!contra && stranger(k) && !r.end && !r.ack) { const nk = Object.keys(an.claims).find((x) => NEWR[x] && rec.f[x] && rec.f[x].n === 1 && !String(r.say).toLowerCase().includes(String(an.claims[x]).toLowerCase().split(' ')[0])); if (nk) r.say = NEWR[nk](an.claims[nk]) + ' ' + r.say; }
           if (contra && !r.say.includes(contra)) r.say = contra + ' ' + r.say;
           if (stranger(k)) r.say = r.say.charAt(0).toUpperCase() + r.say.slice(1);
           const q = r.say.match(/[^.!?]*\?/g); const key = q && askOf(q[q.length - 1]); if (key) { rec.lastAsk = key; rec.lastAskT = now; rec.asks[key] = now; }
@@ -12925,6 +12929,16 @@ window.SH = window.SH || {};
     setInterval(Mo.badge, 1500);
   });
 })(window.SH);
+/* the map sits absolutely inside #center, so if the story log was scrolled down the map opened off-screen.
+   Park the story scroll at the top while the map tab is showing, and give it back afterwards. */
+(function (SH) {
+  let prev = document.body.dataset.tab, saved = 0;
+  new MutationObserver(() => {
+    const t = document.body.dataset.tab, c = document.getElementById('center'); if (!c || t === prev) { prev = t; return; }
+    if (t === 'map') { saved = c.scrollTop; c.scrollTop = 0; } else if (prev === 'map' && t === 'story') { requestAnimationFrame(() => { c.scrollTop = saved; }); }
+    prev = t;
+  }).observe(document.body, { attributes: true, attributeFilter: ['data-tab'] });
+})(window.SH);
 
 </script>
 <script>
@@ -13697,6 +13711,940 @@ window.SH = window.SH || {};
 
   /* after a load / new game, fix what's already on screen */
   ['newGame', 'load'].forEach((k) => { const b = SH[k]; if (typeof b === 'function' && !b._fam) { SH[k] = function () { const r = b.apply(this, arguments); setTimeout(SH.famFixAll, 0); return r; }; SH[k]._fam = 1; } });
+})(window.SH);
+
+</script>
+<script>
+/* town_gen.js */
+/* SMALL HOURS — towns as real places (1/5): the generator.
+   Every Atlas town gets a street layout and a set of locations built from what it actually has (tier, services,
+   economy, rail, motels, Grandma). They go into SH.LOC tagged with `town: <place id>` so the same map, scene,
+   travel and action systems that run Harlow run them too. Harlow's own locations are hidden while you're away. */
+(function (SH) {
+  const TW = SH.Town = SH.Town || {};
+  const h32 = (s) => { let h = 2166136261; for (const c of String(s)) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619); } return h >>> 0; };
+  const rngOf = (s) => { let a = h32(s) || 1; return () => { a ^= a << 13; a ^= a >>> 17; a ^= a << 5; return ((a >>> 0) % 1000003) / 1000003; }; };
+  TW.rng = rngOf; TW.h32 = h32;
+  const pk = (r, a) => a[Math.floor(r() * a.length)];
+
+  const DINER = ['Rosie\'s', 'The Coffee Cup', 'Dot\'s Grill', 'The Chuckwagon', 'Sunrise Cafe', 'The Blue Plate', 'Lucky\'s', 'The Depot Diner', 'Hilltop Grill', 'Mae\'s Kitchen', 'The Egg & I', 'Frank\'s'];
+  const GAS = ['Kwik Stop', 'Gas-N-Go', 'Pump & Pantry', 'Prairie Fuel', 'Hi-Way Mart', 'Tri-County Fuel', 'Speedy Mart', 'Git-N-Split', 'Fill-Er-Up', 'Corner Fuel'];
+  const CHURCH = ['First Lutheran', 'St. Anne\'s', 'Grace Methodist', 'Trinity Church', 'First Baptist', 'St. Joseph\'s', 'Hope Community Church', 'the white church'];
+  const LAUND = ['Wash World', 'Bubbles Laundry', 'Spin City', 'Clean Scene Coin-Op', 'The Suds Stop', 'Wishy Washy'];
+  const PARK = { village: ['the ballfield', 'the church lawn', 'the little park by the water tower'], small: ['Town Square', 'Memorial Park', 'the bandstand green'], town: ['Veterans Park', 'Lions Park', 'Heritage Park', 'Centennial Park'], city: ['Riverside Commons', 'Liberty Park', 'Union Square', 'the Greenway'] };
+  const STAFF = ['Deb', 'Carl', 'Lorna', 'Hank', 'Tammy', 'Ray', 'Bev', 'Duane', 'Shirley', 'Marcus', 'Ines', 'Tom', 'Yolanda', 'Walt', 'Kendra', 'Omar', 'Pearl', 'Vic', 'Luann', 'Dale', 'Priya', 'Arlo', 'Connie', 'Jerome', 'Faye', 'Gordon', 'Mireille', 'Sid'];
+  const MOODS = ['lonely, likes to talk', 'busy, barely looks up', 'suspicious of strangers', 'no-nonsense, soft underneath', 'kind, a little nosy', 'tired, kind', 'cheerful, talks too much'];
+  const WORK = { 'grain co-op': ['Grain Co-op', 'the grain elevator'], 'dairy farms': ['Dairy farm', 'a dairy barn'], 'feed store': ['Feed & Seed', 'the feed store'], 'fishing fleet': ['The docks', 'the fishing docks'], boatyard: ['Boatyard', 'the boatyard'], 'seafood plant': ['Seafood plant', 'the seafood plant'], orchards: ['Orchard', 'the apple orchard'], 'apple orchards': ['Orchard', 'the orchard'], sawmill: ['Sawmill', 'the sawmill'], 'lumber mill': ['Lumber mill', 'the mill'], quarry: ['Quarry road', 'the quarry'], mine: ['Mine road', 'the mine'], 'ski resort': ['Ski lodge', 'the lodge'], vineyards: ['Vineyard', 'the vineyard'], 'cattle ranches': ['Ranch', 'a ranch'], warehouses: ['Warehouse row', 'the warehouses'], 'the port': ['The port', 'the port'], 'tractor repair': ['Tractor repair', 'the tractor shop'], logging: ['Logging yard', 'the logging yard'], 'hunting outfitter': ['Outfitter', 'the outfitter'], campground: ['Campground', 'the campground'], 'barge terminal': ['Barge terminal', 'the barge terminal'], 'canning plant': ['Canning plant', 'the cannery'], 'bait shop': ['Bait shop', 'the bait shop'], marina: ['Marina', 'the marina'], 'summer cabins': ['Cabin rentals', 'the cabins'], 'fishing charters': ['Charter dock', 'the charter dock'], 'wind farm': ['Wind farm road', 'the wind farm'], 'tourist shops': ['Boardwalk', 'the boardwalk'], 'grain elevator': ['Grain elevator', 'the grain elevator'], 'rail depot': ['Rail depot', 'the rail depot'] };
+  TW.biome = (b) => ({ farmland: 'fields', prairie: 'fields', 'hill country': 'hills', forest: 'forest', lakeshore: 'lake', 'river valley': 'river', coast: 'coast' })[b] || 'fields';
+  const ROLE2KIND = [[/laundromat/, 'laundromat'], [/diner|cafe|waitress|cook/, 'diner'], [/gas station|clerk|night shift/, 'gas'], [/pastor|church|priest/, 'church'], [/librar/, 'library'], [/bus/, 'stop'], [/mail/, 'main'], [/teacher|knows everybody/, 'park'], [/motel/, 'motel'], [/farm|co-op|mill|dock|fisher/, 'work'], [/nurse|clinic|doctor/, 'clinic'], [/deputy|sheriff|police/, 'main']];
+  const STAFF_ROLE = { diner: (L) => `works the counter at ${L.name}`, gas: (L) => `runs the register at ${L.name}`, library: () => 'the librarian', church: () => 'the pastor', laundromat: (L) => `keeps ${L.name} running`, clinic: () => 'at the clinic front desk', work: (L) => `foreman at ${L.short}`, park: () => 'walking an old dog, slowly', stop: () => 'waiting for the same bus as you, maybe' };
+
+  /* hours: [open, close] in hours, or null = always */
+  function hoursFor(kind, tier) {
+    const big = tier === 'town' || tier === 'city';
+    return { gas: big ? null : tier === 'small' ? [6, 22] : [6, 21], diner: tier === 'city' ? null : tier === 'town' ? [6, 22] : tier === 'small' ? [6, 20] : [6, 14], library: tier === 'village' ? [10, 16] : [9, 19],
+      church: [7, 19], laundromat: tier === 'city' ? null : [6, 22], clinic: [8, 18], work: [6, 18], station: [5, 24] }[kind] || null;
+  }
+
+  TW.id = (pid, kind) => 't_' + pid + '_' + kind;
+  TW.cache = {};
+  TW.build = function (p) {
+    if (!p || p.home) return null;
+    if (TW.cache[p.id]) return TW.cache[p.id];
+    const r = rngOf('town:' + p.id + ':' + ((SH.Atlas && SH.Atlas.data && SH.Atlas.data().seed) || 1)), tier = p.tier, sv = p.services || {};
+    const east = r() < 0.5, X = (u) => Math.round(east ? u : 1000 - u), MY = 300 + Math.round(r() * 50);
+    const squeeze = tier === 'village' ? 0.72 : tier === 'small' ? 0.86 : 1, U = (u) => X(500 + (u - 500) * squeeze);
+    const T = { pid: p.id, name: p.name, tier, east, MY, locs: {}, people: [], rail: !!(p.rail || p.halt), railY: Math.min(600, MY + 190 + Math.round(r() * 30)) };
+    const L = T.locs, placed = [];
+    const add = (kind, o, u, dy) => {
+      let x = U(u + (r() - 0.5) * 40), y = MY + dy + Math.round((r() - 0.5) * 24);
+      for (let k = 0; k < 40 && placed.some((q) => Math.hypot(q[0] - x, q[1] - y) < 78); k++) { x += (r() - 0.5) * 60; y += (r() - 0.5) * 50; }
+      x = Math.max(50, Math.min(950, Math.round(x))); y = Math.max(40, Math.min(610, Math.round(y))); placed.push([x, y]);
+      const id = TW.id(p.id, kind), hrs = hoursFor(kind, tier);
+      L[id] = Object.assign({ id, kind, town: p.id, x, y, type: 'tw_' + kind, indoor: false, vis: 0.6, hours: hrs, sub: '', blurb: '' }, o);
+      return L[id];
+    };
+    const dn = pk(r, DINER), gn = pk(r, GAS), cn0 = pk(r, CHURCH), cn = cn0 === 'the white church' ? 'The White Church' : cn0, ln = pk(r, LAUND), park = pk(r, PARK[tier] || PARK.small);
+    const street = tier === 'village' ? pk(r, ['Main Street', 'County Road 4', 'Front Street', 'Church Street']) : tier === 'city' ? pk(r, ['Market Street', 'Broadway', 'Central Avenue', '5th Avenue']) : 'Main Street';
+    T.street = street;
+    add('main', { name: tier === 'city' ? 'Downtown' : street, icon: '🏘️', sub: tier === 'village' ? 'The only street' : tier === 'city' ? street + ' and around' : 'Shops, the post office', vis: 0.8,
+      blurb: { village: `${street}: a post office in somebody's front room, a notice board, a grain elevator you can see from anywhere.`, small: `Brick storefronts from 1910, half of them still open. Angle parking. Everybody's truck has the same county sticker.`, town: `A real downtown: a Dollar General, a pharmacy, two banks, a closed movie theater with a hopeful sign.`, city: `Traffic, food carts, glass towers at one end and pawn shops at the other. Nobody looks at anybody.` }[tier] }, 500, -52);
+    const stopName = tier === 'city' ? p.name + ' Bus Terminal' : tier === 'town' ? p.name + ' bus depot' : tier === 'small' ? 'The bus stop' : 'The bus shelter';
+    add('stop', { name: stopName, icon: '🚏', sub: tier === 'village' || tier === 'small' ? 'Outside the ' + pk(r, ['post office', 'general store', 'diner', 'feed store']) : 'Buses & tickets', vis: tier === 'city' ? 0.5 : 0.8, indoor: tier === 'city' || tier === 'town',
+      blurb: tier === 'village' ? 'A plexiglass shelter with one wall kicked out and a timetable faded to pale blue. It smells like rain even when it isn\'t raining.' : tier === 'city' ? 'Twenty bays, a food court that closed in 2019, and security guards who are paid to notice kids alone.' : 'A bench, a timetable, a trash can. The place everyone in town sees on the way to somewhere else.' }, 430, 46);
+    if (sv.gas !== false) add('gas', { name: gn, icon: '⛽', sub: tier === 'village' ? 'Gas, groceries, bait, gossip' : 'Gas station & store', vis: 0.7, indoor: true, blurb: `${gn}: two pumps, a coffee machine that's always on, a rack of phone chargers nobody buys, and a counter where the whole town's news goes through.` }, 770, 44);
+    if (tier !== 'village' || (sv.wifi || []).includes('diner')) add('diner', { name: dn, icon: '☕', sub: tier === 'city' ? 'Open 24 hours' : 'Breakfast all day', vis: 0.6, indoor: true, blurb: `${dn}: vinyl booths, pie under a plastic dome, a waitress who calls everyone "hon". ${tier === 'village' || tier === 'small' ? 'The regulars have their own mugs on hooks.' : 'Truckers at the counter, students in the back.'}` }, 590, -50);
+    if (sv.library) add('library', { name: tier === 'village' ? p.name + ' Library' : p.name + ' Public Library', icon: '📚', sub: 'Free wifi, outlets, warm', vis: 0.4, indoor: true, blurb: tier === 'village' ? 'One room in the old bank building. The vault is the children\'s section.' : 'Carpet that smells like old paper and radiator heat. Kids charge phones at the back tables and nobody asks.' }, 350, -54);
+    if (sv.church) add('church', { name: cn, icon: '⛪', sub: 'Doors open days', vis: 0.4, indoor: true, blurb: `${cn}. The side door is usually unlocked. There's a food pantry shelf in the basement hallway with a sign that says TAKE WHAT YOU NEED.` }, 440, -150);
+    add('park', { name: park[0].toUpperCase() + park.slice(1), icon: '🌳', sub: 'Benches, a restroom, trees', vis: 0.5, blurb: tier === 'village' ? 'A backstop, a set of bleachers, and a porta-potty. At night it\'s the darkest place in town.' : 'Paths, benches, a restroom that\'s locked after dusk, and a gazebo where teenagers smoke.' }, 560, 150);
+    if (sv.laundromat) add('laundromat', { name: ln, icon: '🧺', sub: tier === 'city' ? 'Coin laundry · 24h' : 'Coin laundry', vis: 0.35, indoor: true, blurb: `${ln}: warm dryers, a folding table, a TV bolted high in the corner playing the weather on mute.` }, 650, 52);
+    if (p.hasPolice) add('police', { name: p.name + ' Police', icon: '🚓', sub: tier === 'city' ? 'Precinct · 24/7' : 'Police station', vis: 1, indoor: true, blurb: 'Flag, glass doors, a bench in the lobby. Running away isn\'t a crime. Walking in here ends this, one way or another.' }, 300, 52);
+    if (sv.hospital || tier === 'town' || tier === 'city') add('clinic', { name: sv.hospital && tier === 'city' ? p.name + ' General' : p.name + ' Community Clinic', icon: '🏥', sub: tier === 'city' ? 'Hospital + free clinic' : 'Walk-in clinic', vis: 0.8, indoor: true, blurb: 'Plastic chairs, a TV playing a cooking show, and a nurse at the desk who has seen every kind of kid come in.' }, 250, -66);
+    const ms = SH.Motels && SH.Motels.motels ? SH.Motels.motels(p) : [];
+    if (ms.length) add('motel', { name: ms.length > 1 ? 'Motel strip' : ms[0].n, icon: '🏨', sub: ms.map((m) => m.n).join(' · '), vis: 0.5, blurb: ms.length > 1 ? `Out by the highway: ${ms.map((m) => m.n).join(', ')}. Ice machines humming, trucks idling.` : `${ms[0].n}. A buzzing sign, an ice machine, a row of doors facing the parking lot.` }, 860, -48);
+    const econ = (p.econ || [])[0] || 'feed store', wk = WORK[econ] || [econ[0].toUpperCase() + econ.slice(1), 'the ' + econ];
+    add('work', { name: wk[0], short: wk[1], icon: '🚜', sub: 'Where the work is: ' + econ, vis: 0.5, blurb: `${wk[1][0].toUpperCase() + wk[1].slice(1)}. ${tier === 'city' ? 'Loading docks, forklifts, men on smoke breaks.' : 'Trucks in and out. Somebody here always needs a pair of hands for an hour.'}` }, 110, 120);
+    add('edge', { name: 'Edge of town', icon: '🛣️', sub: 'Where it turns back into ' + { fields: 'fields', coast: 'dunes', forest: 'woods', hills: 'hills', lake: 'shoreline', river: 'river bottoms' }[TW.biome(p.biome)], vis: 0.15,
+      blurb: { fields: p.biome === 'prairie' ? 'The sidewalk gives up. Grass to the horizon, barbed wire, cattle standing around like they\'re waiting for a bus.' : 'The sidewalk gives up. Corn stubble to the horizon, a grain truck every ten minutes, a barn with a sagging roof.', coast: 'Past the last house, the road bends along the dunes. Wind, gulls, a boarded-up bait shack.', forest: 'The streetlights stop and the pines start. A logging road goes off between the trees, and after about fifty feet you can\'t see where it goes.', hills: 'The road climbs out of town in switchbacks. Below, the whole place fits in your hand.', lake: 'The road runs along the water past shut-up summer cabins. A dock with no boat. Loons, if you\'re lucky.', river: 'The road drops down to the river: brown water, cottonwoods, a boat ramp, a sign that says NO SWIMMING that everyone ignores in July.' }[TW.biome(p.biome)] }, 960, 4);
+    if (T.rail) { const st = add('station', { name: p.station || tier === 'city' || tier === 'town' ? p.name + ' Station' : p.name + ' halt', icon: '🚉', sub: p.station || tier === 'city' || tier === 'town' ? 'Trains' : 'A platform, a sign, a bench', vis: 0.5, indoor: !!(p.station || tier === 'city'), blurb: p.station || tier === 'city' ? 'A waiting room with wooden benches, a departures screen, and a vending machine that eats dollars.' : 'A concrete platform in the middle of nowhere. A sign with the town\'s name. A bench. A button that says PUSH TO SIGNAL TRAIN.' }, 520, 0); st.y = T.railY - 16; }
+    if (p.grandma) add('grandma', { name: 'Larkspur Lane', icon: '🏡', sub: 'Grandma\'s street', vis: 0.6, hidden: true, blurb: 'Neat little houses, leaf piles at the curbs, wind chimes. Number 41 has a blue door.' }, 300, -170);
+    if (sv.shelter && (tier === 'city' || tier === 'town')) add('shelter', { name: tier === 'city' ? 'Safe Harbor Youth Center' : p.name + ' Youth Shelter', icon: '🏮', sub: 'Youth drop-in · 24/7', vis: 0.1, indoor: true, blurb: 'A brick house with a porch light that never goes off. For kids who can\'t go home tonight. They don\'t call anybody the first night.' }, 690, -160);
+    if (tier === 'town' || tier === 'city') add('backst', { name: 'Side streets', icon: '🌃', sub: 'Pawn shop, stalls, people who don\'t ask', vis: 0.25, blurb: 'Behind the main drag: a pawn shop, a taco stall, a bar with no windows, alleys that smell like fryer oil.' }, 620, -118);
+    // people: the Atlas locals where their job is, plus someone behind every counter
+    const used = {};
+    (p.people || []).forEach((pp, i) => { let kind = (ROLE2KIND.find(([re]) => re.test(pp.role)) || [0, 'main'])[1]; let role = pp.role; if (!L[TW.id(p.id, kind)]) { kind = 'main'; role = pk(r, [`lives on ${street}`, 'retired, and on every committee in town', `drives a truck for ${(p.econ || ['the co-op'])[0]}`, 'runs the post office out of a front room']); } used[kind] = 1; T.people.push({ id: 'tw_' + p.id + '_' + i, n: pp.n, role, mood: pp.mood, kind }); });
+    Object.keys(STAFF_ROLE).forEach((kind, j) => { const Lk = L[TW.id(p.id, kind)]; if (!Lk || used[kind]) return; if ((kind === 'park' || kind === 'stop') && r() < 0.4) return; let n = pk(r, STAFF); for (let k = 0; k < 6 && T.people.some((q) => q.n === n); k++) n = pk(r, STAFF); T.people.push({ id: 'tw_' + p.id + '_s' + j, n, role: STAFF_ROLE[kind](Lk), mood: pk(r, MOODS), kind, staff: true }); });
+    // no townie shares a name with Sam's family or Harlow regulars; roles name the real building
+    { const f = (SH.G && SH.G.fam) || {}, bad = new Set([f.mom, f.rick, f.sib, f.gma, SH.G && SH.G.name, 'Rick', 'Lily', 'Dana', 'Rose', 'Jordan', 'Pearl', 'Sam'].filter(Boolean).map((x) => String(x).toLowerCase()));
+      T.people.forEach((q) => { for (let k = 0; k < 12 && (bad.has(q.n.toLowerCase()) || T.people.some((o) => o !== q && o.n === q.n)); k++) q.n = pk(r, STAFF.filter((x) => x !== 'Pearl'));
+        const Lk = L[TW.id(p.id, q.kind)];
+        if (q.kind === 'church' && Lk && /pastor/.test(q.role)) q.role = `the pastor at ${Lk.name}`;
+        if (q.kind === 'library' && p.tier !== 'village' && p.tier !== 'small') q.role = q.role.replace(/ \(part-time[^)]*\)/, '');
+        if (q.kind === 'work' && Lk && /^foreman at /.test(q.role)) q.role = `foreman at ${Lk.short || Lk.name}`;
+        if (q.kind === 'stop' && /school bus/.test(q.role) && p.tier === 'city') q.role = 'waiting for the same bus as you, maybe'; }); }
+    T.people.forEach((q) => { if (SH.NPCS_META && !SH.NPCS_META[q.id]) SH.NPCS_META[q.id] = { n: q.n, full: `${q.n}, ${q.role.replace(/ \(.*\)$/, '')} · ${p.name}`, col: ['#9a8c7a', '#7a8c9a', '#8a7a9a', '#7a9a8a', '#9a7a7a'][h32(q.id) % 5], ini: q.n[0], ph: false }; });
+    TW.cache[p.id] = T;
+    return T;
+  };
+
+  /* install into the live tables */
+  TW.install = function (p) {
+    const T = TW.build(p); if (!T) return null;
+    Object.values(T.locs).forEach((L) => { SH.LOC[L.id] = L; if (SH.OPEN) SH.OPEN[L.id] = (h) => !L.hours || (h >= L.hours[0] && h < L.hours[1]); });
+    if (SH.Run && SH.Run.sleepSpots) Object.assign(SH.Run.sleepSpots, TW.sleepSpots(T));
+    return T;
+  };
+  TW.sleepSpots = function (T) {
+    const o = {}, id = (k) => TW.id(T.pid, k), v = T.tier === 'village';
+    o[id('stop')] = { q: 0.25, risk: 0.4, n: v ? 'the bench in the bus shelter, knees up, hood up' : 'a bench by the bays' };
+    o[id('park')] = { q: 0.3, risk: 0.35, n: v ? 'the bleachers, under the top row where the wind can\'t reach' : 'the gazebo floor' };
+    o[id('laundromat')] = { q: 0.45, risk: 0.35, n: 'a plastic chair by the warm dryers' };
+    o[id('church')] = { q: 0.4, risk: 0.15, n: 'the step of the church doorway, out of the wind' };
+    o[id('edge')] = { q: 0.35, risk: 0.2, n: v || T.tier === 'small' ? ({ forest: 'a bed of pine needles under a big spruce', coast: 'the sand on the lee side of a dune, out of the wind', lake: 'the porch of a shut-up summer cabin', river: 'the dry sand under the bridge' }[TW.biome((SH.Atlas.data().places.find((x) => x.id === T.pid) || {}).biome)] || 'loose hay in an open barn that smells like summer') : 'the dry concrete of a drainage culvert' };
+    o[id('diner')] = { q: 0.3, risk: 0.3, n: 'the corner booth, pretending to wait for someone' };
+    o[id('station')] = { q: 0.3, risk: 0.35, n: 'the wooden bench on the platform' };
+    o[id('main')] = { q: 0.2, risk: 0.45, n: 'a doorway on ' + T.street };
+    o[id('backst')] = { q: 0.25, risk: 0.55, n: 'a loading dock behind the pawn shop' };
+    o[id('work')] = { q: 0.3, risk: 0.3, n: 'a pile of feed sacks in an open shed' };
+    o[id('gas')] = { q: 0.15, risk: 0.5, n: 'the ice-machine corner behind the station' };
+    return o;
+  };
+  TW.cur = () => { const G = SH.G; if (!G || !G.away) return null; return TW.cache[G.away] || (SH.Atlas && TW.install(SH.Atlas.here())); };
+  TW.loc = (id) => { const L = SH.LOC[id || (SH.G && SH.G.loc)]; return L && L.town ? L : null; };
+  TW.here = () => TW.loc();
+  TW.people = (kind) => { const T = TW.cur(); return T ? T.people.filter((q) => q.kind === kind) : []; };
+  TW.st = (pid) => { const G = SH.G; G.tw = G.tw || {}; return (G.tw[pid || G.away] = G.tw[pid || G.away] || { seen: {}, met: {}, told: {}, day: {} }); };
+})(window.SH);
+
+</script>
+<script>
+/* town_text.js */
+/* SMALL HOURS — towns as real places (3/5): the writing.
+   Lines change with the town's size, the hour, the weather, how long you've been gone, whether your face is on
+   posters yet, and how many times you've been somewhere. Pools cycle without repeating until they run out. */
+(function (SH) {
+  const TX = SH.TownText = {};
+  const G = () => SH.G;
+  const log = (t, c) => SH.UI.log(t, c || '');
+  /* no-repeat picker: walks a pool in order (shuffled once per key) so you don't see the same line twice in a row */
+  TX.pk = function (key, arr) {
+    arr = arr.filter((x) => x); if (!arr.length) return '';
+    const g = G(); g.twx = g.twx || {}; const s = g.twx[key] = g.twx[key] || { i: 0, o: null, n: 0 };
+    if (!s.o || s.n !== arr.length) { s.o = arr.map((_, i) => i).sort(() => Math.random() - 0.5); s.n = arr.length; s.i = 0; }
+    const v = arr[s.o[s.i % s.o.length]]; s.i++; if (s.i >= s.o.length) { s.o = null; }
+    return typeof v === 'function' ? v() : v;
+  };
+  const ctx = () => { const g = G(), h = SH.hour(); return { g, h, dark: SH.isDark(), rain: SH.raining(), cold: SH.tempF ? SH.tempF() < 42 : false, days: g.missingAt ? Math.floor((g.t - g.missingAt) / 1440) : 0, rep: !!g.reported, broke: g.money < 3, hungry: g.s.full < 30, tired: g.s.energy < 30, party: (g.party || []).length, morning: h >= 5 && h < 10, evening: h >= 17 && h < 21, night: h >= 21 || h < 5 }; };
+  const cap = (s) => s[0].toUpperCase() + s.slice(1);
+
+  /* ---------- arriving ---------- */
+  TX.arrive = function (p, T, at, visits) {
+    const c = ctx(), L = T.locs[SH.Town.id(p.id, at)], tier = T.tier;
+    if (visits > 1) return TX.pk('rearr' + tier, [
+      `${p.name} again. ${L.name}, the same as you left it. ${c.dark ? 'The same streetlight is still flickering.' : 'Somebody has put a pumpkin out since last time.'}`,
+      `Back in ${p.name}. You know where the bathroom is here. You know which clerk looks up. That's what home is, sort of, in a terrible way.`,
+      `${p.name}. You recognize a truck. Worse: the truck's owner might recognize you.`,
+    ]);
+    const how = at === 'station' ? `The train sighs to a stop at ${L.name}. You step down onto the platform with your backpack and ${c.party ? 'your people' : 'nobody'}.`
+      : at === 'edge' ? `You walk into ${p.name} the long way, past the ${tier === 'village' ? 'grain elevator' : tier === 'city' ? 'first overpass' : 'water tower'} and the sign that says WELCOME TO ${p.name.toUpperCase()}${p.motto ? `: ${p.motto.toUpperCase()}` : ''}.`
+      : at === 'gas' ? `The ride drops you in the lot at ${L.name} and pulls out before you've got both straps on.`
+      : tier === 'city' ? `The bus hisses into ${L.name}. Bay 14. Fluorescent light, pigeons inside the building somehow, a voice announcing departures to nobody.`
+      : tier === 'village' ? `The bus lets you off at the shelter and keeps going. Its taillights are the last moving thing you can see.`
+      : /depot|terminal/i.test(L.name) ? `The bus pulls into ${L.name} and exhales. A man with a clipboard, a vending machine, a bench bolted to the floor. You get off like you do this all the time.` : `The bus stops on ${T.street} long enough for you to get off. The doors fold shut behind you.`;
+    const first = {
+      village: [`${p.name} is one street and a sky. ${p.pop < 600 ? `Population ${p.pop}, and from the way a woman on a porch is watching you, she knows every one of them.` : 'A grain elevator, a church, a gas station, and a lot of porches.'}`, `A dog trots out to inspect you, decides you're fine, trots back. The whole village seems to have the same opinion, for now.`],
+      small: [`${p.name}: brick storefronts, angle parking, a bank clock that says ${SH.fmt12 ? SH.fmt12() : 'the wrong time'} and ${Math.round(SH.tempF ? SH.tempF() : 50)}°.`, `The kind of town where the diner has regulars and the regulars have opinions.`],
+      town: [(() => { const h = SH.Atlas.data().places.find((x) => x.home); return h && p.pop > h.pop * 1.15 ? `${p.name} is bigger than Harlow. Nobody looks twice at a kid with a backpack here. Yet.` : `${p.name} is about the size of Harlow, which is the strange part: the same kind of streets, all with the wrong names. Nobody looks twice at you. Yet.`; })(), `Chain stores at the edges, a real downtown in the middle, and people too busy to wonder about you.`],
+      city: [`${p.name}. Noise, traffic, ten thousand strangers. Being invisible feels good for about ten minutes.`, `Sirens somewhere, always. A man sells phone cases from a blanket. Nobody here knows your name, and nobody wants to.`],
+    }[tier] || [''];
+    const mood = c.night ? 'It\'s the middle of the night. Everything is closed except whatever\'s open 24 hours, and the people who are awake now are awake for reasons.'
+      : c.rain ? 'It\'s raining the fine, sideways kind of rain that gets into your collar.'
+      : c.morning ? 'The town is just waking up: a delivery truck, a jogger, the smell of someone\'s bacon.'
+      : c.evening ? 'The light is going gold and then gray. Porch lights come on one at a time.' : '';
+    const worry = c.rep && (tier === 'village' || tier === 'small') ? ' Your face is on the internet now. In a town this size, somebody has seen it.' : '';
+    return `${how} ${first[0]} ${first[1] || ''} ${mood}${worry}`.replace(/\s+/g, ' ').trim();
+  };
+
+  /* ---------- moving around town ---------- */
+  TX.go = function (from, L, opt, n) {
+    const c = ctx(), m = opt.mode === 'bus' ? 'take the city bus' : opt.mode === 'bike' ? 'ride' : 'walk';
+    const on = {
+      main: ['past the bank clock', 'past a barber pole that isn\'t spinning', 'past a hardware store with rakes out front'],
+      gas: [ctx().dark ? 'toward the glow of the pumps' : 'toward the gas station sign', 'along the highway shoulder to the gas station', 'across the lot, where the air smells like gasoline and hot dogs'],
+      diner: ['toward the smell of coffee', 'to the diner with the pie in the window'],
+      library: ['to the library, the most honest building in any town', 'up the library steps'],
+      church: ['around the side of the church to the door that\'s always open', 'up the church steps'],
+      park: ['into the park', 'across the grass'],
+      laundromat: ['toward the warm, humming glow of the laundromat'],
+      edge: ['out to where the sidewalk gives up', 'past the last streetlight'],
+      stop: ['back to the bus stop'], station: ['to the station'], motel: ['out to the motels by the highway'], police: ['toward the flag in front of the police station'],
+      work: [`out to ${L.short || L.name}`], clinic: ['to the clinic'], backst: ['into the side streets'], shelter: ['to the brick house with the porch light'], grandma: ['onto Larkspur Lane, reading the house numbers'],
+    }[L.kind] || ['across town'];
+    const extra = c.rain && opt.mode !== 'bus' ? ' The rain finds the gap between your hood and your neck.' : c.night && opt.mode === 'walk' ? ' Your footsteps are the loudest thing in town.' : '';
+    return `You ${m} ${TX.pk('go' + L.kind, on)} (${opt.mins} min).${n === 1 && L.blurb ? ' ' + L.blurb : ''}${extra}`;
+  };
+  TX.idle = (L, T) => TX.pk('idle' + L.kind, {
+    main: ['You sit on the bank steps and watch the town do its thing. A man parallel parks for four minutes. A woman walks a cat on a leash. Nobody looks at you.', 'You sit on a bench outside the hardware store. The owner comes out to flip the sign and nods at you like you\'re a regular. Maybe you are now.'],
+    gas: ['You lean against the ice machine. Trucks come and go. A trucker buys six energy drinks and a single banana.'],
+    stop: ['You sit in the shelter and read the graffiti. JESS + TY. CLASS OF 09. SOMEBODY LOVES YOU. That last one is in pen, neat, like whoever wrote it meant it.', 'You watch the road. Every car is a bus until it isn\'t.'],
+    park: ['You sit on a swing without swinging. The chains are cold.', 'A squirrel watches you eat nothing. You watch it eat something. Fair.'],
+    edge: ['You sit on the guardrail. The wind comes across the fields like it\'s looking for somebody.'],
+  }[L.kind] || ['You rest. Your legs thank you. Your brain doesn\'t shut up.', 'You sit and let the time go by. It goes by slowly, the way it does when you have nowhere to be.']);
+
+  /* ---------- walking the main street: things happen ---------- */
+  TX.walk = function (L, T, p) {
+    const c = ctx(), g = c.g, r = Math.random();
+    if (r < (p.danger || 0.03) * 1.3 && !c.morning) return SH.TownEvents ? SH.TownEvents.car(p) : null;
+    if (r < 0.14 && !g.flags['found$' + p.id]) { g.flags['found$' + p.id] = 1; const amt = [1, 5, 1, 10, 5][Math.floor(Math.random() * 5)]; SH.money(amt); return log(`Something green in the gutter by the ${T.tier === 'city' ? 'bus shelter' : 'post office'}. A ${amt}-dollar bill, damp and real. You look around. Nobody. It's yours.`, 'good'); }
+    if (c.rep && r < 0.3) return log(TX.pk('poster', [
+      `On a telephone pole: a MISSING poster. Your school picture. Your name spelled right. Somebody printed this and drove it here and stapled it, four staples, one in each corner. You keep walking with your hood up and your heart going like a rabbit's.`,
+      `The window of the ${T.tier === 'city' ? 'corner store' : 'hardware store'} has a flyer taped inside: HAVE YOU SEEN. You have. Every morning in the mirror. You turn and look at a display of snow shovels very hard until your face goes normal.`,
+    ]), 'bad');
+    const lines = {
+      village: [`${p.name}'s whole street takes twelve minutes. A post office in somebody's front room. A notice board. A tractor for sale, "runs good, $1,800 OBO". ${T.people[0] ? T.people[0].n + ', who ' + T.people[0].role + ', waves like everybody waves at everybody.' : ''}`, 'A combine rolls down the middle of the street at walking pace, and three cars follow it patiently like a parade nobody planned.', 'You pass a yard with a hand-painted sign: EGGS $3, HONOR SYSTEM. A coffee can for the money. Someone trusts the whole world here.'],
+      small: [`Main Street: ${(p.econ || ['a feed store'])[0]} trucks, a diner with pie in the window, a closed movie theater whose sign still says COMING SOON. It's been coming soon since before you were born.`, 'Two old men on a bench outside the barber argue about whether it\'s going to rain. It is. Both of them are wrong about when.', 'The bank has a clock and a thermometer. You stand under it and watch the temperature drop a degree like it\'s personally mad at you.'],
+      town: [`${p.name} has a real downtown: a Dollar General, a pharmacy, a high school with a football field bigger than your whole block. A marquee says HOMECOMING FRIDAY — GO ${pick2(['EAGLES', 'BULLDOGS', 'PANTHERS', 'HORNETS'])}.`, 'A girl your age walks past with her mom, arguing about a phone. You would give anything for that argument.', 'You window-shop at a sporting goods store. A sleeping bag rated to 20°F costs $89. You do the math on your whole life and look away.'],
+      city: ['Food carts, buses, sirens. You pass three people talking to themselves and only one of them is on a phone. You pass a sign for a youth center without meaning to read it.', 'A busker plays "Wonderwall" badly enough to be brave. You give him a nickel. He salutes you.', 'Glass towers, and in the doorway of one, a guy in a sleeping bag reading a paperback. He looks up. "Don\'t," he says, kind of gently. "Whatever you\'re doing. Call somebody." Then he goes back to his book.'],
+    }[T.tier] || [''];
+    log(TX.pk('walk' + p.id, lines), '');
+  };
+  const pick2 = (a) => a[Math.floor(Math.random() * a.length)];
+
+  TX.board = function (L, T, p) {
+    const c = ctx(), g = c.g;
+    const notes = [
+      `LOST: orange cat, answers to "Pumpkin", very fat, very loved. $20 reward. A phone number on tear-off tabs. Two are gone.`,
+      `CHURCH SUPPER, WEDNESDAYS 5–7, ${T.locs[SH.Town.id(p.id, 'church')] ? T.locs[SH.Town.id(p.id, 'church')].name.toUpperCase() : 'COMMUNITY HALL'}. ALL WELCOME. FREE WILL OFFERING.`,
+      `HELP WANTED: someone to stack firewood, cash, ask for ${(() => { const st = SH.Town.st(), w = T.people.find((q) => q.kind === 'work'); st.helpName = st.helpName || (w ? w.n : pick2(['Dale', 'Arlene', 'Mick'])); return st.helpName; })()} at ${T.locs[SH.Town.id(p.id, 'work')].short}.`,
+      'FOR SALE: kids\' bike, needs chain. $15. "Or free to a good home, honestly."',
+      'PIANO LESSONS. VOICE LESSONS. LIFE LESSONS (JOKING). Call Bev.',
+      'Hand-lettered: THE BLESSING BOX by the fire station is restocked on Mondays. Food, socks, toothbrushes. Take what you need.',
+    ];
+    const lines = [TX.pk('board' + p.id, notes), TX.pk('board2' + p.id, notes)];
+    if (c.rep) lines.push('And, newest, pinned over everything else: your face. MISSING. The date you left. A number to call. The paper is still crisp. Somebody put it up today.');
+    log(`The notice board outside the post office. ${lines.join(' ')}`, c.rep ? 'bad' : '');
+    if (c.rep) SH.st('stress', 8);
+  };
+  TX.post = (T, p) => TX.pk('post' + p.id, [
+    `The post office lobby is one room with brass mailboxes and a radiator that clanks. A poster about duck stamps. A poster about mail fraud. ${ctx().rep ? 'A poster with your face on it.' : 'No poster with your face on it. Yet.'}`,
+    'The postmaster is sorting mail behind a half door and humming. She says "Morning!" without looking. You say "Morning" back like you belong here. It works.',
+  ]);
+  TX.wash = (where) => TX.pk('wash' + where, [
+    'Pink soap, brown paper towels, a mirror you avoid for the first minute. You scrub your face and neck and the backs of your ears like Mom used to make you. You look a little less like a runaway.',
+    'Someone knocks while you\'re washing your armpits in the sink. "Just a minute!" you say, in your most normal voice. It comes out very normal. Suspiciously normal.',
+    `You brush your teeth${SH.has('toothbrush') ? '' : ' with your finger'} and wet your hair down. In the mirror there's a kid who looks tired, and who looks like someone. You don't look for long.`,
+  ]);
+  TX.read = (T) => TX.pk('read', ['You read half a book about a girl who survives alone on an island for eighteen years. She had it easy. She had fish.', 'A graphic novel about a kid whose dad is a monster, literally, with horns. It ends okay. You read the last page twice.', 'You fall asleep for eleven minutes on a book about volcanoes. Nobody wakes you. You wake up with the page stuck to your cheek.', 'An atlas, the old paper kind. You find where you are, then where you came from. On paper it\'s only three inches.']);
+  TX.libboard = function (L, T, p) {
+    const sh = T.locs[SH.Town.id(p.id, 'shelter')];
+    const lines = ['Toddler story time, Tuesdays. Free tax help. A knitting circle that meets "whenever Doris feels like it".'];
+    if (!SH.has('safeline')) { SH.addBag('safeline', true); lines.push('And a tear-off flyer, blue: NATIONAL RUNAWAY SAFELINE · call or text · 24/7 · free · confidential. You tear off a tab without deciding to. It\'s in your pocket now.'); }
+    else lines.push('The same blue Safeline flyer you already have one of. Someone else has torn off a tab since you were here. You wonder who.');
+    if (sh) { SH.LOC[sh.id].hidden = false; lines.push(`${sh.name}: "Ages 11–17. Hot meals, showers, a bed. You don't have to explain anything tonight." An address. It's on your map now.`); }
+    log(lines.join(' '), 'good');
+  };
+  TX.pew = (T) => TX.pk('pew', ['It\'s so quiet you can hear the radiator tick. Light comes through the stained glass in colors that land on your hands. You don\'t pray, exactly. You just sit there and let something be bigger than you for a while.', 'An old woman two pews up is praying out loud in a whisper, a long list of names. You hope somebody\'s saying yours. You hope somebody isn\'t.', 'You read the hymn numbers on the board. 412, 88, 203. You make them into a code, and the code means nothing, and it\'s nice to think about nothing.']);
+  TX.pantry = (it) => TX.pk('pantry', [`A plastic shelf with a hand-lettered sign: TAKE WHAT YOU NEED, LEAVE WHAT YOU CAN. You take ${SH.ITEMS[it] ? 'a ' + SH.ITEMS[it].n.toLowerCase() : 'something'} and stand there a second, feeling like you owe somebody. You do. You'll pay it back someday. You decide that.`, `Canned corn, a lot of canned corn, and ${SH.ITEMS[it] ? 'a ' + SH.ITEMS[it].n.toLowerCase() : 'something you can actually eat'}. You take it. The sign says God bless. It's a lot to carry, a blessing.`]);
+  TX.supper = (T) => TX.pk('supper', ['Folding tables, a paper tablecloth, four kinds of casserole and all of them have crushed potato chips on top. A lady in a Christmas sweater in October puts a second scoop on your plate. "Growing boy." "Whose are you, hon?" someone asks. You say your grandma\'s visiting her sister. They nod. They look at each other.', 'A man in overalls says grace for a very long time. Then: ham, green beans, Jell-O with things suspended in it. You eat like it\'s your job. Three people ask your name. You give three different ones. Nobody notices. Probably.']);
+  TX.park = (T, c) => TX.pk('park' + T.tier, T.tier === 'village' ? ['A dad hits grounders to a kid who can\'t catch them. He keeps hitting them anyway, softer each time.', 'Just you and the bleachers and a wind that smells like cut hay.'] : ['A little kid on the slide screams with joy like it\'s the first time anyone has ever gone down a slide. For him, maybe it is.', 'A couple breaks up on the bench next to yours, quietly and completely. You pretend to be very interested in your shoes.', 'Pigeons, a man feeding them, a sign that says DO NOT FEED THE PIGEONS right next to the man.']);
+  TX.draw = (T, L) => TX.pk('draw', [`You draw ${L.name}: the benches, a lamp post, a lady with a stroller. You leave a blank spot where you are. Then you draw yourself in, small, in the corner.`, 'You draw your sister from memory and get her nose wrong and fix it and get it wrong again. It\'s the best one you\'ve done.', 'You draw a map of everywhere you\'ve been since you left. It looks like a kid\'s drawing of a map. It looks like a long way.']);
+  TX.dryers = (T) => TX.pk('dryers', ['You sit with your back against a running dryer. It\'s like leaning on a big warm animal. The TV in the corner shows the weather: colder tomorrow.', 'A woman folding towels hands you one, still warm, without a word. You hold it against your face. She goes back to folding.']);
+  TX.edge = (T, p, c) => TX.pk('edge' + p.id, [`From out here ${p.name} is ${c.dark ? 'a handful of lights and one blinking red one on the water tower' : 'roofs and trees and a steeple'}. Somebody in one of those houses is making dinner. Somebody is arguing. Somebody is doing homework. None of them are you.`, 'The road goes both ways. That\'s the thing about roads.', `A pickup slows down, looks at you, speeds up. You let out a breath. ${c.dark ? 'The stars out here are ridiculous.' : 'A hawk sits on a fence post like it owns the county.'}`]);
+  TX.road = (T, p) => TX.pk('road', ['You walk the shoulder for a mile and back. Cows watch you with total disinterest. It\'s restful to be unimportant to a cow.', 'The road is so straight you can see a truck coming for five minutes before it gets to you. The driver lifts one finger off the wheel. You lift one back. Country hello.']);
+
+  /* ---------- work ---------- */
+  TX.noWork = (where, T) => TX.pk('nowork' + where, where === 'diner' ? ['"Honey, I can\'t pay a kid under the table, the health department would eat me alive." She gives you a free biscuit, which is worse, somehow.', '"How old are you? ...Where are your folks?" You say they\'re at the motel. She says "Uh huh." You leave before the next question.'] : ['"Sorry, kid. Insurance." He says it kindly. It doesn\'t help.', '"You should be in school," a woman says, and reaches for her phone, and you are already walking.', '"Come back with a grown-up and we\'ll talk." You say you will. You won\'t.']);
+  TX.didWork = (where, T, p, pay) => where === 'diner'
+    ? TX.pk('workd', [`Two hours of dishes. The water is so hot your hands go pink and wrinkled. The cook, who never tells you his name, slides you a plate of fries halfway through and at the end, $${pay} in ones. "You didn't see me do that," he says.`, `You scrape plates into a bin and learn that people leave more food than they eat. The waitress gives you $${pay} from her tips and a look that says she knows. She doesn't say it. Yet.`])
+    : TX.pk('workw' + p.id, [`You ${((p.kidjobs || ['stack boxes'])[0]).replace(/ \(.+\)$/, '')} for two hours. Your back hurts. Your hands smell like ${/coast|lake|river/.test(SH.Town.biome(p.biome)) ? 'fish and river mud' : SH.Town.biome(p.biome) === 'forest' ? 'pine sap' : 'hay and diesel'}. $${pay}, cash, and a bottle of water, and the question nobody asks hanging in the air.`, `A woman in a Carhartt jacket watches you work for ten minutes before she says anything. Then: "You're a hard worker. Where'd you learn that?" You say your grandpa. It's the first true thing you've said all day, sort of. $${pay}.`]);
+})(window.SH);
+
+</script>
+<script>
+/* town_play.js */
+/* SMALL HOURS — towns as real places (2/5): playing them.
+   Arriving puts you at a real spot (the bus stop, the station, or the edge of town if you walked in).
+   Each spot has its own things to do, people behind the counter, hours, and the same scene/stage as Harlow.
+   Everything the older systems used to add to the town pop-up menu (motels, stores, boards, junkyard, gigs,
+   clinics, side streets, runaway kids…) is routed to the spot where it physically happens. */
+(function (SH) {
+  const TW = SH.Town, A = SH.Atlas; if (!TW || !A) return;
+  const G = () => SH.G, U = SH.util;
+  const log = (t, c) => SH.UI.log(t, c || '');
+  const done = () => SH.UI.afterAction();
+  const act = (label, sub, fn, o) => Object.assign({ label, sub, fn }, o || {});
+  const TX = () => SH.TownText;
+  const pick = (a) => a[Math.floor(Math.random() * a.length)];
+  const kindOf = (id) => (SH.LOC[id] || {}).kind;
+
+  /* ---------- noticing: every action in a small place is a little bit of exposure ---------- */
+  TW.notice = function (k) { const p = A.here(); if (!p || p.home) return false; return A.noticed(p, k); };
+  TW.time = function (mins, k, o) { SH.advance(mins, Object.assign({ interrupt: false }, o || {})); if (G().ended) return true; return k ? TW.notice(k) : false; };
+  TW.pay = (amt, what) => { if (G().money < amt) { SH.UI.toast(`That's $${amt.toFixed(2)}. You have $${G().money.toFixed(2)}.`); return false; } SH.money(-amt); (G().tx = G().tx || []).push({ t: G().t, d: what, a: -amt }); return true; };
+
+  /* ---------- arriving ---------- */
+  TW.enter = function (to, m, extraLog) {
+    const g = G(), T = TW.install(to); if (!T) return;
+    const has = (k) => SH.LOC[TW.id(to.id, k)];
+    const ride = g._arrRide || '', rail = /train/.test(ride), informal = /car|minivan|tempo/.test(ride);
+    const walkIn = m && (m.k === 'walk' || m.k === 'bike');
+    extraLog = extraLog || g._arrLog; g._arrLog = '';
+    const at = walkIn ? 'edge' : rail && has('station') ? 'station' : informal && has('gas') ? 'gas' : 'stop';
+    g.loc = TW.id(to.id, at); if (!g.room || typeof g.room !== 'object') g.room = 'bedroom';
+    const st = TW.st(to.id); st.visits = (st.visits || 0) + 1; st.seen[at] = (st.seen[at] || 0) + 1;
+    if (extraLog) log(extraLog, 'sys');
+    log(TX().arrive(to, T, at, st.visits), '');
+    if (to.grandma) log(SH.f('grandmaAddr') ? `Grandma's street is somewhere on this map. Larkspur Lane. You could walk there in ${T.tier === 'small' ? 'fifteen minutes' : 'twenty'}.` : 'Grandma lives somewhere in this town. You don\'t know the street. Somebody here might. The library might.', 'sys');
+    if (to.grandma && SH.f('grandmaAddr')) { SH.LOC[TW.id(to.id, 'grandma')].hidden = false; }
+    SH.Map && (SH.Map.cache = null);
+  };
+
+  /* ---------- the hub is gone: going "back" just returns you to where you're standing ---------- */
+  A.hub = function () { const g = G(); if (!g || g.ended) return; if (g.away && !TW.loc()) { TW.install(A.here()); const T = TW.cur(); if (T) g.loc = TW.id(g.away, 'stop'); } done(); SH.Phone && SH.Phone.render && SH.Phone.render(); };
+
+  /* ---------- routing the old hub extras to physical places ---------- */
+  const ROUTE = [
+    [/Board:|Departures board/, (c, T) => (/Station|halt|train/i.test((c.sub || '') + c.t) && T.locs[TW.id(T.pid, 'station')] ? 'station' : /gas station lot/.test(c.sub || '') ? 'gas' : /diner parking/.test(c.sub || '') ? 'diner' : /laundromat/.test(c.sub || '') ? 'laundromat' : 'stop')],
+    [/motel|Motels|Your room at|Something's wrong at the motel/i, () => 'motel'],
+    [/The junkyard|Sleep in the/, () => 'edge'],
+    [/Side streets/, (c, T) => (T.locs[TW.id(T.pid, 'backst')] ? 'backst' : 'diner')],
+    [/farm|Go-kart/, (c) => (/farm/.test(c.t) ? 'work' : 'main')],
+    [/Clinic/, () => 'clinic'],
+    [/A kid /, () => 'park'],
+    [/Pickup locker|SwapSpot/, () => 'gas'],
+    [/^Work:/, () => 'work'],
+    [/Look for better signal/, () => 'edge'],
+    [/Stores|business|Your base|trick-or-treat/i, () => 'main'],
+    [/You & your group/, () => '*'],
+  ];
+  function extras(T, dark) {
+    const p = A.here(), ch = [], out = {};
+    (A.extra || []).forEach((f) => { try { f(p, ch, dark); } catch (e) { console.warn(e); } });
+    ch.forEach((c) => { const r = ROUTE.find(([re]) => re.test(c.t)); let k = r ? r[1](c, T) : 'main'; if (k !== '*' && !T.locs[TW.id(T.pid, k)]) k = 'main'; (out[k] = out[k] || []).push(c); });
+    return out;
+  }
+  const fromChoice = (c) => act(c.t.replace(/^\S+\s(?=[A-Z"])/u, (m) => (/\p{Extended_Pictographic}/u.test(m) ? '' : m)), c.sub || '', c.fn, { cls: c.cls, ic: (c.t.match(/^\p{Extended_Pictographic}\S*/u) || [])[0] });
+
+  /* ---------- people who are here right now ---------- */
+  TW.present = function (L) {
+    const T = TW.cur(); if (!T) return []; const h = SH.hour(), open = SH.isOpen(L.id);
+    return T.people.filter((q) => q.kind === L.kind && (q.staff || q.kind !== 'main' ? open : !SH.isDark()) && !(q.kind === 'park' && (h < 7 || h > 19)) && !(q.kind === 'stop' && (h < 6 || h > 21)));
+  };
+  function talkTo(q, L) {
+    return act(`Talk to ${q.n}`, q.role, () => SH.Talk.open(q.id, { turnsMax: 9, local: q, place: A.here(), spot: L, first: SH.TownTalk ? SH.TownTalk.opener(q, L) : 'Hi.', onEnd: (c) => { if (c.result === 'help') return SH.Endings.found(A.here().hasPolice ? 'self' : 'sheriff'); if (c.result === 'call') { G().awayNotice = 100; TW.notice(0); return; } done(); } }));
+  }
+
+  /* ---------- the action list for a town spot ---------- */
+  TW.actions = function () {
+    const g = G(), L = TW.loc(); if (!L) return null;
+    const T = TW.cur(), p = A.here(), h = SH.hour(), dark = SH.isDark(), open = SH.isOpen(L.id), a = [];
+    const X = extras(T, h >= 20 || h < 6);
+    const K = KIND[L.kind];
+    if (K) { try { K(a, L, T, p, { h, dark, open }); } catch (e) { console.warn(e); } }
+    TW.present(L).forEach((q) => a.push(talkTo(q, L)));
+    (X[L.kind] || []).forEach((c) => a.push(fromChoice(c)));
+    (X['*'] || []).forEach((c) => a.push(fromChoice(c)));
+    // everywhere: rest / sleep, and getting out of town
+    if (dark && !['police', 'shelter', 'grandma', 'motel'].includes(L.kind)) a.push(act('Find somewhere to sleep here', (SH.Run.sleepSpots[L.id] || {}).n || 'Wherever you can', () => SH.Run.sleep()));
+    else if (!dark) a.push(act('Sit a while', '30 min · rest your legs', () => { if (TW.time(30, 0.15)) return; SH.st('energy', 6); SH.st('stress', -3); log(TX().idle(L, T), ''); done(); }));
+    if (!p.hasPolice && ['main', 'gas', 'stop', 'church'].includes(L.kind)) a.push(act('Call the sheriff (non-emergency)', 'No police here. A deputy drives out. It ends this.', () => SH.Endings.found('sheriff'), { cls: 'safe' }));
+    a.push(act('Open Atlas', 'Leave town: buses, trains, roads', () => { SH.Phone.open('atlas'); SH.Mobile && SH.Mobile.showPhone && SH.Mobile.showPhone(); }));
+    return { rooms: null, acts: a };
+  };
+
+  /* ---------- per-kind actions ---------- */
+  const food = (a, items, where) => items.forEach(([n, price, full, extra, txt]) => a.push(act(`${n}: $${price.toFixed(2)}`, extra || `+food`, () => { if (!TW.pay(price, where)) return; SH.st('full', full); if (/cocoa|coffee|soup|chocolate|chili/i.test(n)) SH.st('warmth', 10); if (TW.time(/cocoa|chocolate|coffee/i.test(n) ? 20 : 15, 0.2)) return; log(typeof txt === 'function' ? txt() : txt, 'good'); done(); })));
+  const bagBuy = (a, list, where) => list.forEach(([id, price]) => { const it = SH.ITEMS[id]; if (!it) return; a.push(act(`Buy ${it.n}: $${price.toFixed(2)}`, it.d, () => { if (!TW.pay(price, where)) return; SH.addBag(id, true); if (TW.time(5, 0.12)) return; log(`You buy ${/^[aeiou]/i.test(it.n) ? 'an' : 'a'} ${it.n.toLowerCase()} and it goes in the backpack.`, 'sys'); done(); })); });
+  const wifiHere = (L, p) => (p.services.wifi || []).some((w) => new RegExp(w.split(' ')[0], 'i').test(L.kind === 'gas' ? 'gas station' : L.kind === 'diner' ? 'diner' : L.kind === 'library' ? 'library' : L.kind === 'laundromat' ? 'laundromat' : 'x'));
+  const charge = (a, L, mins, k, txt) => a.push(act('Charge your phone', SH.has('charger') ? `${mins} min at an outlet` : 'You need a charger', () => { const g = G(); g.charging = true; g.phone.bat = Math.min(100, g.phone.bat + Math.round(mins * 0.6)); if (TW.time(mins, k)) return; SH.st('warmth', 6); log(txt(), 'sys'); done(); }, { dis: !SH.has('charger') }));
+  const wifi = (a, L, p) => { if (!wifiHere(L, p)) return; a.push(act('Get on the wifi', 'Messages, maps, the news', () => { SH.Net && SH.Net.joinPublic && SH.Net.joinPublic(`${L.name} Guest`); if (TW.time(10, 0.08)) return; const un = Object.values(G().unread || {}).reduce((s, v) => s + (v || 0), 0); log(`The password is taped to the ${L.kind === 'library' ? 'circulation desk' : 'register'}: ${pick(['pie2024', 'guest1234', 'welcome!', 'GoEagles', 'coffee4u'])}. Your phone buzzes${un ? ` ${un} times` : ''} as everything catches up.`, 'sys'); done(); })); };
+  const wash = (a, where, k) => a.push(act('Wash up in the restroom', '+hygiene', () => { if (TW.time(12, k)) return; SH.st('hyg', SH.has('toothbrush') ? 14 : 9); log(TX().wash(where), 'sys'); done(); }));
+
+  const KIND = {
+    main(a, L, T, p, c) {
+      a.push(act(`Walk ${T.tier === 'city' ? 'around downtown' : 'the length of ' + T.street}`, '30 min · see what\'s here', () => { if (TW.time(30, 0.35)) return; SH.st('mood', 2); TX().walk(L, T, p); done(); }));
+      if (T.tier !== 'city') a.push(act('Read the notice board', 'Lost cats, church suppers, odd jobs', () => { if (TW.time(10, 0.1)) return; TX().board(L, T, p); done(); }));
+      if (!c.dark && (T.tier === 'village' || T.tier === 'small')) a.push(act('Check the post office lobby', 'Warm, and the bulletin board inside', () => { if (TW.time(15, 0.3)) return; SH.st('warmth', 8); log(TX().post(T, p), ''); done(); }));
+    },
+    gas(a, L, T, p, c) {
+      if (!c.open) { a.push(act(`${L.name} is closed`, `Opens at ${L.hours[0]} AM. The ice machine hums.`, () => {}, { dis: true })); return; }
+      food(a, [['Hot dog', 2.5, 22, 'Rolled since morning', () => pick(['It has been on the rollers since before you were born, probably. It\'s the best thing you\'ve ever eaten.', 'You eat it standing by the window. Ketchup, relish, the works. The clerk doesn\'t say anything about the relish.'])], ['Cup of cocoa', 1.25, 6, 'From the machine · warms you up', () => pick(['Powdered cocoa from the machine, scalding. You hold it with both hands until you can feel your fingers.', 'The machine grinds and spits out something that\'s 40% cocoa and 60% hot. You drink every drop.'])]], L.name);
+      bagBuy(a, [['granola', 1.5], ['chips', 1.75], ['water', 1.5]], L.name);
+      a.push(act('Pocket something', 'Stealing. There\'s a round mirror in the corner.', () => SH.Actions.shoplift(), { cls: 'hot' }));
+      wash(a, 'gas', 0.15); wifi(a, L, p);
+      if (T.tier === 'village') charge(a, L, 30, 0.35, () => `There's an outlet under the coffee counter. ${pick(['The clerk watches you plug in and says nothing.', '"Just don\'t trip anybody with that cord, hon."'])}`);
+    },
+    diner(a, L, T, p, c) {
+      if (!c.open) { a.push(act(`${L.name} is closed`, `Opens at ${L.hours[0]} AM. Chairs up on the tables.`, () => {}, { dis: true })); return; }
+      const bfast = c.h < 11;
+      food(a, [bfast ? ['Short stack of pancakes', 5, 38, 'Butter, syrup, the whole thing', () => pick(['Three pancakes the size of hubcaps. You eat until you can\'t, then eat one more bite out of spite.', 'The syrup comes in a little metal pitcher. You use all of it. The waitress brings another without being asked.'])] : ['Grilled cheese and soup', 5.5, 40, 'Tomato soup, extra crackers', () => pick(['The grilled cheese is cut corner to corner, the right way. You dunk it and for ten minutes nothing is wrong.', 'Soup so hot you have to wait, so you watch the steam and don\'t think about anything.'])],
+        ['Slice of pie', 3, 18, 'Whatever\'s under the dome today', () => `${pick(['Cherry', 'Apple', 'Pecan', 'Banana cream', 'Rhubarb'])}. ${pick(['It\'s the best pie in three counties, according to a laminated sign. The sign is right.', 'Your grandma makes it better. You eat every crumb anyway.'])}`],
+        ['Hot chocolate (refills free)', 1.75, 6, 'Buys you a warm booth for an hour', () => pick(['She tops it off twice without asking. You stay in the booth for an hour and watch the parking lot. Nobody asks you to leave.', 'Whipped cream from a can, a candy cane stirrer even though it\'s not Christmas. You make it last an hour.'])]], L.name);
+      wash(a, 'diner', 0.15); wifi(a, L, p);
+      if (wifiHere(L, p)) charge(a, L, 45, 0.25, () => 'You find the booth with the outlet under the table. Everyone who\'s ever been broke knows which booth.');
+      if (!c.dark) a.push(act('Ask if they need dishes washed', 'Cash, maybe. Questions, definitely.', () => TW.work('diner', L, T, p)));
+    },
+    library(a, L, T, p, c) {
+      if (!c.open) { a.push(act('The library is closed', `Open ${L.hours[0]} to ${L.hours[1] - 12} PM.`, () => {}, { dis: true })); return; }
+      charge(a, L, 60, 0.15, () => pick(['You plug in at the back table and pretend to read a book about the Dust Bowl. It\'s actually interesting.', 'The outlet is behind the large-print Westerns. You sit on the floor. Nobody minds.']));
+      wifi(a, L, p);
+      a.push(act('Use a public computer', '30 minute limit · look things up', () => TW.computer(L, T, p)));
+      a.push(act('Read in a corner chair', '1 hour · warm, quiet', () => { if (TW.time(60, 0.12)) return; SH.st('stress', -8); SH.st('mood', 5); SH.st('warmth', 10); log(TX().read(T), 'good'); done(); }));
+      a.push(act('Check the bulletin board', 'Flyers by the door', () => { if (TW.time(5, 0.05)) return; TX().libboard(L, T, p); done(); }));
+      wash(a, 'library', 0.1);
+    },
+    church(a, L, T, p, c) {
+      if (!c.open) { a.push(act('The doors are locked', 'The porch is out of the wind, at least.', () => {}, { dis: true })); return; }
+      a.push(act('Sit in a back pew', '30 min · quiet', () => { if (TW.time(30, 0.1)) return; SH.st('stress', -10); SH.st('mood', 3); SH.st('warmth', 8); log(TX().pew(T), 'good'); done(); }));
+      const st = TW.st(), d = SH.day();
+      a.push(act('The pantry shelf in the hallway', st.day.pantry === d ? 'You already took something today' : 'TAKE WHAT YOU NEED', () => { if (TW.time(5, 0.15)) return; st.day.pantry = d; const it = pick(['granola', 'apple', 'sandwich', 'water']); SH.addBag(it, true); log(TX().pantry(it), 'good'); done(); }, { dis: st.day.pantry === d }));
+      if (SH.wd() === 2 && c.h >= 16.5 && c.h < 19) a.push(act('Wednesday supper in the basement', 'Free. Casseroles. Lots of questions.', () => { if (TW.time(60, 0.6)) return; SH.st('full', 55); SH.st('mood', 8); SH.st('warmth', 15); log(TX().supper(T), 'good'); done(); }, { cls: 'job' }));
+    },
+    park(a, L, T, p, c) {
+      if (!c.dark) a.push(act(T.tier === 'village' ? 'Sit on the bleachers' : 'Sit on a bench and watch people', '45 min', () => { if (TW.time(45, 0.2)) return; SH.st('stress', -6); SH.st('energy', 5); log(TX().park(T, c), ''); done(); }));
+      if (SH.has('sketchbook') && !c.dark) a.push(act('Draw what you see', '40 min · your sketchbook', () => { if (TW.time(40, 0.12)) return; SH.st('stress', -10); SH.st('mood', 6); log(TX().draw(T, L), 'good'); done(); }));
+      if (!c.dark && c.h < 18) a.push(act('Use the park restroom', '+hygiene · cold water only', () => { if (TW.time(10, 0.1)) return; SH.st('hyg', 7); log('Cold water, no soap, a hand dryer that blows lukewarm air for three seconds. Better than nothing, barely.', 'sys'); done(); }));
+    },
+    laundromat(a, L, T, p, c) {
+      if (!c.open) { a.push(act(`${L.name} is closed`, 'Dark inside. The dryers are cold.', () => {}, { dis: true })); return; }
+      a.push(act('Warm up by the dryers', '30 min', () => { if (TW.time(30, 0.1)) return; SH.st('warmth', 22); SH.st('stress', -3); log(TX().dryers(T), 'good'); done(); }));
+      a.push(act('Wash your clothes', '$3 · 1 hour · +hygiene', () => { if (!TW.pay(3, L.name)) return; if (TW.time(60, 0.15)) return; SH.st('hyg', 22); SH.st('mood', 4); log('You wash everything but what you\'re wearing, then sit in the bathroom in your hoodie while that washes too. Clean socks. Warm from the dryer. You could cry. You don\'t, but you could.', 'good'); done(); }));
+      charge(a, L, 45, 0.12, () => 'The outlet by the change machine works if you jiggle the plug. You jiggle the plug.');
+    },
+    police(a, L, T, p) {
+      a.push(act('Walk in and tell them', 'Running away isn\'t a crime. They\'ll call home, or someone.', () => SH.Endings.found('self'), { cls: 'safe' }));
+      a.push(act('Keep walking past', 'Head down. Normal pace.', () => { if (TW.time(5, 0.5)) return; log(pick(['An officer on the steps is eating a breakfast burrito. He doesn\'t look up. You don\'t breathe until the corner.', 'Your own face is on a sheet of paper behind the glass door. Or someone who looks like you. You don\'t stop to check.']), 'warn'); done(); }));
+    },
+    clinic(a, L, T, p, c) {
+      if (!c.open) { a.push(act('The clinic is closed', 'An after-hours number is taped to the door.', () => {}, { dis: true })); return; }
+      a.push(act('Sit in the waiting room', '30 min · warm, nobody talks', () => { if (TW.time(30, 0.3)) return; SH.st('warmth', 14); SH.st('stress', -2); log('A TV plays a cooking show with the sound off. A baby cries, stops, cries. A nurse calls names that aren\'t yours. It\'s warm, and it smells like hand sanitizer, and nobody talks to you.', ''); done(); }));
+      if (G().s.health < 70 && !SH.has('x_painkiller')) a.push(act('Ask the nurse for something for your head', 'She\'ll have questions', () => { if (TW.time(15, 0.8)) return; SH.st('health', 8); log('"How old are you, sweetie? Where\'s your mom?" You say she\'s parking the car. She gives you two children\'s Tylenol in a paper cup and watches the door for a mom who doesn\'t come.', 'warn'); done(); }));
+    },
+    motel() {},
+    work(a, L, T, p, c) {
+      if (c.dark || !c.open) { a.push(act('Everyone\'s gone home', 'Come back after 6 AM', () => {}, { dis: true })); return; }
+      a.push(act('Ask around for work', (p.kidjobs || [])[0] || 'An hour or two, cash', () => TW.work('work', L, T, p)));
+    },
+    edge(a, L, T, p, c) {
+      a.push(act('Look back at the town', '15 min', () => { if (TW.time(15, 0)) return; SH.st('stress', -4); log(TX().edge(T, p, c), ''); done(); }));
+      if (!c.dark) a.push(act('Walk out along the road a while', '1 hour · clears your head', () => { if (TW.time(60, 0.05, { exert: 1.5 })) return; SH.st('stress', -8); SH.st('mood', 4); log(TX().road(T, p), 'good'); done(); }));
+    },
+    station(a, L, T, p, c) {
+      a.push(act('Read the timetable', 'When things leave', () => { if (SH.Routes && SH.Routes.boardView) return SH.Routes.boardView(p); }));
+    },
+    stop(a, L, T, p, c) {
+      a.push(act(T.tier === 'city' || T.tier === 'town' ? 'Check the departures screen' : 'Read the timetable', T.tier === 'city' || T.tier === 'town' ? 'Buses, bays, times' : 'Faded, but readable', () => { if (SH.Routes && SH.Routes.boardView) return SH.Routes.boardView(p); }));
+    },
+    grandma(a) { a.push(act('Walk up to number 41', 'The blue door', () => SH.Endings.grandma('walk'), { cls: 'safe' })); },
+    shelter(a, L, T, p) { a.push(act('Ring the bell', 'They take you in tonight. No calls till you\'re ready.', () => (SH.Endings.harbor ? SH.Endings.harbor('city') : SH.Endings.found('self')), { cls: 'safe' })); a.push(act('Read the sign on the door', '', () => { log('ANY KID, ANY TIME. HOT FOOD. SHOWERS. NO ONE WILL MAKE YOU DO ANYTHING TONIGHT. Underneath, in marker, someone added a smiley face and "the mac & cheese is legit".', 'good'); done(); })); },
+    backst() {},
+  };
+  TW.KIND = KIND;
+
+  /* ---------- work: real asks, real answers ---------- */
+  TW.work = function (where, L, T, p) {
+    const g = G(); if (TW.time(where === 'diner' ? 20 : 60, where === 'diner' ? 0.5 : 0.7)) return;
+    const st = TW.st(), d = SH.day(); st.day.worked = st.day.worked || {};
+    if (st.day.worked[where] === d) { log(pick(['"Already told you, kid. Nothing today."', 'Same answer as this morning. Friendlier, though.']), 'sys'); return done(); }
+    const named = where === 'work' && st.helpName && !st.usedHelp; if (named) st.usedHelp = d;
+    const ok = named || Math.random() < (T.tier === 'city' ? 0.4 : where === 'diner' ? 0.5 : 0.6);
+    if (named) log(`You ask for ${st.helpName}, like the notice said. ${pick(['A pause. Then: "Firewood\'s round back. Gloves are on the post. Don\'t get a splinter, I\'m not your mom."', 'They look at you for a long second, then at the woodpile. "You\'re small. Wood\'s not heavy if you carry less of it. Go on."'])}`, '');
+    st.day.worked[where] = d;
+    if (!ok) { log(TX().noWork(where, T), 'warn'); return done(); }
+    const pay = (SH.BAL ? SH.BAL.jobMin : 6) + Math.floor(Math.random() * (SH.BAL ? SH.BAL.jobSpread : 10)) + (where === 'diner' ? 0 : 3);
+    SH.advance(where === 'diner' ? 90 : 120, { interrupt: false, exert: 2 }); if (g.ended) return;
+    SH.money(pay); SH.st('energy', -14); SH.st('mood', 5); SH.st('hyg', -6); if (where === 'diner') SH.st('full', 25);
+    (g.tx = g.tx || []).push({ t: g.t, d: `Odd job: ${L.name}`, a: pay });
+    log(TX().didWork(where, T, p, pay), 'good'); done();
+  };
+
+  /* ---------- a library computer that knows where you are ---------- */
+  TW.computer = function (L, T, p) {
+    const D = (t, ch) => SH.UI.dialog({ title: 'Public computer', text: [].concat(t), choices: ch });
+    const back = { t: 'Log off', fn: done };
+    const ch = [];
+    if (p.grandma && !SH.f('grandmaAddr')) ch.push({ t: `Search: your grandma's name + "${p.name}"`, fn: () => { if (TW.time(15, 0.05)) return; SH.flag('grandmaAddr'); SH.LOC[TW.id(p.id, 'grandma')].hidden = false; SH.Map && (SH.Map.cache = null); log(SH.nm(`A library newsletter from last spring: "Volunteer of the month: ${(SH.G.fam && SH.G.fam.gma) || 'Rose'} of Larkspur Lane, who has read to the Tuesday toddlers for eleven years." Larkspur Lane. It's on the town map. It's a twenty-minute walk.`), 'good'); done(); } });
+    ch.push({ t: 'Search: "runaway help"', fn: () => { if (TW.time(15, 0.05)) return; SH.flag('knowsHarbor'); if (!SH.has('safeline')) SH.addBag('safeline', true); log(`The first result is the National Runaway Safeline: call or text, 24/7, free, and they don't have to tell anyone where you are. ${T.locs[TW.id(p.id, 'shelter')] ? `The second is ${T.locs[TW.id(p.id, 'shelter')].name}, right here in ${p.name}. It's on your map now.` : `The nearest youth shelter is in a bigger town. You write the number on your hand anyway.`}`, 'good'); done(); } });
+    ch.push({ t: 'Search your own name', fn: () => { if (TW.time(15, 0.05)) return; SH.st('stress', G().reported ? 10 : 2); log(G().reported ? `There it is. MISSING, and your school picture, the one where you blinked. ${pick(['A county sheriff\'s page. A Facebook group with 2,400 members.', 'Forty-one comments. You read three and close the window.'])} Somewhere, someone is refreshing that page every hour.` : 'Nothing yet. A kid with your name won a spelling bee in Ohio in 2019. You feel weirdly proud of him.', G().reported ? 'bad' : 'sys'); done(); } });
+    ch.push({ t: 'Look at the town map', fn: () => { if (TW.time(10, 0)) return; log(`You print a map of ${p.name} for ten cents. ${Object.values(T.locs).filter((l) => !l.hidden).length} places worth knowing. You fold it into your back pocket.`, 'sys'); done(); } });
+    ch.push(back);
+    D(['An old computer with a sticky mouse. A sign: 30 MINUTES. BE KIND. The librarian glances over once and goes back to her cart.'], ch);
+  };
+
+  /* ---------- plug into the game ---------- */
+  const bList = SH.Actions.list;
+  SH.Actions.list = function () {
+    const g = G(); if (g && g.away && g.phase === 'run') { TW.cur(); if (!TW.loc()) { g.loc = TW.id(g.away, 'stop'); } const r = TW.actions(); if (r) return r; }
+    return bList.apply(this, arguments);
+  };
+  const bTO = SH.travelOptions;
+  SH.travelOptions = function (to) {
+    const L = TW.loc(to), here = TW.loc(); if (!L || !here) return bTO.apply(this, arguments);
+    const T = TW.cur(), d = Math.hypot(L.x - here.x, L.y - here.y), f = { village: 0.02, small: 0.028, town: 0.04, city: 0.055 }[T.tier] || 0.03;
+    const out = [{ mode: 'walk', label: 'Walk', mins: Math.max(2, Math.round(d * f)), cost: 0, exert: 1.2 }];
+    if (SH.f('bikeWithMe')) out.push({ mode: 'bike', label: 'Bike', mins: Math.max(2, Math.round(d * f / 2.6)), cost: 0, exert: 1.5 });
+    if (T.tier === 'city' && d > 280 && SH.hour() >= 5.5 && SH.hour() < 24) { const wait = 12 - (Math.floor(G().t) % 12); out.push({ mode: 'bus', label: 'City bus', mins: wait + Math.round(d * 0.018), cost: 2, exert: 0.2, note: `next bus in ${wait}m` }); }
+    return out;
+  };
+  const bTravel = SH.travel;
+  SH.travel = function (to, opt) {
+    const L = TW.loc(to); if (!L) return bTravel.apply(this, arguments);
+    const g = G(); if (opt.cost > g.money) return SH.UI.toast('Not enough money for the bus.');
+    if (opt.cost) SH.money(-opt.cost);
+    const from = TW.loc();
+    g.outsideOverride = opt.mode !== 'bus';
+    { const c = (g._twc || 0) + opt.mins, m = Math.round(c / 10) * 10; g._twc = c - m; if (m > 0) SH.advance(m, { exert: opt.exert, act: 'travel', interrupt: false }); } g.outsideOverride = false; if (g.ended) return;
+    if (opt.wet) { SH.st('warmth', -8); SH.st('hyg', -3); }
+    g.loc = to; const st = TW.st(); st.seen[L.kind] = (st.seen[L.kind] || 0) + 1;
+    log(TX().go(from, L, opt, st.seen[L.kind]), 'sys');
+    if (TW.notice((L.vis || 0.5) * 0.25 * (opt.mode === 'bus' ? 0.5 : 1))) return;
+    TW.onArrive(L);
+    if (SH.Mobile && SH.Mobile.is && SH.Mobile.is()) SH.Mobile.tab('story');
+    done();
+  };
+  TW.onArrive = function (L) { SH.TownEvents && SH.TownEvents.arrive(L); };
+
+  /* going somewhere new from the Atlas: land at a real spot */
+  const bArr = A.arrive;
+  A.arrive = function (to, m, extraLog) {
+    const g = G(); g._arrRide = (g.rides || 0) !== (g._ridesSeen || 0) ? g.lastRide : null; g._ridesSeen = g.rides || 0;
+    return bArr.call(this, to, m, extraLog);
+  };
+  /* after load: rebuild the town you're in */
+  const reinstall = () => { const g = G(); if (g && g.away && SH.Atlas) { TW.install(A.here()); if (!SH.LOC[g.loc]) g.loc = TW.id(g.away, 'stop'); } };
+  const bLoad = SH.load; if (bLoad) SH.load = function () { const r = bLoad.apply(this, arguments); if (r) reinstall(); return r; };
+  const bAR = SH.afterRestore; SH.afterRestore = function () { reinstall(); return bAR ? bAR.apply(this, arguments) : undefined; };
+  TW.reinstall = reinstall;
+})(window.SH);
+/* in town, the bus stop's timetable shows buses and the station's shows trains; the Atlas hub board shows everything */
+(function (SH) {
+  const R = SH.Routes, TW = SH.Town; if (!R || !R.board || !TW) return;
+  const bBoard = R.board;
+  R.board = function (place, t) {
+    const g = SH.G, L = g && g.away && TW.loc && TW.loc();
+    if (R.only || !L || !place || place.id !== g.away || (L.kind !== 'station' && L.kind !== 'stop')) return bBoard.apply(this, arguments);
+    R.only = L.kind === 'station' ? (o) => !!o.T.rail : (o) => !o.T.rail;
+    try { return bBoard.apply(this, arguments); } finally { R.only = null; }
+  };
+})(window.SH);
+/* walking up to Grandma's door yourself: its own intro (the base ones are about trains, buses and a 4 AM drive) */
+(function (SH) {
+  const E = SH.Endings; if (!E || !E.grandma) return;
+  const bG = E.grandma;
+  E.grandma = function (how) {
+    if (how !== 'walk') return bG.apply(this, arguments);
+    const h = SH.hour(), dark = SH.isDark ? SH.isDark() : h < 6 || h >= 20, rain = SH.raining && SH.raining(), p = SH.Atlas.here() || { name: 'Cedar Falls' };
+    const intro = [
+      `Number 41. You stand on the walk for a long time. ${rain ? 'The rain runs off the porch roof in a line, like a curtain you have to go through.' : dark ? 'The porch light is on. It has always been on. She says it\'s for the moths.' : 'A leaf blower somewhere. A dog. The fish wind chime turning slowly.'} You count to ten twice.`,
+      'You knock. Footsteps. The blue door opens a crack on the chain, then shuts, then opens all the way, and Grandma Rose is standing there with her reading glasses pushed up in her hair and a dish towel in her hand.',
+      'For a second neither of you moves. Then the dish towel is on the floor.',
+    ];
+    E.show('grandma', 'Wind Chimes', `41 Larkspur Lane · ${p.name}`, intro.concat([
+      '"Mijo. Mijo. Look at you. You walked here? You WALKED here?" She pulls you inside by both hands. "Sit. Eat. Then talk. In that order."',
+      'She calls your mom from the kitchen with the door closed. You hear her voice rise and fall — angry, then crying, then very quiet. When she comes out, her eyes are red. "Your mother is coming tomorrow. Alone. And you\'re staying here as long as you need. That\'s not a question, it\'s a fact."',
+      'You sleep in the room with the quilt she made when you were born. The wind chimes play all night. For the first time in months, nothing else does.']));
+  };
+})(window.SH);
+
+</script>
+<script>
+/* town_talk.js */
+/* SMALL HOURS — towns as real places (4/5): talking to the people who live there.
+   Every townie has a name, a job, a mood, a place they're usually standing, and a memory of you: what you told
+   them, which name you gave, whether you lied. They answer real questions about their town (where's the motel,
+   when's the bus, is there work, where's Larkspur Lane) and they don't ask you the same thing twice. */
+(function (SH) {
+  const TW = SH.Town; if (!TW) return;
+  const TT = SH.TownTalk = {};
+  const G = () => SH.G;
+  const pick = (a) => a[Math.floor(Math.random() * a.length)];
+  const loc = (k) => { const T = TW.cur(); return T && T.locs[TW.id(T.pid, k)]; };
+  const mem = (q) => { const st = TW.st(); st.met[q.id] = st.met[q.id] || { n: 0, told: {}, sus: 0, fed: -1 }; return st.met[q.id]; };
+  const is = (q, re) => re.test(q.mood);
+
+  TT.opener = function (q, L) {
+    const m = mem(q), g = G(), h = SH.hour(), rep = !!g.reported, T = TW.cur();
+    m.n++;
+    if (m.n > 1) return pick(m.told.name ? [`Hey, ${m.told.name}. Back again.`, `${m.told.name}! Still in town, huh?`, `Well, look who it is. ${m.told.name}, right?`] : ['Oh, hey. You again.', 'Back again, kiddo?', 'You\'re becoming a regular.']);
+    const job = q.kind === 'diner' ? (h < 11 ? 'What can I get you, hon? Kitchen\'s doing breakfast till eleven.' : 'What can I get you?')   : q.kind === 'gas' ? pick(['Pump or inside?', 'Hot dogs are fresh. Well. They\'re hot.', 'Just holler if you need the bathroom key.']) : /librar/.test(q.role) ? 'Can I help you find something? Or just here for the outlets? That\'s allowed.' : /pastor/.test(q.role) ? 'Hello there. Door\'s always open. You\'re welcome to sit as long as you like.' : /laundr|keeps/.test(q.role) ? 'Dryer four eats quarters, just so you know.' : /foreman|farm|co-op/.test(q.role) ? 'Help you with something, kid? This isn\'t really a place to hang around.' : /bus|waiting/.test(q.role) ? 'You waiting on the 3:15 too? It\'s always late.' : '';
+    if (is(q, /too friendly/)) return `Well hi there! I'm ${q.n}. You look like you could use a friend. ${job}`;
+    if (is(q, /suspicious/)) return rep && T.tier !== 'city' ? `...Do I know you from somewhere?` : `Can I help you with something?`;
+    if (is(q, /busy/)) return job || `Mm-hm?`;
+    if (is(q, /lonely|talks too much|cheerful/)) return `Well hey there! I'm ${q.n}. I don't think I know you, and I know everybody. ${job}`;
+    if (is(q, /nosy/)) return `Hi, sweetie. Whose are you? ${job}`;
+    return job || `${q.n}. You need something, kid?`;
+  };
+
+  /* small-town knowledge: where things are, from someone who lives here */
+  function where(q, t, T, p) {
+    const say = (k, s) => { const L = loc(k); if (!L) return null; if (L.hidden) { L.hidden = false; SH.Map && (SH.Map.cache = null); } return s(L); };
+    if (/motel|hotel|room|place to stay|sleep/.test(t)) return say('motel', (L) => `${L.name}, out by the highway. ${/\bstrip\b/i.test(L.name) ? L.sub.split(' · ').join(', ') + '. ' : ''}${is(q, /nosy|suspicious/) ? 'Why, you need a room? At your age?' : 'Tell \'em I sent you, won\'t do any good but it\'s nice.'}`) || 'Motel? Here? Nearest one\'s the next town over. People stay with family here.';
+    if (/bus|train|leave|get out of|ride|station/.test(t)) return (loc('station') && /train|station/.test(t) ? `Station's ${loc('station').name}. ` : '') + `Buses stop at ${loc('stop').name.toLowerCase()}. ${T.tier === 'village' ? 'Couple times a day, if you\'re lucky.' : 'There\'s a board with the times.'}`;
+    if (/bathroom|restroom|toilet|pee/.test(t)) return loc('gas') ? `${loc('gas').name} has one. Ask for the key, it's on a hubcap.` : 'Library, if it\'s open. Or the park, if you\'re brave.';
+    if (/wifi|internet|charge|outlet/.test(t)) return `${(p.services.wifi || ['library'])[0].replace(/^./, (c) => c.toUpperCase())}. Password's usually on the counter.`;
+    if (/library/.test(t)) return say('library', (L) => `${L.name}, ${L.hours ? `open ${L.hours[0]} till ${L.hours[1] > 12 ? L.hours[1] - 12 : L.hours[1]}` : 'right there'}.`) || 'We don\'t have one. There\'s a bookmobile Thursdays.';
+    if (/food|eat|hungry|grocer|store/.test(t)) return (loc('diner') ? `${loc('diner').name} for a real meal. ` : '') + (loc('gas') ? `${loc('gas').name} for snacks. ` : '') + (loc('church') ? `And ${loc('church').name} does a supper Wednesdays, free.` : '');
+    if (/church/.test(t)) return say('church', (L) => `${L.name}. Side door's never locked.`);
+    if (/police|cop|sheriff/.test(t)) return p.hasPolice ? `Station's on ${T.street}. Why, you in trouble?` : 'Sheriff\'s thirty-five minutes out. We mostly handle things ourselves.';
+    if (/shelter|youth|safe place|homeless/.test(t)) return say('shelter', (L) => `${L.name}. The brick house with the porch light. They're good people. You didn't hear it from me.`) || 'Nearest shelter\'s in the city. There\'s a number, though. The library has flyers.';
+    if (/work|job|money/.test(t)) return say('work', (L) => `${L.short ? L.short[0].toUpperCase() + L.short.slice(1) : L.name}, if anybody's hiring. They sometimes need a hand, cash.`);
+    if (/larkspur|grandma|grandmother|nana/.test(t)) {
+      if (p.grandma) return say('grandma', (L) => { SH.flag('grandmaAddr'); return /grandma|nana|grandmother/.test(t) && !/larkspur/.test(t) ? SH.nm(`Your grandma lives here? What's her name? ...Oh! ${(SH.G.fam && SH.G.fam.gma) || 'Rose'}! Larkspur Lane, blue door. Everybody knows ${(SH.G.fam && SH.G.fam.gma) || 'Rose'}. She's gonna be so happy.`) : `Larkspur? That's up past the school. Little houses. Pretty street.`; });
+      return 'Never heard of it, hon. You sure you\'ve got the right town?';
+    }
+    return null;
+  }
+
+  function smalltalk(q, T, p) {
+    const topics = {
+      counter: ['Pie\'s fresh. Well. Fresh-ish.', 'Coffee\'s been on since five. It tastes like it.', `You know what ${p.name} is famous for? ${p.motto ? p.motto.replace(/^(home of|famous for|birthplace of) (the )?/i, '').replace(/^./, (c) => c.toUpperCase()) : 'Nothing'}. Don't tell anybody.`],
+      librar: ['I just got the new ones in. Nobody reads anymore. Except the ones who really read. You look like a real reader.', 'Outlets are by the large print. Nobody\'s using them. Nobody under eighty, anyway.'],
+      pastor: ['I\'m not going to preach at you. It\'s Tuesday. I only preach on Sundays.', 'You look like you\'re carrying something heavy. And I don\'t mean the backpack.'],
+      laundr: ['This machine\'s older than me. Runs better, too.', 'You wouldn\'t believe what people leave in their pockets. Found a lottery ticket once. Lost, of course.'],
+      foreman: [`${(p.econ || ['work'])[0]} doesn't wait for anybody. Neither does the weather.`, 'My grandpa worked here. My dad worked here. My kid says he\'s going to be a YouTuber.'],
+      mail: ['I know every dog on every route. The dogs like me more than the people do.', 'Rain, snow, the whole thing. It\'s not a motto, it\'s a warning.'],
+      teacher: ['Taught thirty-one years. I can tell when a kid\'s hiding something from across a football field. Just so you know.', 'Everybody here was in my class, or their kids were. That\'s the thing about a small town.'],
+      default: ['Weather\'s turning.', `Not much happens in ${p.name}. That's how we like it.`, 'You\'re not from around here, are you?'],
+    };
+    const k = Object.keys(topics).find((x) => q.role.includes(x)) || (/register|clerk/.test(q.role) ? 'counter' : 'default');
+    return SH.TownText.pk('st_' + q.id, topics[k].concat(topics.default));
+  }
+
+  function brain(an, c) {
+    const q = (c.opts && c.opts.local) || { n: 'Someone', mood: 'kind', role: '' }, p = (c.opts && c.opts.place) || SH.Atlas.here(), T = TW.cur(), m = mem(q), t = an.t || '';
+    c.mem.n = (c.mem.n || 0) + 1;
+    const R = (say, x) => Object.assign({ say, fx: {} }, x || {}), R2 = (say, x) => Object.assign(R(say, x), { ack: 1 });
+    const g = G(), rep = !!g.reported, small = T.tier === 'village' || T.tier === 'small';
+    if (an.has('selfharm')) { c.result = 'help'; return R('Okay. Okay. You come sit with me. We\'re calling someone right now, and I\'m not going anywhere. You hear me? I\'m right here.', { end: true }); }
+    // someone who's too friendly: the danger is them, and a gut feeling is the right answer
+    if (is(q, /too friendly/)) {
+      if (/\b(yes|ok|okay|sure)\b/.test(t) && c.mem.offered) { c.result = 'call'; return R(`"${q.n}, she's with me." A woman you've never seen steps between you, hand on your shoulder. "Sweetie, come inside with me. Right now." She doesn't let go until you're in the light. Then she makes a call, and she stays with you the whole time.`, { end: true }); }
+      if (c.mem.n >= 2 && !c.mem.offered) { c.mem.offered = 1; return R('Hey, you need a ride somewhere? Or a place to crash? I\'ve got a spare room. No big deal. I help kids out all the time.'); }
+      if (/\b(no|nope|leave me|go away|stop)\b/.test(t)) return R('Whoa, okay, okay. Just trying to be nice.', { end: true });
+    }
+    // telling the truth to a grown-up
+    if (an.has('disclose') || an.has('scared') || (an.has('run') && c.mem.n > 1)) {
+      if (/pastor|librar|teacher/.test(q.role) && !m.told.resource) { m.told.resource = 1; if (!SH.has('safeline')) SH.addBag('safeline', true); const sh = loc('shelter'); if (sh) { sh.hidden = false; SH.Map && (SH.Map.cache = null); }
+        return R(`Thank you for telling me. I mean that. I'm not going to grab you or call anybody this second. Here — ${sh ? `${sh.name} is a real place, and they'll let you sleep tonight without calling anyone. And ` : ''}this number's free, any hour, and they don't have to tell anybody where you are. If you want me to call somebody with you, I will. That's your choice. But I'd like it to be soon.`); }
+      c.result = 'help'; return R(is(q, /busy|suspicious/) ? 'Okay. Okay, stay right there. I\'m calling someone who knows what to do. You did the right thing.' : 'Oh, sweetheart. Come here. You did the right thing telling me. Let\'s get you somewhere warm, and call the people who can help.', { end: true });
+    }
+    // names & ages: remembered, never re-asked
+    const nm = t.match(/\b(?:my name is|i'?m|call me|it'?s)\s+([a-z]{2,12})\b/);
+    if (nm && !/^(fine|ok|okay|good|hungry|lost|tired|twelve|here|not|just|from|visiting|staying|waiting|looking|so|sorry|alright|cold)$/.test(nm[1])) { m.told.name = nm[1][0].toUpperCase() + nm[1].slice(1); return R2(`${m.told.name}. Nice to meet you, ${m.told.name}. ${m.told.age || !small ? '' : 'How old are you, if you don\'t mind me asking?'}`); }
+    if (an.has('age') || /\b(i'?m|i am) (1[0-9]|twelve|thirteen|fourteen|fifteen|sixteen)\b/.test(t)) {
+      const young = /\b(1[0-3]|twelve|thirteen)\b/.test(t); m.told.age = young ? 'young' : 'older';
+      if (/\b(1[6-9]|sixteen|seventeen)\b/.test(t)) { m.sus++; return R2('Sixteen. Uh huh. And I\'m the Queen of England.'); }
+      if (young && small) { m.sus++; return R2(is(q, /nosy|suspicious|no-nonsense/) ? 'Twelve. On a school day. By yourself. ...Honey, where are your folks?' : 'Twelve! That\'s a good age. I remember twelve. Hardest year there is.'); }
+      return R2(young ? pick(['Twelve, huh. You look about that.', 'Hm. Young to be out on your own.', 'Twelve. I remember twelve.']) : 'Hm.');
+    }
+      if (small && m.askedRel === 1 && !an.has('lie') && !['greet', 'thanks', 'bye', 'yes', 'no', 'deflect'].some((x) => an.has(x)) && !/^(yes|no|yeah|nope|ok|okay|why|what|idk|huh|hi|hey|nobody|none|sure)$/.test(t.trim()) && /^[a-z]+( [a-z]+)?$/.test(t.trim()) && t.length < 25) { m.askedRel = 2; m.sus += 0.5; return R2(is(q, /nosy|suspicious/) ? `${t.trim().replace(/\b\w/g, (x) => x.toUpperCase())}? ...Huh. Can't place 'em. And I'd place 'em.` : 'Hm. Can\'t say I know them. But I don\'t know everybody, I guess.'); }
+    // cover stories
+    if (an.has('lie') || /\b(visiting|staying with|my (grandma|grandpa|aunt|uncle|cousin|mom|dad) (lives|is)|waiting for my)\b/.test(t)) {
+      m.told.cover = t.slice(0, 60); m.sus += small ? 1 : 0.5;
+      if (/grandma|nana|grandmother/.test(t) && p.grandma) { const w = where(q, t, T, p); return R(w || 'Oh, whose grandma?'); }
+      if (m.sus >= 2.5 && /suspicious|no-nonsense/.test(q.mood)) { c.result = 'call'; return R('Uh huh. What\'s their name, then? ...What street? ...That\'s what I thought. Hang on, I\'m making a call. Stay right there.', { end: true }); }
+      const rel = (t.match(/\b(grandpa|aunt|uncle|cousin|mom|dad|sister|brother|friend)\b/) || [])[1];
+      if (small && rel && !m.askedRel) { m.askedRel = 1; return R2(is(q, /nosy/) ? `Your ${rel}? Which house? I know everybody in ${p.name}.` : is(q, /suspicious/) ? `Is that so. Who's your ${rel}, then?` : pick([`Oh, who's your ${rel}? Maybe I know them.`, `Your ${rel}, huh. Which end of town?`])); }
+      return R2(is(q, /nosy/) ? 'Oh yeah? Which house? I know everybody.' : is(q, /suspicious/) ? 'Is that so.' : pick(['Oh, that\'s nice.', 'Well, good. Family\'s good.', 'Mm. Okay.']));
+    }
+    // real questions about the town
+    if (an.has('where') || /\b(where|how do i get|is there|any)\b.*\b(motel|hotel|bus|train|station|bathroom|restroom|toilet|pee|sleep|stay|crash|wifi|internet|library|food|eat|church|police|sheriff|shelter|work|job|larkspur|grandma|store|outlet|charge)\b/.test(t)) {
+      const w = where(q, t, T, p); if (w) return R(w);
+    }
+    if (/\b(larkspur|my grandma|grandmother)\b/.test(t)) { const w = where(q, t, T, p); if (w) return R(w); }
+    // hungry
+    if (an.has('food') || /\b(hungry|starving|haven'?t eaten)\b/.test(t)) {
+      if (m.fed !== SH.day() && /lonely|kind|soft|counter|cheerful|tired|pastor/.test(q.mood + ' ' + q.role)) { m.fed = SH.day(); return R(/counter|register/.test(q.role) ? 'Here. On the house. Don\'t argue with me, I\'ll lose my train of thought.' : 'You hungry? Here, I got half a sandwich I wasn\'t going to finish. Don\'t argue.', { fx: { full: 18 } }); }
+      return R(where(q, 'food', T, p) || 'Gas station\'s got hot dogs.');
+    }
+    if (an.has('money') || /\b(work|job|hiring)\b/.test(t)) return R(where(q, 'work', T, p) || 'Not much work around here. Not for a kid.');
+    if (an.has('school')) { m.sus += small ? 0.5 : 0; return R(small ? 'School\'s in session today, far as I know. Which school do you go to?' : 'School, huh. I hated school. Don\'t tell anyone I said that.'); }
+    if (/\b(what'?s|what is) your name\b|\bwho are you\b/.test(t)) { m.gaveName = 1; return R(is(q, /suspicious|busy/) ? `${q.n}. It's on the tag.` : pick([`${q.n}. Everybody just calls me ${q.n}.`, `I'm ${q.n}. And you are...?`.replace(/ And you are\.\.\.\?/, m.told.name ? '' : ' And you are...?')])); }
+    if (/\b(bathroom|restroom|toilet|pee)\b/.test(t)) return R(q.kind === 'gas' ? 'Key\'s on the hubcap by the register. Bring it back or I have to hunt you down.' : q.kind === 'diner' ? 'Back past the pie case. Jiggle the handle.' : where(q, t, T, p));
+    if (an.has('who') || /\bwhat do you do\b|\byour job\b/.test(t)) return R(`Me? ${TT.self(q)} Have been for ${pick(['six', 'eleven', 'twenty', 'too many'])} years.`);
+    if (/\bwhat'?s (it|this (place|town)) like\b|\babout (this|the) town\b|\bwhat is there to do\b/.test(t)) return R(`${p.name}? ${p.pop.toLocaleString()} people, give or take. ${(p.econ || [])[0] ? `Mostly ${(p.econ || [])[0]}.` : ''} ${p.motto ? p.motto + '.' : ''} ${small ? 'Everybody knows everybody. That\'s the good part and the bad part.' : 'Big enough to get lost in. Small enough to get found.'}`);
+    if (an.has('thanks')) return R(pick(['You\'re welcome, hon.', 'Anytime.', 'Don\'t mention it. Really. Don\'t mention it.']));
+    if (an.has('bye')) return R(pick(['You take care now.', 'Stay warm.', 'Bye now. Be careful out there.']), { end: true });
+    if (an.has('greet')) return R(pick(['Hi yourself.', 'Hey there.', 'Well, hello.']));
+    if (an.has('compliment')) return R(pick(['Well, aren\'t you sweet.', 'Flattery gets you a free refill. That\'s all it gets you.']));
+    if (an.has('weather')) return R(pick(['Supposed to get colder. You got a real coat?', 'Rain tonight, they say. They\'re usually right about rain.']));
+    // they notice: rarely in a city, often in a village, faster once your face is out there
+    const lim = (small ? 5 : 7) - (rep ? 2 : 0) - Math.floor(m.sus);
+    if (c.mem.n >= lim && /nosy|no-nonsense|suspicious/.test(q.mood) && T.tier !== 'city') { c.result = 'call'; return R(rep ? 'I know where I\'ve seen you. The Facebook thing. The missing kid. ...Sweetheart, I\'m calling somebody. It\'s for your own good. You stay right there.' : 'Kid, I\'m going to be straight with you. You\'re alone, it\'s a school day, and you look like you slept outside. I\'m calling somebody. It\'s for your own good.', { end: true }); }
+    if (!m.told.name && c.mem.n === 2 && small) return R('I didn\'t catch your name.');
+    return R(smalltalk(q, T, p));
+  }
+  TT.self = (q) => { const r = q.role.replace(/ \(.*\)$/, ''); const m = r.match(/^(runs|works|keeps|drives|lives|sits)\b(.*)$/); return m ? `I ${m[1].replace(/s$/, '')}${m[2]}.` : /^(retired|walking|waiting|at the)/.test(r) ? `I'm ${r}.` : `I'm ${/^(the|a|an) /.test(r) ? r : 'the ' + r}.`; };
+  TT.brain = brain;
+  // every townie id routes to the same brain (registered when the town is built)
+  const bInst = TW.install;
+  TW.install = function (p) { const T = bInst.apply(this, arguments); if (T) T.people.forEach((q) => { try { if (!SH.Brain[q.id]) SH.Brain[q.id] = brain; } catch (e) { console.warn(e); } }); return T; };
+})(window.SH);
+
+</script>
+<script>
+/* town_map.js */
+/* SMALL HOURS — towns as real places (5/5): the town map and a few things that happen when you get somewhere.
+   While you're away, the map (M key / Map button / Maps app) shows the town you're in: its streets, its places,
+   what's open, how far on foot. Tap a place, walk there. Harlow's places are hidden until you go back. */
+(function (SH) {
+  const TW = SH.Town, M = SH.Map; if (!TW || !M) return;
+  const G = () => SH.G, W = 1000, H = 650;
+  /* visibility: only the town you're in */
+  const bVis = M.visible;
+  M.visible = function (id) {
+    const L = SH.LOC[id]; if (!L) return false; const g = G();
+    if (g && g.away) return L.town === g.away && !L.hidden;
+    if (L.town) return false;
+    return bVis(id);
+  };
+  let cache = null, ckey = '';
+  function base(T) {
+    const oc = document.createElement('canvas'); oc.width = W * 2; oc.height = H * 2; const x = oc.getContext('2d'); x.scale(2, 2);
+    const dark = SH.isDark(), r = TW.rng('map' + T.pid), p = SH.Atlas.here();
+    const bg = { fields: dark ? '#141a12' : '#26301f', coast: dark ? '#0f161c' : '#1f2b33', forest: dark ? '#0f1812' : '#1c2b20', hills: dark ? '#15161a' : '#2a2c30', lake: dark ? '#10161c' : '#1f2a30', river: dark ? '#121814' : '#232e25' }[TW.biome(p.biome)] || (dark ? '#0f141d' : '#1b2330');
+    x.fillStyle = bg; x.fillRect(0, 0, W, H);
+    const tier = T.tier, MY = T.MY;
+    // fields / water around small places
+    if (tier === 'village' || tier === 'small') { for (let i = 0; i < 26; i++) { x.fillStyle = `rgba(${dark ? '60,70,40' : '120,130,70'},${0.08 + r() * 0.1})`; x.fillRect(r() * W, r() * H, 60 + r() * 140, 40 + r() * 90); } }
+    if (/coast|lake/.test(TW.biome(p.biome))) { x.fillStyle = dark ? '#0d2238' : '#244f7c'; x.beginPath(); x.moveTo(0, H); for (let i = 0; i <= 10; i++) x.lineTo(i * 100, H - 60 - Math.sin(i * 1.3) * 18); x.lineTo(W, H); x.fill(); }
+    // streets
+    const road = (a, b, c, d, w) => { x.strokeStyle = dark ? '#2a3140' : '#46526a'; x.lineWidth = w || 12; x.lineCap = 'round'; x.beginPath(); x.moveTo(a, b); x.lineTo(c, d); x.stroke(); };
+    const nV = { village: 1, small: 3, town: 5, city: 7 }[tier] || 3, span = tier === 'village' ? [200, 800] : tier === 'small' ? [110, 890] : [30, 970];
+    // blocks of buildings along streets
+    const bld = (x0, y0, x1, y1, dens) => { for (let k = 0; k < dens; k++) { const bw = 8 + r() * 20, bh = 8 + r() * 16, bx = x0 + r() * Math.max(1, x1 - x0 - bw), by = y0 + r() * Math.max(1, y1 - y0 - bh); x.fillStyle = dark ? `rgba(40,50,70,${0.45 + r() * 0.3})` : `rgba(70,82,105,${0.5 + r() * 0.3})`; x.fillRect(bx, by, bw, bh); if (dark && r() < 0.35) { x.fillStyle = 'rgba(255,200,110,.5)'; x.fillRect(bx + bw / 2, by + bh / 2, 2, 2); } } };
+    const vx = []; for (let i = 0; i < nV; i++) vx.push(Math.round(span[0] + (span[1] - span[0]) * ((i + 0.5) / nV) + (r() - 0.5) * 40));
+    const hy = [MY]; if (tier === 'town' || tier === 'city') { hy.push(MY - 160, MY + 150); } if (tier === 'city') hy.push(MY - 270, MY + 250);
+    const dens = { village: 5, small: 9, town: 14, city: 22 }[tier] || 8;
+    hy.forEach((y) => { bld(span[0], y - 60, span[1], y - 12, dens * 2); bld(span[0], y + 12, span[1], y + 60, dens * 2); });
+    vx.forEach((vv) => bld(vv - 55, 30, vv - 12, H - 30, dens), vx.forEach((vv) => bld(vv + 12, 30, vv + 55, H - 30, dens)));
+    // green
+    const pk = T.locs[TW.id(T.pid, 'park')]; if (pk) { x.fillStyle = dark ? '#132418' : '#2a4a30'; x.beginPath(); x.ellipse(pk.x, pk.y, 70, 44, 0, 0, 7); x.fill(); }
+    // roads on top
+    road(T.east ? span[0] : 0, MY, T.east ? W : span[1], MY, 16); // main street runs out to the highway
+    hy.slice(1).forEach((y) => road(span[0], y, span[1], y));
+    vx.forEach((vv) => road(vv, tier === 'village' ? MY - 150 : 20, vv, tier === 'village' ? MY + 150 : H - 20));
+    // connectors to every place so you can see how you'd walk there
+    Object.values(T.locs).forEach((L) => { if (L.hidden) return; road(L.x, L.y, L.x, MY, 6); });
+    // center line on main street
+    x.strokeStyle = dark ? '#4a4030' : '#9a8a5a'; x.lineWidth = 1.2; x.setLineDash([10, 10]); x.beginPath(); x.moveTo(T.east ? span[0] : 0, MY); x.lineTo(T.east ? W : span[1], MY); x.stroke(); x.setLineDash([]);
+    // rail
+    if (T.rail) { const ry = T.railY; x.strokeStyle = dark ? '#3a3226' : '#6a5a44'; x.lineWidth = 2; for (let s = 0; s < W; s += 9) { x.beginPath(); x.moveTo(s, ry - 5); x.lineTo(s, ry + 5); x.stroke(); } x.strokeStyle = dark ? '#6d6a66' : '#a9a49c'; x.lineWidth = 1.2; [-3, 3].forEach((o) => { x.beginPath(); x.moveTo(0, ry + o); x.lineTo(W, ry + o); x.stroke(); }); }
+    // labels
+    x.fillStyle = 'rgba(210,220,235,.5)'; x.font = '600 11px system-ui'; x.fillText(T.street, (T.east ? span[0] : 30) + 10, MY - 12);
+    x.fillStyle = 'rgba(210,200,170,.5)'; x.font = 'italic 11px Georgia'; x.fillText(T.east ? 'highway →' : '← highway', T.east ? W - 90 : 20, MY + 24);
+    x.fillStyle = 'rgba(230,235,245,.8)'; x.font = 'bold 18px Georgia'; x.textAlign = 'right'; x.fillText(p.name, W - 22, 34); x.font = '12px system-ui'; x.fillStyle = 'rgba(200,210,225,.6)'; x.fillText(`${SH.Atlas.TIERS[tier].n} · pop. ${p.pop.toLocaleString()}`, W - 22, 52); x.textAlign = 'left';
+    return oc;
+  }
+  function draw(time) {
+    const g = G(), T = TW.cur(); if (!T) return false;
+    const c = M.c, x = M.x, dpr = window.devicePixelRatio || 1, cw = c.clientWidth, ch = c.clientHeight;
+    if (c.width !== cw * dpr || c.height !== ch * dpr) { c.width = cw * dpr; c.height = ch * dpr; }
+    const t = M.tf();
+    x.setTransform(dpr, 0, 0, dpr, 0, 0); x.fillStyle = '#0b0e14'; x.fillRect(0, 0, cw, ch);
+    x.setTransform(dpr * t.s, 0, 0, dpr * t.s, dpr * t.ox, dpr * t.oy);
+    const key = T.pid + (SH.isDark() ? 'd' : 'l') + Object.values(T.locs).map((l) => (l.hidden ? 0 : 1)).join('');
+    if (!cache || ckey !== key || !M.cache) { cache = base(T); ckey = key; M.cache = cache; }
+    x.save(); x.beginPath(); x.roundRect ? x.roundRect(0, 0, W, H, 14) : x.rect(0, 0, W, H); x.clip(); x.drawImage(cache, 0, 0, W, H);
+    const here = SH.LOC[g.loc];
+    // route preview
+    if (M.sel && M.sel !== g.loc && M.visible(M.sel) && here) { const B = SH.LOC[M.sel]; x.strokeStyle = 'rgba(92,200,176,.85)'; x.lineWidth = 3; x.setLineDash([10, 7]); x.lineDashOffset = -time * 30; x.beginPath(); x.moveTo(here.x, here.y); x.lineTo(here.x, T.MY); x.lineTo(B.x, T.MY); x.lineTo(B.x, B.y); x.stroke(); x.setLineDash([]); }
+    x.textAlign = 'center'; const boxes = [];
+    for (const id in T.locs) {
+      if (!M.visible(id)) continue; const L = SH.LOC[id], open = SH.isOpen(id), me = g.loc === id, rad = M.hover === id || M.sel === id ? 19 : 16;
+      x.fillStyle = me ? '#f2a65a' : open ? '#1e2638' : '#151a24'; x.strokeStyle = M.sel === id ? '#fff' : me ? '#ffd9a8' : open ? '#56627a' : '#2a3140'; x.lineWidth = 2; x.beginPath(); x.arc(L.x, L.y, rad, 0, 7); x.fill(); x.stroke();
+      x.globalAlpha = open ? 1 : 0.4; x.font = '16px serif'; x.fillText(L.icon, L.x, L.y + 6); x.globalAlpha = 1;
+      x.font = (me ? 'bold ' : '600 ') + '11.5px system-ui'; x.lineWidth = 3.5; x.strokeStyle = 'rgba(8,10,16,.85)'; const lw = x.measureText(L.name).width + 6, hit = (y) => boxes.some((b) => Math.abs(b.x - L.x) * 2 < b.w + lw && Math.abs(b.y - y) < 13);
+      let ly = [L.y + 30, L.y - 22, L.y + 43, L.y - 35, L.y + 56].find((y) => !hit(y)); if (ly == null) ly = L.y + 30; boxes.push({ x: L.x, y: ly, w: lw }); if (rad > 16 && ly > L.y) ly += 3;
+      x.strokeText(L.name, L.x, ly); x.fillStyle = me ? '#ffd9a8' : open ? '#e6eaf2' : '#7a8396'; x.fillText(L.name, L.x, ly);
+      if (L.kind === 'shelter') { const gg = x.createRadialGradient(L.x, L.y, 2, L.x, L.y, 40); gg.addColorStop(0, 'rgba(255,200,110,.25)'); gg.addColorStop(1, 'rgba(255,200,110,0)'); x.fillStyle = gg; x.beginPath(); x.arc(L.x, L.y, 40, 0, 7); x.fill(); }
+    }
+    if (here) { const pr = 6 + Math.sin(time * 3) * 2; x.fillStyle = 'rgba(92,200,176,.25)'; x.beginPath(); x.arc(here.x, here.y, 26 + pr, 0, 7); x.fill(); x.fillStyle = '#5cc8b0'; x.beginPath(); x.arc(here.x + 13, here.y - 13, 6, 0, 7); x.fill(); x.strokeStyle = '#0b0e14'; x.lineWidth = 2; x.stroke(); }
+    if (M.hover && M.hover !== M.sel && M.visible(M.hover)) { const L = SH.LOC[M.hover], o = SH.travelOptions(M.hover) || [], best = o.length ? o.reduce((a, b) => (a.mins <= b.mins ? a : b)) : null;
+      const l1 = L.name, l2 = (SH.isOpen(M.hover) ? 'Open' : 'Closed') + (M.hover === g.loc ? ' · you are here' : best ? ` · ${best.label} ${best.mins} min` : '');
+      x.font = 'bold 12px system-ui'; const w = Math.max(x.measureText(l1).width, (x.font = '11px system-ui', x.measureText(l2).width)) + 20; let bx = L.x + 24, by = L.y - 44; if (bx + w > W - 6) bx = L.x - 24 - w; if (by < 6) by = L.y + 20;
+      x.fillStyle = 'rgba(14,18,28,.94)'; x.strokeStyle = '#3a4560'; x.lineWidth = 1; x.beginPath(); x.roundRect ? x.roundRect(bx, by, w, 38, 8) : x.rect(bx, by, w, 38); x.fill(); x.stroke();
+      x.textAlign = 'left'; x.fillStyle = '#fff'; x.font = 'bold 12px system-ui'; x.fillText(l1, bx + 10, by + 16); x.fillStyle = '#9aa3b5'; x.font = '11px system-ui'; x.fillText(l2, bx + 10, by + 31); }
+    x.restore();
+    x.setTransform(dpr, 0, 0, dpr, 0, 0);
+    if (SH.isDark()) { x.fillStyle = 'rgba(5,8,20,.25)'; x.fillRect(0, 0, cw, ch); }
+    if (SH.raining()) { x.strokeStyle = 'rgba(160,180,220,.25)'; x.beginPath(); for (let i = 0; i < 80; i++) { const rx = (i * 97 + time * 300) % cw, ry = (i * 53 + time * 600) % ch; x.moveTo(rx, ry); x.lineTo(rx - 3, ry + 9); } x.stroke(); }
+    return true;
+  }
+  let lastHdr = '';
+  function header() { const g = G(), T = g && g.away && TW.cur(); const k = T ? T.pid : 'home'; if (k === lastHdr) return; lastHdr = k; const b = document.querySelector('#mapTop b'), l = document.querySelector('#mapTop .legend'); if (!b || !l) return;
+    if (T) { b.textContent = T.name; l.textContent = 'Tap a place to walk there · drag to pan · pinch/scroll to zoom · dim = closed right now'; } else { b.textContent = 'Harlow'; l.textContent = 'Tap a place · drag to pan · pinch/scroll to zoom · dashed amber = bus · fog = places you haven\'t found'; } }
+  const bDraw = M.draw;
+  M.draw = function (time) { header(); const g = G(); if (g && g.away && TW.loc() && draw(time)) return; if (M.cache === cache && cache) M.cache = null; return bDraw.apply(this, arguments); };
+  const bInfo = M.info;
+  M.info = function () {
+    const g = G(); if (!(g && g.away && TW.loc())) return bInfo.apply(this, arguments);
+    const box = document.querySelector('#mapInfo'), id = M.sel; if (!id || !M.visible(id)) { box.classList.add('hidden'); return; }
+    const L = SH.LOC[id], open = SH.isOpen(id), ppl = TW.present(L).map((q) => q.n);
+    let html = `<div class="sheetgrab"></div><h3>${L.icon} ${L.name}</h3><p style="color:var(--muted)">${L.sub} · ${open ? '<span style="color:#9fe3b0">Open</span>' : '<span style="color:#ff9aa5">Closed</span>'}${L.hours ? ` · ${L.hours[0]}:00–${L.hours[1] % 24}:00` : ''}</p><p>${L.blurb}</p>${ppl.length ? `<p>👥 ${ppl.join(', ')} ${ppl.length > 1 ? 'are' : 'is'} here.</p>` : ''}`;
+    if (id === g.loc) html += '<p style="color:var(--teal)">You are here.</p>';
+    else SH.travelOptions(id).forEach((o, i) => { html += `<button class="btn" data-i="${i}">${o.label}: ${o.mins} min${o.cost ? ' · $' + o.cost : ''}${o.note ? '<br><small style="color:var(--muted)">' + o.note + '</small>' : ''}</button>`; });
+    box.innerHTML = html; box.classList.remove('hidden');
+    box.querySelector('.sheetgrab').onclick = () => { M.sel = null; box.classList.add('hidden'); };
+    box.querySelectorAll('button[data-i]').forEach((b) => (b.onclick = () => { const o = SH.travelOptions(id)[+b.dataset.i]; SH.UI.closeMap(); SH.travel(id, o); }));
+  };
+
+  /* ---------- small scenes ---------- */
+  const E = SH.TownEvents = {};
+  const D = (o) => SH.UI.dialog(o);
+  E.car = function (p) {
+    D({ title: 'A man in a nice car', text: ['A silver car slows down and matches your walking speed. The window comes down. "Hey. You look lost. Need a ride? I could buy you dinner. No big deal."', 'He\'s smiling. Your stomach does the thing it does when something is wrong. Listen to your stomach.'],
+      choices: [{ t: 'Walk away fast, toward people', cls: 'safe', fn: () => { SH.st('stress', 10); SH.UI.log('You turn around and walk the other way, into the first store with people in it, and stand by the register until the car is gone. Your hands shake for twenty minutes. You were right to listen.', 'bad'); SH.UI.afterAction(); } },
+        { t: 'Tell the clerk inside', cls: 'safe', fn: () => { SH.UI.log('You tell the clerk. She looks out the window, and her face goes hard. She writes down the plate. Then she looks at you, really looks.', 'warn'); SH.Endings.found(p.hasPolice ? 'self' : 'sheriff'); } }] });
+  };
+  E.arrive = function (L) {
+    const g = SH.G, st = TW.st(), k = L.kind, first = (st.seen[k] || 0) <= 1, dark = SH.isDark();
+    if (!first) return;
+    if (k === 'edge' && dark) SH.UI.log('No streetlights out here. When your eyes adjust, the sky is so full of stars it looks fake, like a screensaver. You didn\'t know there were this many. They were always there.', 'good');
+    if (k === 'library' && g.reported && Math.random() < 0.4) SH.UI.log('The librarian looks at you over her glasses for one second longer than a librarian needs to. Then she goes back to her cart. Libraries are like that. They let you be.', 'warn');
+    if (k === 'church' && Math.random() < 0.5) SH.UI.log('Somebody is practicing the organ, badly, one hand at a time. It\'s the saddest, most hopeful sound you\'ve ever heard.', '');
+    if (k === 'grandma') SH.UI.log(SH.nm('Number 41. Blue door. A wind chime shaped like a fish. The kitchen light is on. You know that kitchen. You haven\'t seen it since you were nine.'), 'good');
+  };
+})(window.SH);
+
+</script>
+<script>
+/* town_art.js */
+/* SMALL HOURS — scene art for town spots. Same renderer and style as Harlow's places, with each town's own
+   names on the signs, and a look that follows the town's size (a village gas station isn't a city terminal). */
+(function (SH) {
+  const PL = SH.ScenePL, K = SH.SceneKit; if (!PL || !K) return;
+  const { R, rr, glow, win, facade, tree, lamp, bench, hydrant, bin, mailbox, car, rng, hs } = K;
+  const L = (id) => SH.LOC[id] || {};
+  const tierOf = (id) => { const T = SH.Town && SH.Town.cache[L(id).town]; return T ? T.tier : 'small'; };
+  const up = (s) => String(s || '').toUpperCase();
+  const small = (id) => /village|small/.test(tierOf(id));
+  const store = (x, E, cx, w, h, col, name, seed, o) => facade(x, E, Object.assign({ cx, w, h, col, roof: 'flat', seed, lit: true, open: true, brick: 1, wins: { rows: 1, cols: 1, w: w - 50, h: 36, px: 25, py: 24, gx: 0, gy: 0 }, door: { w: 30, h: 42, col: '#3a4454', glass: 1, dx: w / 2 - 34 }, sign: { t: name, font: 'bold 11px system-ui', c: '#f1e7d0', dy: 14, plate: '#3a2a24' } }, o || {}));
+  const rowOfShops = (x, E, id, names) => { const r = rng(hs(id)); const n = names.length, w = Math.min(170, (E.W - 80) / n); names.forEach((nm, i) => store(x, E, 40 + w / 2 + i * w, w - 10, 70 + r() * 30, ['#8a4d3c', '#6a7a5a', '#7a6a8a', '#8a7a5a', '#5a6a7a'][i % 5], nm, hs(id) + i, { awning: i % 2 ? { n: 5, sw: (w - 30) / 5, px: 10, py: 20, c1: '#b8562b', c2: '#f1e7d0' } : null })); };
+
+  PL.tw_main = function (x, E, id) {
+    const T = SH.Town.cache[L(id).town] || {}, tier = T.tier;
+    if (tier === 'village') { const r = rng(hs(id)); tree(x, E, E.W * 0.06, 1.1, 'oak', r); facade(x, E, { cx: E.W * 0.3, w: 150, h: 80, col: '#b8a88a', siding: 1, roof: 'gable', roofc: '#4a3a30', pitch: 40, seed: 3, wins: { rows: 1, cols: 2, w: 28, h: 24, px: 22, py: 22, gx: 50, gy: 0 }, door: { w: 26, h: 40, col: '#2f4a6b' }, sign: { t: 'U.S. POST OFFICE', font: 'bold 9px system-ui', c: '#1d2d55', day: '#1d2d55', dy: 12, plate: '#f1e7d0' } });
+      R(x, E.shade('#9a9a9a'), E.W * 0.72, E.gy - 190, 46, 190); R(x, E.shade('#8a8a8a'), E.W * 0.72 + 46, E.gy - 150, 30, 150); R(x, E.shade('#7a7a7a'), E.W * 0.72 - 6, E.gy - 196, 58, 8); x.font = 'bold 9px system-ui'; x.fillStyle = E.shade('#3a3a3a'); x.fillText('CO-OP', E.W * 0.72 + 8, E.gy - 170);
+      R(x, E.shade('#5a4a3a'), E.W * 0.5, E.gy - 50, 4, 50); R(x, E.shade('#d8d0bc'), E.W * 0.5 - 30, E.gy - 72, 64, 30); x.font = '7px system-ui'; x.fillStyle = '#333'; x.fillText('NOTICES', E.W * 0.5 - 12, E.gy - 62); for (let i = 0; i < 5; i++) R(x, ['#fff', '#ffd', '#dff', '#fdd', '#fff'][i], E.W * 0.5 - 26 + i * 12, E.gy - 58, 9, 11);
+      lamp(x, E, E.W * 0.9); return; }
+    if (tier === 'city') { const r = rng(hs(id)); for (let i = 0; i < 6; i++) { const w = 90 + r() * 60, h = 150 + r() * 90, cx = 60 + i * (E.W / 6); facade(x, E, { cx, w, h, col: ['#6a7080', '#8a8f9a', '#5a6474', '#7a7060'][i % 4], roof: 'flat', seed: i + 40, wins: { rows: Math.floor(h / 26), cols: Math.floor(w / 24), w: 12, h: 14, px: 8, py: 10, gx: 12, gy: 12 } }); } R(x, E.shade('#2a2a30'), E.W * 0.4, E.gy - 30, 70, 30); x.font = 'bold 9px system-ui'; x.fillStyle = E.night ? '#ffd66b' : '#eee'; x.fillText('HOT DOGS · PRETZELS', E.W * 0.4 + 2, E.gy - 18); hydrant(x, E, E.W * 0.7); lamp(x, E, E.W * 0.2); lamp(x, E, E.W * 0.8); return; }
+    rowOfShops(x, E, id, tier === 'town' ? ['DOLLAR GENERAL', 'RX PHARMACY', 'FIRST STATE BANK', 'THE BIJOU'] : ['HARDWARE', 'BARBER', 'BANK', 'THE ROYAL']);
+    R(x, E.shade('#333a44'), E.W * 0.62, E.gy - 150, 4, 150); R(x, E.shade('#1d2230'), E.W * 0.62 - 20, E.gy - 172, 44, 24); x.font = 'bold 10px system-ui'; x.fillStyle = E.night ? '#ffb347' : '#e6d6a6'; x.fillText(SH.fmt12 ? SH.fmt12().replace(/ [AP]M/, '') : '12:00', E.W * 0.62 - 14, E.gy - 156); lamp(x, E, E.W * 0.1); bench(x, E, E.W * 0.45); hydrant(x, E, E.W * 0.8);
+  };
+  PL.tw_stop = function (x, E, id) {
+    const tier = tierOf(id), nm = L(id).name;
+    if (tier === 'city' || tier === 'town') { facade(x, E, { cx: E.W * 0.42, w: tier === 'city' ? 420 : 300, h: tier === 'city' ? 110 : 84, col: '#9aa0a8', roof: 'flat', seed: 15, lit: true, open: true, wins: { rows: 1, cols: 5, w: 50, h: 34, px: 22, py: 30, gx: 16, gy: 0 }, sign: { t: up(nm), font: 'bold 13px system-ui', c: '#8ab4ff', day: '#1d2d55', dy: 18, neon: 1 } });
+      const bx = E.W * 0.42 + (tier === 'city' ? 230 : 170); rr(x, bx, E.gy - 54, 200, 48, 8); x.fillStyle = E.shade('#e4e6ea'); x.fill(); R(x, E.shade('#2b4f8a'), bx, E.gy - 22, 200, 6); for (let i = 0; i < 6; i++) win(x, bx + 10 + i * 31, E.gy - 48, 24, 18, E, true, null); x.fillStyle = '#0c0d10'; x.beginPath(); x.arc(bx + 34, E.gy - 4, 8, 0, 7); x.arc(bx + 166, E.gy - 4, 8, 0, 7); x.fill(); return; }
+    const r = rng(hs(id)); tree(x, E, E.W * 0.12, 1, 'oak', r); tree(x, E, E.W * 0.86, 1.15, r() < 0.5 ? 'pine' : 'oak', r);
+    const sx = E.W * 0.45; R(x, E.shade('#5a6070'), sx - 60, E.gy - 72, 4, 72); R(x, E.shade('#5a6070'), sx + 56, E.gy - 72, 4, 72); R(x, E.shade('#3a4050'), sx - 64, E.gy - 76, 128, 6);
+    x.fillStyle = 'rgba(170,200,230,.18)'; x.fillRect(sx - 56, E.gy - 70, tierOf(id) === 'village' ? 60 : 112, 58); bench(x, E, sx - 30);
+    R(x, E.shade('#5a6070'), sx + 90, E.gy - 96, 3, 96); R(x, E.shade('#1d6a3a'), sx + 78, E.gy - 100, 28, 22); x.font = 'bold 9px system-ui'; x.fillStyle = '#fff'; x.fillText('BUS', sx + 83, E.gy - 85);
+    if (small(id)) { facade(x, E, { cx: E.W * 0.75, w: 150, h: 76, col: '#8a7a5a', roof: 'flat', seed: 7, brick: 1, wins: { rows: 1, cols: 2, w: 40, h: 30, px: 20, py: 26, gx: 30, gy: 0 }, door: { w: 26, h: 40, col: '#3a2e24' }, sign: { t: 'GENERAL STORE', font: 'bold 10px system-ui', c: '#f1e7d0', dy: 14, plate: '#3a2a24' } }); }
+    lamp(x, E, E.W * 0.3); bin(x, E, sx + 70);
+  };
+  PL.tw_gas = function (x, E, id) {
+    const nm = L(id).name, cx = E.W * 0.36; R(x, E.shade('#d8d8dc'), cx - 150, E.gy - 110, 300, 10); R(x, E.shade('#b83b3b'), cx - 150, E.gy - 102, 300, 5); [-90, 20].forEach((d) => { R(x, E.shade('#8a8f99'), cx + d, E.gy - 100, 8, 100); rr(x, cx + d - 12, E.gy - 48, 32, 48, 4); x.fillStyle = E.shade('#e8e8ee'); x.fill(); R(x, E.shade('#b83b3b'), cx + d - 12, E.gy - 48, 32, 8); });
+    if (E.night) glow(x, cx, E.gy - 90, 160, 'rgba(255,245,220,A)', 0.2);
+    facade(x, E, { cx: E.W * 0.74, w: 220, h: 76, col: '#c9c2b0', roof: 'flat', seed: 21, lit: true, open: true, wins: { rows: 1, cols: 3, w: 46, h: 36, px: 18, py: 26, gx: 20, gy: 0 }, door: { w: 34, h: 44, col: '#3a4454', glass: 1, dx: -80 }, sign: { t: up(nm), font: 'bold 13px system-ui', c: '#ff6b5a', day: '#b83b3b', dy: 16, neon: 1 } });
+    R(x, E.shade('#5a6070'), E.W * 0.95, E.gy - 150, 5, 150); R(x, E.shade('#1d2230'), E.W * 0.95 - 30, E.gy - 190, 64, 44); x.font = 'bold 13px system-ui'; x.fillStyle = E.night ? '#ffd66b' : '#e6d6a6'; x.fillText('3.29⁹', E.W * 0.95 - 22, E.gy - 162);
+    R(x, E.shade('#e8eef4'), E.W * 0.74 + 120, E.gy - 40, 30, 40); x.font = 'bold 7px system-ui'; x.fillStyle = '#2b6fd6'; x.fillText('ICE', E.W * 0.74 + 128, E.gy - 26); car(x, E, cx - 40, '#6b8e5a', true);
+  };
+  PL.tw_diner = function (x, E, id) {
+    const nm = L(id).name, cx = E.W * 0.48; rr(x, cx - 170, E.gy - 82, 340, 82, 20); x.fillStyle = E.shade(small(id) ? '#c8b89a' : '#b8c0c8'); x.fill(); R(x, E.shade('#3a8a6a'), cx - 170, E.gy - 30, 340, 6);
+    for (let i = 0; i < 6; i++) win(x, cx - 140 + i * 48, E.gy - 66, 40, 28, E, true, null);
+    facade(x, E, { cx, w: 1, h: 82, col: '#b8c0c8', sign: { t: up(nm), font: 'italic bold 20px Georgia', c: '#ff5fa2', day: '#8a2a4a', dy: -16, neon: 1 } });
+    facade(x, E, { cx: cx + 120, w: 1, h: 82, col: '#b8c0c8', sign: { t: 'PIE · COFFEE', font: 'bold 10px system-ui', c: '#5ff', day: '#1c6a6a', dy: -34, neon: 1 } });
+    car(x, E, cx + 200, '#8a3a3a', true); car(x, E, cx - 290, '#4a4a5a', true); lamp(x, E, cx - 210);
+  };
+  PL.tw_library = function (x, E, id) {
+    const nm = L(id).name, on = SH.isOpen(id), vil = tierOf(id) === 'village';
+    facade(x, E, { cx: E.W * 0.5, w: vil ? 200 : 320, h: vil ? 86 : 92, col: vil ? '#9a7a5e' : '#bdb39e', brick: vil ? 1 : 0, roof: vil ? 'flat' : 'pediment', seed: 5, lit: on, open: on, wins: { rows: 1, cols: vil ? 2 : 4, w: 34, h: 44, px: 26, py: 24, gx: vil ? 70 : 50, gy: 0, skip: (c) => !vil && (c === 1 || c === 2) }, door: { w: 40, h: 54, col: '#3b2f28', glass: 1, light: true }, sign: { t: up(nm), font: '600 10px Georgia', c: '#3a3024', day: '#3a3024', dy: -6, plate: vil ? '#e8dcc0' : null } });
+    bench(x, E, E.W * 0.5 + 180); lamp(x, E, E.W * 0.5 - 200); tree(x, E, E.W * 0.1, 1, 'oak', rng(5));
+  };
+  PL.tw_church = function (x, E, id) {
+    const nm = L(id).name, cx = E.W * 0.5, r = rng(hs(id));
+    facade(x, E, { cx, w: 200, h: 100, col: '#e8e4da', siding: 1, roof: 'gable', roofc: '#3a3a44', pitch: 60, seed: 31, lit: (c, rI, rr2) => rr2() < 0.4, wins: { rows: 1, cols: 3, w: 18, h: 44, px: 32, py: 24, gx: 38, gy: 0, skip: (c) => c === 1 }, door: { w: 34, h: 54, col: '#6b2f2a', light: true } });
+    R(x, E.shade('#e8e4da'), cx - 20, E.gy - 190, 40, 90); x.fillStyle = E.shade('#3a3a44'); x.beginPath(); x.moveTo(cx - 24, E.gy - 190); x.lineTo(cx, E.gy - 250); x.lineTo(cx + 24, E.gy - 190); x.fill(); R(x, E.shade('#c9a24a'), cx - 1.5, E.gy - 272, 3, 22); R(x, E.shade('#c9a24a'), cx - 8, E.gy - 266, 16, 3);
+    if (E.night) { x.fillStyle = 'rgba(255,190,110,.5)'; x.fillRect(cx - 8, E.gy - 170, 16, 26); }
+    R(x, E.shade('#3a3024'), cx + 150, E.gy - 40, 3, 40); R(x, E.shade('#f1e7d0'), cx + 118, E.gy - 66, 68, 28); x.font = 'bold 7px Georgia'; x.fillStyle = '#3a3024'; x.fillText(up(nm).slice(0, 16), cx + 122, E.gy - 55); x.fillText('ALL WELCOME', cx + 126, E.gy - 44);
+    for (let i = 0; i < 7; i++) { R(x, E.shade('#6a6a6a'), E.W * 0.08 + i * 22, E.gy - 14 - r() * 4, 10, 14 + r() * 4); } tree(x, E, E.W * 0.9, 1.2, 'oak', r);
+  };
+  PL.tw_park = function (x, E, id) { PL.park(x, E, id); };
+  PL.tw_laundromat = function (x, E, id) {
+    facade(x, E, { cx: E.W * 0.5, w: 250, h: 80, col: '#7a9ab0', roof: 'flat', seed: 14, lit: true, open: SH.isOpen(id), wins: { rows: 1, cols: 1, w: 200, h: 42, px: 25, py: 22, gx: 0, gy: 0 }, sign: { t: up(L(id).name), font: 'bold 11px system-ui', c: '#bfe8ff', day: '#fff', dy: 14 } });
+    for (let i = 0; i < 5; i++) { x.fillStyle = E.shade('#e8eef4'); x.fillRect(E.W * 0.5 - 95 + i * 40, E.gy - 54, 30, 30); x.fillStyle = E.night ? '#9ec7e8' : E.shade('#4a6a88'); x.beginPath(); x.arc(E.W * 0.5 - 80 + i * 40, E.gy - 39, 10, 0, 7); x.fill(); } E.drums = true; lamp(x, E, E.W * 0.2);
+  };
+  PL.tw_police = function (x, E, id) {
+    facade(x, E, { cx: E.W * 0.5, w: 300, h: 92, col: '#8a8f9a', brick: 1, roof: 'flat', seed: 8, lit: true, sills: 1, wins: { rows: 2, cols: 6, w: 26, h: 20, px: 24, py: 14, gx: 18, gy: 16, skip: (c, rI) => rI === 1 && c === 2 }, door: { w: 46, h: 44, col: '#2a3a55', glass: 1, light: true }, open: true, sign: { t: up(L(id).name), font: 'bold 11px system-ui', c: '#e9eef8', dy: 14, plate: '#1d2d55' } });
+    car(x, E, E.W * 0.5 - 250, '#e8e8ee', true); R(x, E.shade('#1d2d55'), E.W * 0.5 - 240, E.gy - 8, 40, 4); E.siren = [E.W * 0.5 - 226, E.gy - 22]; R(x, E.shade('#9aa0aa'), E.W * 0.5 + 190, E.gy - 120, 3, 120); R(x, E.shade('#2b4f8a'), E.W * 0.5 + 193, E.gy - 120, 22, 14);
+  };
+  PL.tw_clinic = function (x, E, id) {
+    facade(x, E, { cx: E.W * 0.5, w: 260, h: 84, col: '#d6dbe2', roof: 'flat', seed: 13, lit: SH.isOpen(id), open: SH.isOpen(id), wins: { rows: 1, cols: 4, w: 36, h: 30, px: 22, py: 28, gx: 24, gy: 0, skip: (c) => c === 2 }, door: { w: 44, h: 44, col: '#3a4a5a', glass: 1, light: true, dx: 34 }, sign: { t: up(L(id).name), font: 'bold 10px system-ui', c: '#2a3a55', day: '#2a3a55', dy: 14 } });
+    x.fillStyle = '#e33'; x.fillRect(E.W * 0.5 - 150, E.gy - 70, 10, 26); x.fillRect(E.W * 0.5 - 158, E.gy - 62, 26, 10); car(x, E, E.W * 0.5 + 160, '#cfcfcf', true);
+  };
+  PL.tw_motel = function (x, E, id) {
+    const nm = L(id).name, cx = E.W * 0.5; facade(x, E, { cx, w: 420, h: 70, col: '#c9a27a', roof: 'flat', seed: 51, lit: (c, rI, r) => r() < 0.5, wins: { rows: 1, cols: 7, w: 22, h: 20, px: 20, py: 20, gx: 36, gy: 0 } });
+    for (let i = 0; i < 7; i++) R(x, E.shade(['#2f4a6b', '#6b2f2a', '#3a6a4a'][i % 3]), cx - 190 + i * 58 + 26, E.gy - 40, 18, 40);
+    R(x, E.shade('#5a6070'), cx + 250, E.gy - 170, 5, 170); R(x, E.shade('#b83b3b'), cx + 216, E.gy - 200, 74, 40); x.font = 'bold 12px system-ui'; x.fillStyle = E.night && (SH.Scene.flick || 1) > 0.2 ? '#ffd0a0' : '#f1e7d0'; x.fillText('MOTEL', cx + 230, E.gy - 184); x.font = 'bold 8px system-ui'; x.fillText(E.night ? 'VACANCY' : 'VACANCY', cx + 232, E.gy - 170);
+    x.font = 'bold 10px system-ui'; x.fillStyle = E.night ? '#ffd0a0' : '#3a2a24'; x.fillText(up(nm).slice(0, 34), cx - 190, E.gy - 78); car(x, E, cx - 300, '#3a5a9a', true); car(x, E, cx + 120, '#9a3a3a', true);
+    R(x, E.shade('#e8eef4'), cx - 240, E.gy - 36, 26, 36); x.font = 'bold 7px system-ui'; x.fillStyle = '#2b6fd6'; x.fillText('ICE', cx - 234, E.gy - 22);
+  };
+  PL.tw_work = function (x, E, id) {
+    const T = SH.Town.cache[L(id).town] || {}, p = SH.Atlas.data().places.find((q) => q.id === L(id).town) || {}, r = rng(hs(id));
+    if (/coast|lake|river/.test(SH.Town.biome(p.biome)) && /dock|marina|boat|fish|charter|barge|bait/i.test(L(id).name)) { R(x, E.shade('#1d3450'), 0, E.gy - 24, E.W, 24); for (let i = 0; i < 3; i++) { const bx = E.W * 0.15 + i * E.W * 0.28; x.fillStyle = E.shade(['#e8e8ee', '#b83b3b', '#2b4f8a'][i]); x.beginPath(); x.moveTo(bx, E.gy - 30); x.lineTo(bx + 120, E.gy - 30); x.lineTo(bx + 100, E.gy - 10); x.lineTo(bx + 16, E.gy - 10); x.fill(); R(x, E.shade('#5a5a5a'), bx + 60, E.gy - 90, 3, 60); } return; }
+    facade(x, E, { cx: E.W * 0.35, w: 240, h: 90, col: '#8a3a2a', roof: 'gable', roofc: '#5a5a5a', pitch: 50, seed: 61, wins: { rows: 1, cols: 2, w: 30, h: 26, px: 40, py: 20, gx: 100, gy: 0 }, door: { w: 70, h: 64, col: '#5a2a1a' } });
+    R(x, E.shade('#9a9a9a'), E.W * 0.7, E.gy - 200, 50, 200); R(x, E.shade('#8a8a8a'), E.W * 0.7 + 50, E.gy - 160, 34, 160); x.font = 'bold 9px system-ui'; x.fillStyle = E.shade('#3a3a3a'); x.fillText(up(L(id).name).slice(0, 12), E.W * 0.7 + 2, E.gy - 176);
+    for (let i = 0; i < 5; i++) { R(x, E.shade('#c9a24a'), E.W * 0.1 + i * 18, E.gy - 14, 16, 14); } R(x, E.shade('#3a6a3a'), E.W * 0.55, E.gy - 30, 60, 22); x.fillStyle = '#0c0d10'; x.beginPath(); x.arc(E.W * 0.55 + 12, E.gy - 6, 9, 0, 7); x.arc(E.W * 0.55 + 50, E.gy - 4, 6, 0, 7); x.fill();
+  };
+  PL.tw_edge = function (x, E, id) {
+    const p = SH.Atlas.data().places.find((q) => q.id === L(id).town) || {}, r = rng(hs(id));
+    const bm = SH.Town.biome(p.biome), ground = { fields: '#5a5a2a', coast: '#b8a878', forest: '#23402f', hills: '#4a5a3a', lake: '#3a5a3a', river: '#3a5030' }[bm] || '#4a5a3a';
+    x.fillStyle = E.shade(ground); x.fillRect(0, E.gy - 40, E.W, 40); for (let i = 0; i < 40; i++) { x.fillStyle = E.shade(i % 2 ? '#6a6a3a' : '#4a4a22'); x.fillRect(r() * E.W, E.gy - 40 + r() * 36, 20 + r() * 40, 2); }
+    if (bm === 'forest' || bm === 'hills') for (let i = 0; i < 12; i++) tree(x, E, r() * E.W, 0.8 + r() * 0.6, 'pine', r);
+    else { facade(x, E, { cx: E.W * 0.75, w: 120, h: 70, col: '#8a3a2a', roof: 'gable', roofc: '#4a4a4a', pitch: 44, seed: 71, door: { w: 40, h: 50, col: '#3a1a10' } }); tree(x, E, E.W * 0.2, 1.3, 'oak', r); }
+    R(x, E.shade('#8a8f99'), 0, E.gy - 14, E.W, 3); for (let i = 0; i < E.W; i += 50) R(x, E.shade('#6a6e76'), i, E.gy - 14, 3, 14);
+    R(x, E.shade('#3a6a3a'), E.W * 0.45, E.gy - 70, 3, 70); R(x, E.shade('#2a6a3a'), E.W * 0.45 - 40, E.gy - 100, 84, 32); x.font = 'bold 9px system-ui'; x.fillStyle = '#fff'; x.fillText(up(p.name).slice(0, 14), E.W * 0.45 - 34, E.gy - 88); x.font = '8px system-ui'; x.fillText('POP. ' + (p.pop || '').toLocaleString(), E.W * 0.45 - 34, E.gy - 76);
+  };
+  PL.tw_station = function (x, E, id) {
+    const big = /Station$/.test(L(id).name);
+    if (big) { facade(x, E, { cx: E.W * 0.46, w: 340, h: 92, col: '#9a7a5e', brick: 1, roof: 'gable', roofc: '#2e3a48', pitch: 36, seed: 17, lit: true, sills: 1, wins: { rows: 1, cols: 6, w: 28, h: 42, px: 24, py: 30, gx: 22, gy: 0 }, door: { w: 42, h: 52, col: '#2e3a48', glass: 1, light: true }, open: true, sign: { t: up(L(id).name), font: 'bold 12px Georgia', c: '#f1e7d0', day: '#2e2620', dy: 16, plate: '#d9c9a8' } }); }
+    else { R(x, E.shade('#8a8a8a'), E.W * 0.3, E.gy - 10, E.W * 0.4, 10); R(x, E.shade('#2a6a3a'), E.W * 0.48, E.gy - 80, 70, 22); x.font = 'bold 9px system-ui'; x.fillStyle = '#fff'; x.fillText(up(L(id).name).slice(0, 12), E.W * 0.48 + 4, E.gy - 65); R(x, E.shade('#5a6070'), E.W * 0.5, E.gy - 58, 3, 48); bench(x, E, E.W * 0.36); lamp(x, E, E.W * 0.62); }
+    E.rail = true;
+  };
+  PL.tw_grandma = function (x, E, id) {
+    const r = rng(hs(id)); [0.15, 0.85].forEach((f, i) => facade(x, E, { cx: E.W * f, w: 150, h: 80, col: ['#8a9a8a', '#a89a7a'][i], siding: 1, roof: 'gable', roofc: '#3b3038', pitch: 40, seed: 80 + i, wins: { rows: 1, cols: 2, w: 24, h: 22, px: 24, py: 20, gx: 54, gy: 0 }, door: { w: 26, h: 40, col: '#4a2e22' } }));
+    facade(x, E, { cx: E.W * 0.5, w: 190, h: 92, col: '#e8dcc0', siding: 1, roof: 'gable', roofc: '#5a3a32', pitch: 48, chimney: 1, shutters: '#2c4a6b', sills: 1, seed: 41, lit: true, wins: { rows: 1, cols: 2, w: 30, h: 26, px: 26, py: 26, gx: 78, gy: 0 }, door: { w: 30, h: 46, col: '#2b6fd6', light: true } });
+    x.font = 'bold 10px Georgia'; x.fillStyle = E.shade('#3a3024'); x.fillText('41', E.W * 0.5 - 6, E.gy - 52); mailbox(x, E, E.W * 0.5 + 110); tree(x, E, E.W * 0.33, 1.1, 'oak', r); for (let i = 0; i < 20; i++) { x.fillStyle = E.shade(E.autumn[i % 3]); x.fillRect(r() * E.W, E.gy - 2 + r() * 4, 3, 2); }
+  };
+  PL.tw_shelter = function (x, E, id) {
+    facade(x, E, { cx: E.W * 0.5, w: 220, h: 110, col: '#8a4d3c', brick: 1, roof: 'gable', roofc: '#3a2a24', pitch: 44, seed: 16, lit: true, sills: 1, wins: { rows: 2, cols: 4, w: 24, h: 22, px: 22, py: 14, gx: 26, gy: 18, skip: (c, rI) => rI === 1 && (c === 1 || c === 2) }, door: { w: 34, h: 44, col: '#8a3a2a', light: true }, sign: { t: up(L(id).name).slice(0, 28), font: '600 9px Georgia', c: '#ffd08a', day: '#3a2a24', dy: 16, plate: '#f1e7d0' } });
+    glow(x, E.W * 0.5, E.gy - 50, 60, 'rgba(255,200,110,A)', E.night ? 0.5 : 0.15); bench(x, E, E.W * 0.5 - 180); lamp(x, E, E.W * 0.8);
+  };
+  PL.tw_backst = function (x, E, id) {
+    rowOfShops(x, E, id, ['PAWN · GOLD', 'TACOS', 'NO NAME BAR', 'VAPE · PHONE']); R(x, 'rgba(0,0,0,.35)', E.W * 0.47, E.gy - 90, 26, 90); bin(x, E, E.W * 0.5); bin(x, E, E.W * 0.53);
+    x.font = 'bold 14px system-ui'; x.fillStyle = 'rgba(180,140,255,.45)'; x.fillText('STAY UP', E.W * 0.2, E.gy - 20);
+  };
 })(window.SH);
 
 </script>

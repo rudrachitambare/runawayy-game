@@ -501,3 +501,6 @@ Tests: `tests/parts.js` (runs `tests/part2.js`…`part7.js`, fresh page each).
 - Shoplifting stays, but getting caught on the run never ends the story. The clerk just deals with you.
 - **Route 9 Pickup** (Harlow, Gas-N-Go lot): cheap buses, tempos, van shuttles and car pools board here. The Greyline depot has only the official lines, and Harlow Station only trains. Every unofficial company in your story runs at least once from Harlow.
 - PIP understands follow-ups and context ("bus to oakton" → "how much?" → "tomorrow?" → "is there a motel there?" → "book it"), and typo'd town names.
+
+## REQUESTS #31–33 BUILT: away towns are real places
+Every town you reach has its own map, streets, open/closed places, people with names and jobs who remember what you told them, work, sleeping spots, a timetable, a notice board, a library computer, and endings that fit how you got there. See FULLMEMORY.md #31–33.

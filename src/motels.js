@@ -97,7 +97,7 @@
   }
   /* ---------- daily motel life: payment + trouble ---------- */
   K.daily.push(() => {
-    const g = G(), r = g.room; if (!r) return;
+    const g = G(), r = g.room; if (!r || typeof r !== 'object') return;
     if (g.t > r.until) { r.late = (r.late || 0) + 1; if (r.late > (r.k === 'sloppy' ? 2 : 1)) g.roomEvt = 'late'; return; }
     const risk = { pro: 0.07, loose: 0.08, sloppy: 0.1 }[r.k]; if (!K.chance(risk)) return;
     const ev = ['spooked', 'police', 'newclerk']; if (K.party().length >= 2) ev.push('noise'); if (!g.reported) ev.splice(0, 1);
