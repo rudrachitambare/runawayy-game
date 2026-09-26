@@ -254,7 +254,7 @@
     if (G.phase === 'home' && SH.day() > SH.HOME_DAYS) {
       SH.Events.queue({ id: 'stayedEnd', run: () => SH.Endings.stayed() });
     }
-    if (G.phase === 'run' && SH.day() - SH.day(G.missingAt) >= 6) {
+    if (G.phase === 'run' && SH.day() - SH.day(G.missingAt) >= 6 && (G.s.health < 40 || G.s.full < 25 || G.s.energy < 20 || (!G.away && !G.veh && !G.hideout && !(G.base && G.base.level) && SH.day() - SH.day(G.missingAt) >= 9))) {
       SH.Events.queue({ id: 'longRun', run: () => SH.Endings.found('exhausted') });
     }
     G.newDayPending = true;

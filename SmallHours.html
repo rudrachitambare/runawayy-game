@@ -1272,7 +1272,7 @@ window.SH = window.SH || {};
     if (G.phase === 'home' && SH.day() > SH.HOME_DAYS) {
       SH.Events.queue({ id: 'stayedEnd', run: () => SH.Endings.stayed() });
     }
-    if (G.phase === 'run' && SH.day() - SH.day(G.missingAt) >= 6) {
+    if (G.phase === 'run' && SH.day() - SH.day(G.missingAt) >= 6 && (G.s.health < 40 || G.s.full < 25 || G.s.energy < 20 || (!G.away && !G.veh && !G.hideout && !(G.base && G.base.level) && SH.day() - SH.day(G.missingAt) >= 9))) {
       SH.Events.queue({ id: 'longRun', run: () => SH.Endings.found('exhausted') });
     }
     G.newDayPending = true;
@@ -7990,6 +7990,279 @@ window.SH = window.SH || {};
   };
   P.extraApps = P.extraApps || [];
   P.extraApps.push({ at: 6, app: ['tubeyou', '▶️', 'TubeYou', '#ff0000'] });
+})(window.SH);
+
+</script>
+<script>
+/* travel2.js */
+/* SMALL HOURS — Part 2a: getting around Averland.
+   Rides: walk, kick scooter, e-scooter (battery!), bike, your own vehicle (fuel + driving skill).
+   Tickets: County Transit (anyone), CheapRide (driver discretion), Averline (strict), Regional Rail (conductors).
+   Rain slows every mode (x1.4) and makes falls/crashes likelier. Things happen on the road. */
+(function (SH) {
+  const A = SH.Atlas; if (!A) return;
+  const G = () => SH.G;
+  const T = SH.Travel = {};
+  const own = (k) => (G().owned || []).includes(k);
+  T.rides = () => ({ kick: own('x_kick'), escoot: own('x_escoot'), bike: SH.f('hasBike') || own('x_bikeused') || own('x_bmx') || own('x_bikenew') || own('x_cargo') });
+  const wet = () => { const w = SH.weatherDay ? SH.weatherDay() : {}; return /rain|storm/.test(w.c || ''); };
+  T.wet = wet;
+
+  const bModes = A.modes;
+  A.modes = function (from, to) {
+    const g = G(), mi = A.miles(from, to), out = bModes.call(this, from, to).filter((m) => m.k !== 'intercity' && m.k !== 'bike');
+    const R = T.rides(), rain = wet() ? 1.4 : 1, rn = wet() ? ' Rain: slower, slippery.' : '';
+    if (R.kick && mi <= 25) out.push({ k: 'kick', n: '🛴 Kick scooter', mins: Math.round(mi * 9 * rain), cost: 0, e: Math.round(mi * 2.5), note: 'Your legs are the motor.' + rn });
+    if (R.escoot) { const bat = g.escootBat == null ? 100 : g.escootBat, range = bat * 0.18; out.push({ k: 'escoot', n: '🛴 E-scooter', mins: Math.round(mi * 4.5 * rain), cost: 0, e: 1, note: `Battery ${bat}% ≈ ${range.toFixed(0)} mi.${mi > range ? ' ⚠️ Not enough charge. You\'ll be pushing it.' : ''}` + rn }); }
+    if (R.bike && mi <= 30) out.push({ k: 'bike', n: '🚲 Bike', mins: Math.round(mi * 6 * rain), cost: 0, e: Math.round(mi * 1.8), note: rn.trim() });
+    const v = g.veh; if (v && v.running && v.at === from.id) { const need = mi * 0.9; out.push({ k: 'drive', n: `🚗 Drive the ${v.n}`, mins: Math.round(mi * 1.6 * rain), cost: 0, e: 3, note: `Fuel ${Math.round(v.fuel)}%${v.fuel < need ? ' ⚠️ not enough gas' : ''} · driving skill ${SH.skill('drive')}.` + rn }); }
+    if (mi > 9 || !out.some((m) => m.k === 'bus')) Object.entries(SH.TRANSPORT || {}).forEach(([k, c]) => {
+      if (k === 'county') return;
+      if (!c.tiers.includes(from.tier) || !c.tiers.includes(to.tier)) return;
+      if (c.rail && !((from.rail || from.tier === 'city' || from.home) && (to.rail || to.tier === 'city'))) return;
+      const price = Math.round(c.base + mi * c.rate);
+      out.push({ k: 'co_' + k, n: `${c.icon} ${c.n}`, mins: Math.round(mi / (c.rail ? 55 : 42) * 60 + 30), cost: price, e: 2, note: c.rule.split('.')[0] + '.' });
+    });
+    return out;
+  };
+
+})(window.SH);
+
+</script>
+<script>
+/* travel3.js */
+/* SMALL HOURS — Part 2b: the trip itself — tickets, battery, fuel, and things that happen on the road. */
+(function (SH) {
+  const A = SH.Atlas, T = SH.Travel; if (!A || !T) return;
+  const G = () => SH.G, X = () => SH.EndX;
+  const chance = (p) => Math.random() < p;
+
+  function ticket(k, c, from, to) {
+    const g = G(), heat = (g.heat || 0) / 100, look = g.flags && g.flags.disguise ? 0.15 : 0;
+    const strict = Math.max(0, c.strict + heat * 0.3 - look - (g.party && g.party.length ? 0.05 : 0));
+    if (k === 'averline' && chance(strict)) {
+      if (g.reported && chance(0.5)) { SH.Endings.found('agent'); return false; }
+      SH.UI.dialog({ title: 'Averline ticket counter', text: ['"ID, please." You don\'t have one. The agent looks at you over her glasses. "Honey, you can\'t ride alone. Is there a grown-up with you?"', 'You say your mom is parking the car. She watches you walk away.'], choices: [{ t: 'Okay', fn: () => A.hub() }] });
+      g.awayNotice = (g.awayNotice || 0) + 15; return false;
+    }
+    if (k === 'cheapride' && chance(strict * 0.6)) {
+      SH.UI.dialog({ title: 'CheapRide', text: ['The driver scans your ticket, looks at you, looks at the empty sidewalk behind you. "Where\'s your parent?" You lie. He\'s heard better. "Not on my bus, kid."'], choices: [{ t: 'Okay', fn: () => A.hub() }] });
+      return false;
+    }
+    if (k === 'rail') g._railRisk = strict;
+    if (k === 'cheapride') g._cheapRisk = strict * 0.4;
+    return true;
+  }
+  T.ticket = ticket;
+
+  /* incidents: some are just bad luck, some end the story */
+  function incident(mode, from, to, mi) {
+    const g = G(), rain = T.wet(), dark = SH.hour() >= 20 || SH.hour() < 6, bio = (to.biomes || [to.biome || ''])[0] || '';
+    if (mode === 'co_rail' && chance(g._railRisk || 0)) return 'conductor';
+    if (mode === 'co_cheapride' && chance(g._cheapRisk || 0)) return 'cheapDriver';
+    if (mode.startsWith('co_') && dark && chance(0.18)) return chance(0.5) ? 'nightbus' : null;
+    if ((mode === 'kick' || mode === 'escoot') && chance(rain ? 0.12 : 0.04)) return 'scooterFall';
+    if (mode === 'escoot' && g._escootDead) return 'escootDead';
+    if (mode === 'bike' && mi > 15 && g.s.energy < 30 && chance(0.4)) return 'bikeLong';
+    if (mode === 'walk' && mi > 5 && dark && chance(0.2)) return 'walkHighway';
+    if (mode === 'walk' && /forest/.test(bio) && chance(0.1)) return 'lostWoods';
+    if (/river/.test(bio) && rain && chance(0.07)) return 'riverCold';
+    if (to.tier === 'village' && chance(0.05)) return 'dog';
+    if (SH.weatherDay && SH.weatherDay().c === 'storm' && chance(0.2)) return 'storm';
+    if (mode === 'drive') {
+      const sk = SH.skill('drive'), p = Math.max(0.02, 0.35 - sk / 330) * (rain ? 1.8 : 1) * (dark ? 1.3 : 1);
+      if (chance(p)) return sk < 30 && rain ? 'crashHurt' : chance(0.5) ? 'crash' : 'crashDitch';
+      if (chance(0.06 + (g.heat || 0) / 500)) return 'driveStop';
+      if (g.veh.fuel < mi * 0.9) return 'outOfGas';
+    }
+    if (mode === 'co_cheapride' && to.tier === 'city' && g.reported && chance(0.25)) return 'cheaprideCity';
+    if (mode === 'co_rail' && to.capital && chance(0.3)) return 'railCapital';
+    return null;
+  }
+
+  const bGo = A.go;
+  A.go = function (id, mode) {
+    const g = G(), D = A.data(), from = A.here(), to = D.places.find((p) => p.id === id);
+    const m = A.modes(from, to).find((x) => x.k === mode); if (!m || m.blocked) return;
+    if (m.cost && g.money < m.cost) return SH.UI.toast('Not enough cash.');
+    const mi = A.miles(from, to); g.lastRide = mode; g._escootDead = false;
+    if (mode.startsWith('co_') && !ticket(mode.slice(3), SH.TRANSPORT[mode.slice(3)], from, to)) return;
+    if (mode === 'escoot') { const bat = g.escootBat == null ? 100 : g.escootBat, need = mi / 0.18; if (need > bat) { g._escootDead = true; m.mins += Math.round((need - bat) * 0.18 * 20); } g.escootBat = Math.max(0, Math.round(bat - need)); }
+    const ev = to.home ? null : incident(mode, from, to, mi);
+    if (mode === 'drive') { g.veh.fuel = Math.max(0, g.veh.fuel - mi * 0.9); if (!ev) { g.veh.at = to.id; SH.skill && ((g.skills = g.skills || {}).drive = Math.min(100, (g.skills.drive || 0) + 1)); } }
+    if (ev && ['conductor', 'cheapDriver', 'crash', 'crashDitch', 'crashHurt', 'driveStop', 'outOfGas', 'scooterFall', 'escootDead', 'bikeLong', 'walkHighway', 'lostWoods', 'riverCold', 'storm', 'nightbus', 'dog', 'cheaprideCity', 'railCapital'].includes(ev)) {
+      // half of these are survivable scares on a good day
+      const soft = { nightbus: 0.6, dog: 0.7, storm: 0.5, scooterFall: 0.55, bikeLong: 0.3, walkHighway: 0.4, crash: 0.25 }[ev] || 0;
+      if (chance(soft)) { scare(ev); }
+      else { SH.advance(Math.round(m.mins / 2), { interrupt: false }); if (m.cost) SH.money(-m.cost); g._tripTo = to; return X().trigger(ev, { to, from, mi, mode }); }
+    }
+    return bGo.apply(this, arguments);
+  };
+  function scare(ev) {
+    const t = { nightbus: 'A man two seats back keeps asking where you\'re headed. A woman in scrubs sits down next to you without a word and stays there until your stop.', dog: 'A big farm dog follows you for a mile, then decides you\'re fine.', storm: 'The storm hits halfway. You wait it out under a gas station awning, soaked to the bone.', scooterFall: 'The wheel catches a crack and you go down hard. Scraped palms, torn jeans. You get back on.', bikeLong: 'Your legs turn to jelly at mile fifteen. You walk the bike the rest of the way.', walkHighway: 'Trucks blast past so close the wind shoves you. You walk in the ditch the rest of the way.', crash: 'You scrape a mailbox. It\'s fine. The mailbox is not fine.' }[ev];
+    if (t) SH.UI.log(t, 'warn'); SH.st('stress', 8); SH.st('health', ev === 'scooterFall' ? -6 : -1);
+  }
+})(window.SH);
+
+</script>
+<script>
+/* junkyard.js */
+/* SMALL HOURS — Part 2c: junkyards (every town; size varies) and vehicles you can buy for cash, fix, fuel,
+   sleep in, and (badly, then less badly) drive. No theft: the owner sells "as-is, cash, no questions." */
+(function (SH) {
+  const A = SH.Atlas; if (!A) return;
+  const G = () => SH.G, $ = (n) => '$' + n;
+  const J = SH.Junk = {};
+  const TYPES = { car: { n: 'rusty hatchback', warm: 18, seats: 4, price: [180, 320] }, tempo: { n: 'little tempo truck', warm: 12, seats: 3, price: [220, 380] }, minivan: { n: 'dented minivan', warm: 25, seats: 7, price: [260, 450] }, camper: { n: 'old camper van', warm: 40, seats: 4, price: [480, 800] } };
+  const PARTS = { battery: ['x_carbat', 'Car battery', 45], tires: ['x_tires', 'Tires', 40], oil: ['x_motoroil', 'Motor oil', 8], plugs: ['x_sparkplugs', 'Spark plugs', 9] };
+  J.TYPES = TYPES;
+  J.yard = function (p) {
+    const r = SH.Browser ? SH.Browser.rnd(p.pop + p.id.length * 131) : Math.random;
+    const n = { village: 1 + Math.floor(r() * 2), small: 2 + Math.floor(r() * 2), town: 4, city: 6 }[p.tier];
+    const keys = Object.keys(TYPES), out = [];
+    for (let i = 0; i < n; i++) { const t = i === 0 && p.tier === 'city' ? 'camper' : keys[Math.floor(r() * keys.length)], T = TYPES[t]; out.push({ id: p.id + 'v' + i, type: t, n: T.n, price: Math.round(T.price[0] + r() * (T.price[1] - T.price[0])), need: keys.length ? Object.keys(PARTS).filter(() => r() < 0.75) : [] }); }
+    return { name: { village: 'a field of dead cars behind the Hollis barn', small: 'Dale\'s Scrap & Salvage', town: 'County Auto Salvage', city: 'Metro U-Pull-It' }[p.tier], owner: ['Dale', 'Bev', 'Gus', 'Rosa', 'Big Earl'][Math.floor(r() * 5)], cars: out };
+  };
+  const sold = () => (G().junkSold = G().junkSold || {});
+
+  J.open = function (p) {
+    const g = G(), Y = J.yard(p), v = g.veh, back = () => (g.away ? setTimeout(A.hub, 30) : SH.UI.afterAction());
+    const ch = [];
+    if (!v) Y.cars.filter((c) => !sold()[c.id]).forEach((c) => ch.push({ t: `Buy the ${c.n}: ${$(c.price)} cash`, sub: c.need.length ? `Needs: ${c.need.join(', ')} + work` : 'Needs work, but it turns over', fn: () => J.buy(p, c) }));
+    if (v && v.at === p.id) {
+      if (!v.running) ch.push({ t: `Work on the ${v.n} (2h)`, sub: `Progress ${Math.round(v.work)}% · mechanics ${SH.skill('mech')}`, fn: () => J.work() });
+      Object.entries(PARTS).forEach(([k, [id, n, price]]) => { if (!v.parts[k]) { const have = SH.has(id) || (g.owned || []).includes(id); ch.push({ t: have ? `Install ${n}` : `Buy a used ${n.toLowerCase()} here: ${$(Math.round(price * 0.6))}`, fn: () => J.part(k, have) }); } });
+      if (v.running && v.fuel < 100) ch.push({ t: 'Fill up at the pump', sub: `Fuel ${Math.round(v.fuel)}% · $5 per 10%`, fn: () => J.fuel() });
+    }
+    ch.push({ t: 'Leave', fn: back });
+    SH.UI.dialog({ title: Y.name, text: [`${Y.owner} runs it. ${v && v.at === p.id ? `Your ${v.n} sits where you left it${v.running ? ', ready to go' : ''}.` : `${Y.cars.length} vehicle${Y.cars.length > 1 ? 's' : ''} worth looking at. "Cash, as-is, no title, no questions. You're a little young, aren't you?" A shrug. "Money's money."`}`], choices: ch });
+  };
+  J.buy = function (p, c) {
+    const g = G(); if (g.money < c.price) return SH.UI.toast(`${$(c.price)} cash. You have ${$(Math.floor(g.money))}.`);
+    SH.money(-c.price); sold()[c.id] = true; (g.tx = g.tx || []).push({ t: g.t, d: 'Junkyard: ' + c.n, a: -c.price });
+    const parts = { battery: true, tires: true, oil: true, plugs: true }; c.need.forEach((k) => parts[k] = false);
+    g.veh = { n: c.n, type: c.type, at: p.id, parts, work: c.need.length ? 20 : 70, fuel: 5, running: false, warm: TYPES[c.type].warm, seats: TYPES[c.type].seats, nights: 0, since: g.t };
+    SH.flag('ownsVehicle'); SH.UI.log(`You own a ${c.n}. It smells like mice and old french fries. It's the best thing that's ever been yours.`, 'good'); J.open(p);
+  };
+  J.part = function (k, have) {
+    const g = G(), v = g.veh, [id, n, price] = PARTS[k];
+    if (have) { if (!SH.rmBag(id)) { const i = g.owned.indexOf(id); if (i >= 0) g.owned.splice(i, 1); } }
+    else { const cost = Math.round(price * 0.6); if (g.money < cost) return SH.UI.toast('Not enough cash.'); SH.money(-cost); }
+    v.parts[k] = true; SH.advance(30, { interrupt: false }); J.check(); J.open(A.here());
+  };
+  J.work = function () {
+    const g = G(), v = g.veh; SH.advance(120, { interrupt: false }); SH.st('energy', -12); SH.st('hyg', -10);
+    const gain = 10 + SH.skill('mech') / 4 + ((g.party || []).length * 5);
+    v.work = Math.min(100, v.work + gain); (g.skills = g.skills || {}).mech = Math.min(100, (g.skills.mech || 0) + 3);
+    SH.UI.log(`Grease to the elbows.${(g.party || []).length ? ' Everyone helps, even if "helping" means holding the flashlight wrong.' : ''} (+${Math.round(gain)}%)`, 'sys'); J.check(); J.open(A.here());
+  };
+  J.check = function () { const v = G().veh; if (v && !v.running && v.work >= 100 && Object.values(v.parts).every(Boolean)) { v.running = true; SH.UI.log(`You turn the key. It coughs, it rattles, and then the ${v.n} RUNS. Someone screams. It might be you.`, 'good'); SH.flag('vehicleRuns'); } };
+  J.fuel = function () { const g = G(), v = g.veh; if (g.money < 5) return SH.UI.toast('$5 for 10%.'); const k = Math.min(Math.floor(g.money / 5), Math.ceil((100 - v.fuel) / 10)); SH.money(-k * 5); v.fuel = Math.min(100, v.fuel + k * 10); g.awayNotice = (g.awayNotice || 0) + 4; SH.UI.log('The clerk watches a twelve-year-old pump gas and decides it\'s not his business. Mostly.', 'warn'); J.open(A.here()); };
+
+  /* sleeping in it: warmer, less noticed than sleeping rough */
+  J.sleep = function () {
+    const g = G(), v = g.veh, back = () => (g.away ? setTimeout(A.hub, 30) : SH.UI.afterAction());
+    SH.advance(8 * 60, { interrupt: false }); v.nights++; SH.st('energy', 45); SH.st('warmth', v.warm); SH.st('stress', -4);
+    g.awayNotice = Math.max(0, (g.awayNotice || 0) - 5);
+    if (v.nights >= 12 && Math.random() < 0.15) return SH.EndX.trigger('van', {});
+    SH.UI.dialog({ title: 'The ' + v.n, text: [v.type === 'camper' ? 'The camper has a real bed, sort of, and a door that locks. You sleep eight hours straight.' : `You sleep across the seats with your hoodie as a pillow. ${(g.party || []).length ? 'Somebody snores. Somebody always snores.' : 'The windows fog up. It\'s warmer than outside.'}`], choices: [{ t: 'Okay', fn: back }] });
+  };
+
+  /* hooks: Atlas hub + Harlow (trainyard backs onto County Auto Salvage) */
+  (A.extra = A.extra || []).push((p, ch, dark) => {
+    if (!dark) ch.push({ t: '🚙 The junkyard', sub: J.yard(p).name, fn: () => J.open(p) });
+    const v = G().veh; if (v && v.at === p.id) ch.unshift({ t: `Sleep in the ${v.n}`, sub: `Warmth +${v.warm}`, fn: J.sleep });
+  });
+  const AC = SH.Actions;
+  if (AC && AC.list) { const bl = AC.list; AC.list = function () { const r = bl.apply(this, arguments), g = G(); if (!g || g.away || !r || !r.acts) return r; if (g.loc === 'trainyard' && !SH.isDark()) r.acts.push({ label: 'Walk over to County Auto Salvage', sub: 'Junk cars, cash only', fn: () => J.open(A.data().places[0]) }); const v = g.veh; if (v && v.at === 'p0' && g.loc === 'trainyard' && g.phase === 'run') r.acts.unshift({ label: `Sleep in the ${v.n}`, sub: 'Behind the salvage yard', fn: J.sleep }); return r; }; }
+})(window.SH);
+
+</script>
+<script>
+/* endx_core.js */
+/* SMALL HOURS — ending engine. Sits in front of SH.Endings.show: whenever the story reaches an ending, the engine
+   builds a context (who's with you, where, weather, vehicle, money, days gone, family setup, skills…) and picks
+   the MOST SPECIFIC matching ending from the registry. New systems can also trigger endings directly with
+   SH.EndX.trigger(base, extra). Found endings are remembered across playthroughs (localStorage). */
+(function (SH) {
+  const EN = SH.Endings; if (!EN) return;
+  const X = SH.EndX = { defs: [], KEY: 'smallhours_endings' };
+  const G = () => SH.G;
+  X.add = (list) => list.forEach((d) => { d.p = d.p || 1; X.defs.push(d); });
+
+  /* ---------- context ---------- */
+  X.ctx = function (base, extra) {
+    const g = G(), M = SH.NPCS_META, nm = (id) => (M[id] || {}).n || id;
+    const party = (g.party || []).filter((id) => M[id]);
+    const partner = g.crush && g.crush.status === 'going' ? g.crush.id : null;
+    const place = g.away && SH.Atlas ? SH.Atlas.here() : null;
+    const w = SH.weatherDay ? SH.weatherDay() : {};
+    const h = SH.hour();
+    const c = {
+      g, base, reason: g._foundReason || null, extra: extra || {},
+      party, pn: party.map(nm), n: party.length, pl: party.length === 1 ? nm(party[0]) : party.length ? party.slice(0, -1).map(nm).join(', ') + ' and ' + nm(party[party.length - 1]) : '',
+      partner, partnerN: partner ? nm(partner) : '', partnerWith: partner && party.includes(partner),
+      place, tier: place ? place.tier : 'town', town: place ? place.name : 'Harlow', away: !!place,
+      rain: /rain|storm/.test(w.c || ''), storm: w.c === 'storm', cold: (w.lo || 50) < 40, night: h >= 21 || h < 6, h,
+      days: g.missingAt ? (g.t - g.missingAt) / 1440 : 0, run: g.phase === 'run' || !!g.missingAt,
+      money: g.money || 0, bank: g.bank ? g.bank.bal : 0, frozen: !!(g.bank && g.bank.frozen),
+      veh: g.veh || null, ride: g.lastRide || null, skill: (k) => ((g.skills || {})[k] || 0),
+      burner: !!(g.net && g.net.x && g.net.x.burner), crew: g.crew || null, fund: g.fund || null,
+      role: (g.fam && g.fam.role) || 'stepdad', rick: SH.nm('Rick'), mom: SH.nm('Mom'), momN: (g.fam && g.fam.mom) || 'Mom', sib: SH.nm('Lily'), gma: SH.nm('Grandma Rose'),
+      rel: (id) => g.rel[id] || 0, f: (k) => SH.f(k), name: g.name || 'Sam',
+      heat: g.heat || 0, notice: g.awayNotice || 0, poster: !!(g.flags && g.flags.sawPoster) || !!g.reported,
+    };
+    c.they = c.n ? (c.n === 1 ? c.pl : 'your friends') : '';
+    c.withYou = c.n ? ` with ${c.pl}` : '';
+    return c;
+  };
+
+  /* ---------- resolve ---------- */
+  X.pick = function (base, c) {
+    const cands = X.defs.filter((d) => d.on.includes(base) && (!d.w || safe(() => d.w(c))));
+    if (!cands.length) return null;
+    cands.sort((a, b) => b.p - a.p);
+    const top = cands.filter((d) => d.p === cands[0].p);
+    return top[Math.floor(Math.random() * top.length)];
+  };
+  const safe = (fn) => { try { return !!fn(); } catch (e) { return false; } };
+
+  const bShow = EN.show;
+  EN.show = function (key, title, sub, paras) {
+    const g = G(); if (!g || g.ended || X._inner) return bShow.apply(this, arguments);
+    try {
+      const c = X.ctx(key), d = X.pick(key, c);
+      if (d) { X._inner = true; try { return X.render(d, c); } finally { X._inner = false; } }
+    } catch (e) { console.warn('EndX', e); }
+    X.seen(key); return bShow.apply(this, arguments);
+  };
+  X.render = function (d, c) {
+    let paras = d.x(c); paras = paras.filter(Boolean);
+    X.seen(d.k);
+    return bShow.call(EN, d.k, typeof d.t === 'function' ? d.t(c) : d.t, typeof d.sub === 'function' ? d.sub(c) : d.sub, paras);
+  };
+  /* direct trigger from new systems */
+  X.trigger = function (base, extra) {
+    const g = G(); if (!g || g.ended) return;
+    const c = X.ctx(base, extra), d = X.pick(base, c);
+    if (d) { X._inner = true; try { return X.render(d, c); } finally { X._inner = false; } }
+    console.warn('EndX: no ending for', base); EN.found && EN.found('police');
+  };
+  const bFound = EN.found;
+  EN.found = function (reason) { const g = G(); if (g) g._foundReason = reason; return bFound.apply(this, arguments); };
+
+  /* ---------- tracker ---------- */
+  X.seenList = () => { try { return JSON.parse(localStorage.getItem(X.KEY) || '[]'); } catch (e) { return []; } };
+  X.seen = (k) => { const L = X.seenList(); if (!L.includes(k)) { L.push(k); try { localStorage.setItem(X.KEY, JSON.stringify(L)); } catch (e) {} } };
+  X.total = () => { const s = new Set(X.defs.map((d) => d.k)); ['harbor', 'grandma', 'patel', 'call911', 'foundSafe', 'foundHome', 'foundMom', 'foundMomKnows', 'walkHome', 'garage', 'garageTold', 'collapse', 'empty', 'dex', 'dexNo', 'trainSafe', 'listened', 'quiet', 'friendFamily', 'reachedOut'].forEach((k) => s.add(k)); return s.size; };
+  document.addEventListener('DOMContentLoaded', () => setTimeout(() => {
+    const card = document.querySelector('#start .card, #start, .startcard'); if (!card) return;
+    const foot = [...document.querySelectorAll('div')].find((d) => /endings/.test(d.textContent) && d.children.length === 0 && d.textContent.length < 220);
+    if (foot) foot.textContent = foot.textContent.replace(/\d+ endings/, `${X.total()} endings (you've found ${X.seenList().length})`);
+  }, 50));
+
+  /* helpers for ending text */
+  X.pick1 = (a) => a[Math.floor(Math.random() * a.length)];
 })(window.SH);
 
 </script>
