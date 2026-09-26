@@ -3,7 +3,7 @@ const { chromium } = require('playwright-core');
   const b = await chromium.launch({ executablePath: '/usr/bin/chromium', args: ['--no-sandbox'] });
   for (const mob of [false, true]) {
     const p = await b.newPage(mob ? { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true } : { viewport: { width: 1366, height: 768 } });
-    await p.goto('file:///home/user/smallhours/src/index.html'); await p.waitForTimeout(400); await p.click('#startBtn'); await p.waitForTimeout(500);
+    await p.goto('file:///home/user/runawayy-game/src/index.html'); await p.waitForTimeout(400); await p.click('#startBtn'); await p.waitForTimeout(500);
     await p.evaluate(() => { document.querySelector('#daycard') && document.querySelector('#daycard').remove(); const m = document.querySelector('#modal'); m.classList.add('hidden'); if (SH.Mobile && SH.Mobile.showPhone) SH.Mobile.showPhone(); });
     for (const app of ['atlas', 'net', 'messages', 'people']) {
       await p.evaluate((a) => SH.Phone.open(a), app); await p.waitForTimeout(200);

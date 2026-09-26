@@ -4,7 +4,7 @@ const { chromium } = require('playwright-core');
   const errs = [];
   for (const [nm, o] of [['DSK', { viewport: { width: 1366, height: 700 } }], ['MOB', { viewport: { width: 390, height: 700 }, isMobile: true, hasTouch: true }]]) {
     const p = await b.newPage(o); p.on('pageerror', (e) => errs.push(e.message));
-    await p.goto('file:///home/user/smallhours/src/index.html'); await p.waitForTimeout(400); await p.click('#startBtn'); await p.waitForTimeout(500);
+    await p.goto('file:///home/user/runawayy-game/src/index.html'); await p.waitForTimeout(400); await p.click('#startBtn'); await p.waitForTimeout(500);
     await p.evaluate(() => { document.querySelector('#daycard') && document.querySelector('#daycard').remove(); document.querySelector('#modal').classList.add('hidden'); if (SH.Mobile && SH.Mobile.showPhone) SH.Mobile.showPhone(); SH.Phone.open('home'); });
     await p.waitForTimeout(300);
     const info = await p.evaluate(() => { const pb = document.querySelector('#pbody'); return { h: pb.clientHeight, sh: pb.scrollHeight, apps: document.querySelectorAll('.homegrid .app').length }; });

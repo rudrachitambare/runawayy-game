@@ -3,7 +3,7 @@ const { chromium } = require('playwright-core');
   const b = await chromium.launch({ executablePath: '/usr/bin/chromium', args: ['--no-sandbox'] });
   const p = await b.newPage({ viewport: { width: 1366, height: 768 } });
   const errs = []; p.on('pageerror', (e) => errs.push(e.message + ' @ ' + (e.stack || '').split('\n')[1]));
-  await p.goto('file:///home/user/smallhours/SmallHours.html'); await p.waitForTimeout(400);
+  await p.goto('file:///home/user/runawayy-game/SmallHours.html'); await p.waitForTimeout(400);
   console.log('title fam:', await p.evaluate(() => document.querySelector('#famPrev') && document.querySelector('#famPrev').textContent));
   await p.click('#genSeg button[data-g="f"]'); await p.fill('#seedIn', 'feat7'); await p.waitForTimeout(100);
   console.log('preview:', await p.evaluate(() => document.querySelector('#famPrev').textContent));

@@ -56,14 +56,17 @@
     if (mode.startsWith('co_') && !ticket(mode.slice(3), SH.TRANSPORT[mode.slice(3)], from, to)) return;
     if (mode === 'escoot') { const bat = g.escootBat == null ? 100 : g.escootBat, need = mi / 0.18; if (need > bat) { g._escootDead = true; m.mins += Math.round((need - bat) * 0.18 * 20); } g.escootBat = Math.max(0, Math.round(bat - need)); }
     const ev = to.home ? null : incident(mode, from, to, mi);
-    if (mode === 'drive') { g.veh.fuel = Math.max(0, g.veh.fuel - mi * 0.9); if (!ev) { g.veh.at = to.id; SH.skill && ((g.skills = g.skills || {}).drive = Math.min(100, (g.skills.drive || 0) + 1)); } }
+    if (mode === 'drive') g.veh.fuel = Math.max(0, g.veh.fuel - mi * 0.9);
     if (ev && ['conductor', 'cheapDriver', 'crash', 'crashDitch', 'crashHurt', 'driveStop', 'outOfGas', 'scooterFall', 'escootDead', 'bikeLong', 'walkHighway', 'lostWoods', 'riverCold', 'storm', 'nightbus', 'dog', 'cheaprideCity', 'railCapital'].includes(ev)) {
       // half of these are survivable scares on a good day
       const soft = { nightbus: 0.6, dog: 0.7, storm: 0.5, scooterFall: 0.55, bikeLong: 0.3, walkHighway: 0.4, crash: 0.25 }[ev] || 0;
       if (chance(soft)) { scare(ev); }
       else { SH.advance(Math.round(m.mins / 2), { interrupt: false }); if (m.cost) SH.money(-m.cost); g._tripTo = to; return X().trigger(ev, { to, from, mi, mode }); }
     }
-    return bGo.apply(this, arguments);
+    // the car moves only once Sam actually got there (the base go re-checks modes, which need the car at the START)
+    const r = bGo.apply(this, arguments);
+    if (mode === 'drive' && g.veh && !g.ended && (g.away === to.id || (to.home && !g.away))) { g.veh.at = to.id; (g.skills = g.skills || {}).drive = Math.min(100, (g.skills.drive || 0) + 1); }
+    return r;
   };
   function scare(ev) {
     const t = { nightbus: 'A man two seats back keeps asking where you\'re headed. A woman in scrubs sits down next to you without a word and stays there until your stop.', dog: 'A big farm dog follows you for a mile, then decides you\'re fine.', storm: 'The storm hits halfway. You wait it out under a gas station awning, soaked to the bone.', scooterFall: 'The wheel catches a crack and you go down hard. Scraped palms, torn jeans. You get back on.', bikeLong: 'Your legs turn to jelly at mile fifteen. You walk the bike the rest of the way.', walkHighway: 'Trucks blast past so close the wind shoves you. You walk in the ditch the rest of the way.', crash: 'You scrape a mailbox. It\'s fine. The mailbox is not fine.' }[ev];

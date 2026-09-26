@@ -5,7 +5,7 @@ const { chromium } = require('playwright-core');
   const errs = []; p.on('pageerror', (e) => errs.push(e.message + ' @ ' + (e.stack || '').split('\n')[1]));
   const M = async () => (await p.evaluate(() => document.querySelector('#modal').innerText)).replace(/\n+/g, ' / ');
   const hide = () => p.evaluate(() => { document.querySelector('#daycard') && document.querySelector('#daycard').remove(); const m = document.querySelector('#modal'); m.classList.add('hidden'); m.innerHTML = ''; });
-  await p.goto('file:///home/user/smallhours/SmallHours.html'); await p.waitForTimeout(400);
+  await p.goto('file:///home/user/runawayy-game/SmallHours.html'); await p.waitForTimeout(400);
   await p.click('#genSeg button[data-g="m"]'); await p.fill('#seedIn', 'feat7'); await p.click('#startBtn'); await p.waitForTimeout(600);
   console.log('INTRO', (await M()).slice(0, 700)); await hide();
   console.log(await p.evaluate(() => { const D = SH.Atlas.data(), H = D.places[0]; return D.places.map((x) => x.name + ':' + x.tier + ':' + SH.Atlas.miles(H, x) + ':' + SH.Atlas.modes(H, x).map((m) => m.k).join('/')).slice(0, 8).join(' | '); }));

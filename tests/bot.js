@@ -5,7 +5,7 @@ const { chromium } = require('playwright-core');
   const o = mode === 'm' ? { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true } : { viewport: { width: 1366, height: 768 } };
   const p = await b.newPage(o);
   const errs = []; p.on('pageerror', (e) => errs.push(e.message + ' @ ' + (e.stack || '').split('\n').slice(1, 3).join(' '))); p.on('console', (m) => m.type() === 'error' && errs.push('c:' + m.text()));
-  await p.goto('file:///home/user/smallhours/src/index.html'); await p.waitForTimeout(300);
+  await p.goto('file:///home/user/runawayy-game/src/index.html'); await p.waitForTimeout(300);
   await p.fill('#seedIn', seed); await p.click('#startBtn'); await p.waitForTimeout(500);
   let r = (+seed || 7) * 9301 % 233280; const rnd = () => (r = (r * 9301 + 49297) % 233280) / 233280;
   const says = ['hi', 'im fine', 'whatever', 'can i stay over', 'i hate it at home', 'thanks', 'where is the bus', 'rick is drunk again', 'no', 'yeah ok', 'bye', 'what do you think i should do'];
@@ -34,7 +34,7 @@ const { chromium } = require('playwright-core');
     await p.waitForTimeout(60);
   }
   const fin = await p.evaluate(() => ({ day: SH.day(), loc: SH.G.loc, phase: SH.G.phase, t: SH.fmt12() }));
-  await p.screenshot({ path: `/home/user/smallhours/tests/shots/bot_${mode}_${seed}.png` });
+  await p.screenshot({ path: `/home/user/runawayy-game/tests/shots/bot_${mode}_${seed}.png` });
   console.log(mode, seed, 'steps', i, JSON.stringify(fin), 'ended', ended, JSON.stringify(counts), 'errors', errs.length, errs.slice(0, 4));
   await b.close();
 })();

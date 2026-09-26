@@ -11,11 +11,12 @@ The complete working memory of this project: what the player asked for (every tu
 ## 1. CURRENT STATE (read first)
 
 - **Part 1 DONE** (commit 149ab03).
+- **E2 DONE (turn 19):** transport network + a ~112-place Atlas + the drive-bug fix. See FULLGAME §6. Script order after endx_core: routes, routes_go, routes_web, routes_end, atlas_map.
 - **Part 2 PARTIAL** (commit c9ae4cf). Built: `endx_core.js` (ending engine), `travel2.js` (ride modes), `travel3.js` (tickets and road incidents), `junkyard.js` (vehicles), plus a `state.js` patch for long runs. All four files are linked in `index.html` after `jobs2.js` (order: travel2, travel3, junkyard, endx_core). `tests/p2.js` passes with 0 errors.
 - **Pushed to GitHub** at commit 33bfd9a (FULLGAME.md full info) and later this file.
 - **Known issues:**
-  1. The new trigger keys have no ending text yet, so `SH.EndX.trigger` falls back to `found('police')`.
-  2. In `tests/p2.js`, the drive trip couldn't be confirmed (the junkyard dialog was still showing), so drive-mode travel through `A.go` needs checking.
+  1. The travel3 trigger keys (crash, crashDitch, crashHurt, driveStop, outOfGas, dog, storm, lostWoods, riverCold, scooterFall, escootDead, bikeLong, walkHighway, van) still have no ending text yet, so `SH.EndX.trigger` falls back to `found('police')`.
+  2. (FIXED turn 19) In `tests/p2.js`, the drive trip couldn't be confirmed (the junkyard dialog was still showing), so drive-mode travel through `A.go` needs checking.
   3. `lessons.js` was deleted because it kept getting truncated; it needs rewriting in small pieces.
 
 ### Found in turn 17 (health check)
@@ -24,7 +25,7 @@ The complete working memory of this project: what the player asked for (every tu
 - Tests hardcode `/home/user/smallhours` and need `/home/user/runawayy-game`.
 
 ### Immediate next steps
-0. Fix the drive bug + test paths. Then **E2 transport network & bigger Averland** (FULLGAME.md §2 E2): ~110 places, a road/rail graph, 7 randomized companies (tempo traveller / minivan / shared car / bus / rare train × professional / unprofessional / sketchy-but-safe), real routes, stops, timetables, seats, transfers.
+0. ✅ DONE turn 19: drive bug, test paths, **E2 transport network & bigger Averland** (FULLGAME.md §2 E2): ~110 places, a road/rail graph, 7 randomized companies (tempo traveller / minivan / shared car / bus / rare train × professional / unprofessional / sketchy-but-safe), real routes, stops, timetables, seats, transfers.
 1. **lessons.js:**
    - A village farmer teaches driving on private land: +15 per lesson up to 100, in exchange for 2h of chores. You choose which learner (you or a party friend); friend skill goes in `G.lessons.fsk`.
    - "Ask to stay" leads to the farm never-found ending.
@@ -63,7 +64,8 @@ A deep, fun narrative life-sim for **16+** players. Vanilla JS / canvas (anythin
 15. Push; make FULLGAME.md contain every game info → done.
 16. Write this FULLMEMORY.md and upload it.
 17. New session: re-read the memory, read the repo, ran a health check (found the drive bug).
-18. Add to the md: 7 more randomized travel companies (tempo traveller, minivan, car, bus, train rarer), each professional / unprofessional / sketchy-but-safe, with times etc.; many more towns and villages in the Atlas; transport must actually go to specific cities (routes). → planned as E2, not built yet.
+18. Add to the md: 7 more randomized travel companies (tempo traveller, minivan, car, bus, train rarer), each professional / unprofessional / sketchy-but-safe, with times etc.; many more towns and villages in the Atlas; transport must actually go to specific cities (routes). → planned as E2.
+19. "go" + villages must NOT cluster around market towns; transport goes to different places; along with the county intercity train (Regional Rail) add an UNPROFESSIONAL train company; buses a bit more common and most stop along the way to their destination. → E2 built.
 
 ---
 
@@ -168,7 +170,11 @@ The ending is a years-later time skip showing adulthood with friends: happy, hea
 
 ## 7. TECHNICAL FACTS
 
-- Global `SH`; town "Harlow"; map 1000×650; country "Averland" (37 places).
+- Global `SH`; town "Harlow"; map 1000×650; country "Averland" (~112 places since E2; atlas map is 900×600 units, 0.35 mi/unit).
+- **E2 APIs:**
+  - `SH.Routes`: net() → {ops, routes, at[placeId] = [[route, idx]], P}; journeys(from, to, t, max); board(place, t); next(rt, i, t); price(rt, i, j); seats; delay; byKey; fmt; take(jr, dest); boardView(place).
+  - Route = {id, op, stops, cmi, off, deps}; ids look like `op:pA-pB:dir`. Journey mode keys are `rt:<routeId>/<i>/<j>/<dep>|…`.
+  - `A.arrive(to, {mins, cost, e}, extraLog)`; `A.svg(D, sel, W, H, {z, vb, hl})`; `A.cam`, `A.zoomBy`, `A.focus`. Places gained rail, halt, served and busStop; `D.lines`. The atlas is not in G (cached by seed).
 - **Harlow LOC ids:** home, patel, jordan, school, store, library, park, police, mall, hospital, diner, laundromat, underpass, bus, trainyard, harbor (hidden), station, birch.
 - **Beat days (remapped per seed):** d1 grade, d3 bully, d4 okafor1, d5 conference, d6 fight6, d7 grandmaCall, d9 bike, d12 moving, d15 juice, d16 bruiseSchool, d17 cps, d19 bigNight.
 - **Cast:** Sam; Mom Dana; Rick (randomized); Lily 7 (randomized); Grandma Rose (Cedar Falls, 41 Larkspur Lane); Jordan (mom Tanya); Ms. Okafor; Tyler (the "7" is his jersey number); Mrs. Patel (Newton the beagle); Officer Lowe; Maya; Ms. Ruiz; Wren; Dolores; dex_19; PIP. Birch St: Nia, Marco, Priya, Eli, Theo, Hazel. Harbor House, 212 Wharf St.
@@ -201,7 +207,7 @@ The ending is a years-later time skip showing adulthood with friends: happy, hea
 
 ## 8. ERRORS & DEAD ENDS (don't repeat these)
 
-- **Big writes get truncated / time out.** Keep each file ≤ 8KB (writes have been cut at ~1.5–5KB when the conversation is long). `node --check` after every write. To fix truncation: cut at a marker with python and close the IIFE. For big docs, append with bash heredocs in chunks.
+- (Turn 19: in this Arena environment, 17KB writes worked fine; the ≤8KB rule is a precaution, not law.) **Big writes get truncated / time out.** Keep each file ≤ 8KB (writes have been cut at ~1.5–5KB when the conversation is long). `node --check` after every write. To fix truncation: cut at a marker with python and close the IIFE. For big docs, append with bash heredocs in chunks.
 - Complex sed / inline python with nested quotes fails → write python to `/tmp/*.py` via a heredoc, using an asserting patch helper (a failed assert aborts all later replacements).
 - edit_file fails if the text has already changed → grep first.
 - Playwright's bundled chromium lacks libraries → use `/usr/bin/chromium`. If apt and the playwright CDN are blocked: `npm i @sparticuz/chromium@129` in /tmp, run its executablePath() (extracts /tmp/chromium), brotli-decompress bin/al2023.tar.br + swiftshader.tar.br into /tmp/al, and symlink /usr/bin/chromium to a wrapper that sets LD_LIBRARY_PATH=/tmp/al/lib:/tmp/al. After an environment reset run `bash tests/setup.sh` (reinstalls playwright-core).

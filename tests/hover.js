@@ -2,7 +2,7 @@ const { chromium } = require('playwright-core');
 (async () => {
   const b = await chromium.launch({ executablePath: '/usr/bin/chromium', args: ['--no-sandbox'] });
   const p = await b.newPage({ viewport: { width: 1366, height: 768 } });
-  await p.goto('file:///home/user/smallhours/SmallHours.html'); await p.waitForTimeout(300);
+  await p.goto('file:///home/user/runawayy-game/SmallHours.html'); await p.waitForTimeout(300);
   await p.fill('#seedIn', 'h'); await p.click('#startBtn'); await p.waitForTimeout(600);
   for (let i = 0; i < 4; i++) { await p.evaluate(() => { const d = document.querySelector('#daycard'); d && d.remove(); }); await p.click('#modal button', { timeout: 800 }).catch(() => {}); await p.waitForTimeout(300); }
   await p.evaluate(() => { const d = document.querySelector('#daycard'); d && d.remove(); });

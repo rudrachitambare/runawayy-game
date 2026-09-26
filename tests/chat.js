@@ -4,7 +4,7 @@ const { chromium } = require('playwright-core');
   const b = await chromium.launch({ executablePath: '/usr/bin/chromium', args: ['--no-sandbox'] });
   const p = await b.newPage({ viewport: { width: 1366, height: 768 } });
   const errs = []; p.on('pageerror', (e) => errs.push(e.message + ' @ ' + (e.stack || '').split('\n')[1]));
-  await p.goto('file:///home/user/smallhours/SmallHours.html'); await p.waitForTimeout(300);
+  await p.goto('file:///home/user/runawayy-game/SmallHours.html'); await p.waitForTimeout(300);
   await p.fill('#seedIn', 'chat'); await p.click('#startBtn'); await p.waitForTimeout(500);
   await p.evaluate(() => { document.querySelector('#daycard') && document.querySelector('#daycard').remove(); const m = document.querySelector('#modal'); m.classList.add('hidden'); m.innerHTML = ''; });
   async function talk(npc, lines) {

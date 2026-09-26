@@ -55,10 +55,13 @@
     const capital = add({ name: 'Port Aldine', tier: 'city', x: 820, y: 220, capital: true });
     // a few places within walking / biking / county-bus range of home, so running somewhere is possible
     [[17, 'village'], [23, 'village'], [48, 'small'], [100, 'town']].forEach(([d, tier], i) => { let x, y; for (let k = 0; k < 40; k++) { const a = r() * Math.PI * 2; x = harlow.x + Math.cos(a) * d; y = harlow.y + Math.sin(a) * d; if (places.every((p) => p === harlow || Math.hypot(p.x - x, p.y - y) > d * 0.7)) break; } add({ name: name(), tier, x, y }); });
-    const c2 = spot(160); add({ name: name(), tier: 'city', x: c2[0], y: c2[1] });
-    for (let i = 0; i < 6; i++) { const p = spot(90); add({ name: name(), tier: 'town', x: p[0], y: p[1] }); }
-    for (let i = 0; i < 11; i++) { const p = spot(60); add({ name: name(), tier: 'small', x: p[0], y: p[1] }); }
-    for (let i = 0; i < 16; i++) { const p = spot(38); add({ name: name(), tier: 'village', x: p[0], y: p[1] }); }
+    for (let i = 0; i < 4; i++) { const c = spot(150); add({ name: name(), tier: 'city', x: c[0], y: c[1] }); }
+    for (let i = 0; i < 14; i++) { const p = spot(72); add({ name: name(), tier: 'town', x: p[0], y: p[1] }); }
+    for (let i = 0; i < 29; i++) { const p = spot(44); add({ name: name(), tier: 'small', x: p[0], y: p[1] }); }
+    // villages: scattered evenly over the whole map (a jittered grid), NOT clustered around market towns
+    const vc = [], cols = 10, rows = 6; for (let gy = 0; gy < rows; gy++) for (let gx = 0; gx < cols; gx++) vc.push([gx, gy]);
+    vc.sort(() => r() - 0.5);
+    let vn = 0; for (const [gx, gy] of vc) { if (vn >= 58) break; for (let k = 0; k < 12; k++) { const x = 60 + (gx + r()) * 770 / cols, y = 40 + (gy + r()) * 530 / rows; if (places.every((q) => Math.hypot(q.x - x, q.y - y) > 22)) { add({ name: name(), tier: 'village', x, y }); vn++; break; } } }
     places.forEach((p) => {
       const T = A.TIERS[p.tier]; const [a, b] = T.pop;
       p.pop = p.home ? 41200 : p.grandma ? 6800 : Math.round(a + (b - a) * Math.pow(r(), 1.8));
@@ -66,7 +69,7 @@
       p.police = T.police(p.pop, r); p.hasPolice = !/^No police/.test(p.police);
       p.services = { hospital: p.tier === 'city' || p.tier === 'town' || (p.tier === 'small' && r() < 0.3), shelter: p.tier === 'city' || p.home, library: p.tier !== 'village' || r() < 0.3, wifi: [], grocery: p.tier !== 'village' || r() < 0.5, church: true, laundromat: p.tier !== 'village', gas: true };
       p.services.wifi = [p.services.library ? 'library' : null, p.tier !== 'village' ? 'diner' : r() < 0.5 ? 'gas station' : null, p.tier === 'city' ? 'coffee shops' : null].filter(Boolean);
-      p.station = p.tier === 'city' || p.home || p.grandma || (p.tier === 'town' && r() < 0.6);
+      p.station = p.tier === 'city' || p.home || p.grandma || (p.tier === 'town' && r() < 0.7) || (p.tier === 'small' && r() < 0.2);
       p.busStop = p.tier !== 'village' || r() < 0.4;
       p.kidjobs = p.tier === 'city' ? CITYJOBS : KIDJOBS[p.biome];
       p.jobs = p.tier === 'city' ? ['hospitals', 'warehouses', 'restaurants', 'offices', 'the port', 'delivery'] : p.econ.concat(p.tier === 'town' ? ['school district', 'big-box store'] : []);
@@ -77,14 +80,33 @@
       if (p.home) p.police = 'Harlow PD: 64 officers on Route 9. You\'ve met Officer Lowe.';
       if (p.grandma) p.police = 'Cedar Falls PD: 6 officers, and the chief went to school with Grandma.';
     });
-    // roads: connect each place to its 2 nearest, plus a highway through towns/cities
-    const roads = [];
-    places.forEach((p) => { places.filter((q) => q !== p).sort((a, b) => Math.hypot(a.x - p.x, a.y - p.y) - Math.hypot(b.x - p.x, b.y - p.y)).slice(0, p.tier === 'village' ? 1 : 2).forEach((q) => { const k = [p.id, q.id].sort().join('-'); if (!roads.some((r2) => r2.k === k)) roads.push({ k, a: p.id, b: q.id, hw: p.tier !== 'village' && q.tier !== 'village' }); }); });
-    const rail = [harlow.id, cedar.id, capital.id]; places.filter((p) => p.station && !rail.includes(p.id)).forEach((p) => rail.push(p.id));
-    return { seed, name: 'Averland', state: pick(r, ['North Averland', 'Averland']), places, roads, rail, coast, river, mountains, forests, lakes };
+    // roads: every place links to its nearest neighbours; a highway spanning tree joins towns & cities; then make it all connected
+    const roads = [], rk = new Set(), dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+    const road = (a, b, hw) => { const k = [a.id, b.id].sort().join('-'); const ex = roads.find((x) => x.k === k); if (ex) { if (hw) ex.hw = true; return; } rk.add(k); roads.push({ k, a: a.id, b: b.id, hw: !!hw, loc: a.tier === 'village' || b.tier === 'village' }); };
+    places.forEach((p) => places.filter((q) => q !== p).sort((a, b) => dist(a, p) - dist(b, p)).slice(0, { village: 2, small: 3, town: 3, city: 4 }[p.tier]).forEach((q) => { if (dist(p, q) < 170) road(p, q, false); }));
+    const big = places.filter((p) => p.tier === 'city' || p.tier === 'town'), inT = [big[0]];
+    while (inT.length < big.length) { let best = null; inT.forEach((a) => big.forEach((b) => { if (!inT.includes(b) && (!best || dist(a, b) < best[2])) best = [a, b, dist(a, b)]; })); road(best[0], best[1], true); inT.push(best[1]); }
+    const comp = () => { const c = {}, adj = {}; roads.forEach((x) => { (adj[x.a] = adj[x.a] || []).push(x.b); (adj[x.b] = adj[x.b] || []).push(x.a); }); let n = 0; places.forEach((p) => { if (c[p.id] != null) return; const st = [p.id]; c[p.id] = n; while (st.length) { const v = st.pop(); (adj[v] || []).forEach((w) => { if (c[w] == null) { c[w] = n; st.push(w); } }); } n++; }); return [c, n]; };
+    for (let it = 0; it < 30; it++) { const [c, n] = comp(); if (n <= 1) break; let best = null; places.forEach((a) => { if (c[a.id] !== 0) return; places.forEach((b) => { if (c[b.id] !== 0 && (!best || dist(a, b) < best[2])) best = [a, b, dist(a, b)]; }); }); road(best[0], best[1], false); }
+    // rail: 2-3 named lines between cities, through towns with stations. The Northline always runs Harlow - Cedar Falls - Port Aldine.
+    const cities = places.filter((p) => p.tier === 'city'), lines = [];
+    const lineThrough = (a, b, must, w) => { const dx = b.x - a.x, dy = b.y - a.y, L = Math.hypot(dx, dy) || 1; return places.filter((p) => p === a || p === b || must.includes(p) || (p.station && (() => { const t = ((p.x - a.x) * dx + (p.y - a.y) * dy) / (L * L); return t > 0.02 && t < 0.98 && Math.abs((p.x - a.x) * dy - (p.y - a.y) * dx) / L < w; })())).sort((p, q) => ((p.x - a.x) * dx + (p.y - a.y) * dy) - ((q.x - a.x) * dx + (q.y - a.y) * dy)).map((p) => p.id); };
+    const west = cities.filter((c) => c !== capital).sort((a, b) => a.x - b.x)[0] || cities[0];
+    lines.push({ id: 'L1', n: 'Northline', stops: lineThrough(west, capital, [harlow, cedar], 95) });
+    const rest = cities.filter((c) => c !== capital && c !== west); const pairs = [];
+    cities.forEach((a, i) => cities.slice(i + 1).forEach((b) => { if (!(a === west && b === capital) && !(b === west && a === capital)) pairs.push([a, b, dist(a, b)]); }));
+    pairs.sort((x, y) => y[2] - x[2]);
+    const LN = ['Southern Line', 'Lakeshore Line', 'Prairie Line', 'Valley Line'];
+    for (const [a, b] of pairs) { if (lines.length >= (r() < 0.6 ? 3 : 2)) break; if (lines.some((l) => l.stops.includes(a.id) && l.stops.includes(b.id))) continue; if (rest.length && !rest.includes(a) && !rest.includes(b)) continue; const st = lineThrough(a, b, [], 80), used2 = new Set(lines.flatMap((l) => l.stops)), shared = st.filter((id) => used2.has(id)).length; if (shared > Math.max(1, st.length * 0.4)) continue; lines.push({ id: 'L' + (lines.length + 1), n: LN.splice(Math.floor(r() * LN.length), 1)[0], stops: st }); }
+    const rail = []; lines.forEach((l) => l.stops.forEach((id) => { if (!rail.includes(id)) rail.push(id); }));
+    places.forEach((p) => { p.rail = rail.includes(p.id); p.station = p.rail; });
+    // tiny unstaffed halts: villages and small towns right beside a line (only slow local trains stop there)
+    places.forEach((p) => { if (p.rail) return; lines.forEach((l) => { for (let i = 1; i < l.stops.length; i++) { const a = places.find((q) => q.id === l.stops[i - 1]), b = places.find((q) => q.id === l.stops[i]); const dx = b.x - a.x, dy = b.y - a.y, L2 = dx * dx + dy * dy || 1, t = ((p.x - a.x) * dx + (p.y - a.y) * dy) / L2; if (t > 0.05 && t < 0.95 && Math.hypot(a.x + dx * t - p.x, a.y + dy * t - p.y) < 20 && (p.tier === 'village' || p.tier === 'small')) p.halt = l.id; } }); });
+    return { v: A.VER, seed, name: 'Averland', state: pick(r, ['North Averland', 'Averland']), places, roads, rail, lines, coast, river, mountains, forests, lakes };
   };
 
-  A.data = function () { const G = SH.G; if (!G) return null; if (!G.atlas || !G.atlas.places) G.atlas = A.generate((G.story && G.story.seed) || 1); return G.atlas; };
+  A.VER = 2; let cache = null;
+  A.data = function () { const G = SH.G; if (!G) return null; if (G.atlas) delete G.atlas; const seed = (G.story && G.story.seed) || 1; if (!cache || cache.seed !== seed) cache = A.generate(seed); return cache; };
   A.here = () => { const D = A.data(); return D.places.find((p) => p.id === (SH.G.away || 'p0')); };
   const MI = 0.35; // miles per map unit
   A.miles = (a, b) => Math.round(Math.hypot(a.x - b.x, a.y - b.y) * MI);
@@ -98,28 +120,30 @@
   };
 
   /* ---------- drawing ---------- */
-  A.svg = function (D, sel, W = 900, H = 600) {
+  A.svg = function (D, sel, W = 900, H = 600, o = {}) {
+    const z = o.z || 1, zs = Math.sqrt(z), vb = o.vb || [0, 0, W, H];
     const P = (id) => D.places.find((p) => p.id === id);
     const cur = A.here();
     const pl = (pts) => pts.map((p) => p.map((v) => v.toFixed(0)).join(',')).join(' ');
-    let s = `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" class="atlas-svg" style="width:100%;height:auto;display:block;background:#1c2a3a;border-radius:10px">`;
+    let s = `<svg viewBox="${vb.map((v) => v.toFixed(1)).join(' ')}" xmlns="http://www.w3.org/2000/svg" class="atlas-svg" style="width:100%;height:auto;display:block;background:#1c2a3a;border-radius:10px">`;
     s += `<polygon points="0,0 ${pl(D.coast)} 0,600" fill="#2f4a36"/>`;
     D.forests.forEach((f) => { s += `<circle cx="${f[0].toFixed(0)}" cy="${f[1].toFixed(0)}" r="${f[2].toFixed(0)}" fill="#264530" opacity=".85"/>`; });
     D.mountains.forEach((m) => { s += `<path d="M${(m[0] - 14).toFixed(0)} ${(m[1] + 10).toFixed(0)} L${m[0].toFixed(0)} ${(m[1] - 12).toFixed(0)} L${(m[0] + 14).toFixed(0)} ${(m[1] + 10).toFixed(0)}Z" fill="#5d6b5a" stroke="#839180" stroke-width="1"/>`; });
     D.lakes.forEach((l) => { s += `<ellipse cx="${l[0].toFixed(0)}" cy="${l[1].toFixed(0)}" rx="${(l[2] * 1.4).toFixed(0)}" ry="${l[2].toFixed(0)}" fill="#2d5a80"/>`; });
     s += `<polyline points="${pl(D.river)}" fill="none" stroke="#3a6f99" stroke-width="4" stroke-linecap="round"/>`;
-    D.roads.forEach((r) => { const a = P(r.a), b = P(r.b); s += `<line x1="${a.x.toFixed(0)}" y1="${a.y.toFixed(0)}" x2="${b.x.toFixed(0)}" y2="${b.y.toFixed(0)}" stroke="${r.hw ? '#c9b27a' : '#7f7a68'}" stroke-width="${r.hw ? 2.2 : 1.2}" opacity=".8"/>`; });
-    for (let i = 1; i < D.rail.length; i++) { const a = P(D.rail[i - 1]), b = P(D.rail[i]); s += `<line x1="${a.x.toFixed(0)}" y1="${a.y.toFixed(0)}" x2="${b.x.toFixed(0)}" y2="${b.y.toFixed(0)}" stroke="#d0d6e0" stroke-width="1.5" stroke-dasharray="5 4" opacity=".55"/>`; }
-    const R = { city: 9, town: 6.5, small: 4.5, village: 3 };
+    D.roads.forEach((r) => { const a = P(r.a), b = P(r.b); s += `<line x1="${a.x.toFixed(0)}" y1="${a.y.toFixed(0)}" x2="${b.x.toFixed(0)}" y2="${b.y.toFixed(0)}" stroke="${r.hw ? '#c9b27a' : '#7f7a68'}" stroke-width="${((r.hw ? 2.2 : 1.2) / zs).toFixed(2)}" opacity=".8"/>`; });
+    (D.lines || []).forEach((l) => { s += `<polyline points="${l.stops.map((id) => { const q = P(id); return q.x.toFixed(0) + ',' + q.y.toFixed(0); }).join(' ')}" fill="none" stroke="#d0d6e0" stroke-width="${(1.6 / zs).toFixed(2)}" stroke-dasharray="${5 / zs} ${4 / zs}" opacity=".6"/>`; });
+    if (o.hl) o.hl.forEach((h) => { s += `<polyline points="${h.ids.map((id) => { const q = P(id); return q.x.toFixed(0) + ',' + q.y.toFixed(0); }).join(' ')}" fill="none" stroke="${h.col}" stroke-width="${(4 / zs).toFixed(2)}" stroke-linejoin="round" stroke-linecap="round" opacity=".9"/>`; h.ids.forEach((id) => { const q = P(id); s += `<circle cx="${q.x.toFixed(0)}" cy="${q.y.toFixed(0)}" r="${(3.2 / zs).toFixed(2)}" fill="#fff" stroke="${h.col}" stroke-width="${(1.5 / zs).toFixed(2)}"/>`; }); });
+    const R0 = { city: 9, town: 6.5, small: 4.5, village: 3 }, R = {}; Object.keys(R0).forEach((k) => (R[k] = R0[k] / zs));
     D.places.forEach((p) => {
       const on = sel === p.id, isCur = cur && cur.id === p.id;
-      s += `<g class="apl" data-id="${p.id}" style="cursor:pointer"><circle cx="${p.x.toFixed(0)}" cy="${p.y.toFixed(0)}" r="${R[p.tier] + 9}" fill="transparent"/>`;
-      s += `<circle cx="${p.x.toFixed(0)}" cy="${p.y.toFixed(0)}" r="${R[p.tier]}" fill="${p.home ? '#ffd166' : p.grandma ? '#f4a2c0' : p.tier === 'city' ? '#ff8c69' : p.tier === 'town' ? '#f2e2b8' : '#d6d0c0'}" stroke="${on ? '#fff' : '#111'}" stroke-width="${on ? 3 : 1}"/>`;
-      if (isCur) s += `<circle cx="${p.x.toFixed(0)}" cy="${p.y.toFixed(0)}" r="${R[p.tier] + 6}" fill="none" stroke="#5ac8fa" stroke-width="2.5"><animate attributeName="r" values="${R[p.tier] + 4};${R[p.tier] + 10};${R[p.tier] + 4}" dur="2s" repeatCount="indefinite"/></circle>`;
-      if (p.tier !== 'village' || on) s += `<text x="${(p.x + R[p.tier] + 4).toFixed(0)}" y="${(p.y + 4).toFixed(0)}" font-size="${p.tier === 'city' ? 15 : p.tier === 'town' ? 12.5 : 10.5}" fill="#f4f1e8" font-family="system-ui" font-weight="${p.tier === 'city' || p.home ? 700 : 500}" paint-order="stroke" stroke="#0d1520" stroke-width="3">${esc(p.name)}</text>`;
+      s += `<g class="apl" data-id="${p.id}" style="cursor:pointer"><circle cx="${p.x.toFixed(0)}" cy="${p.y.toFixed(0)}" r="${R[p.tier] + 9 / zs}" fill="transparent"/>`;
+      s += `<circle cx="${p.x.toFixed(0)}" cy="${p.y.toFixed(0)}" r="${R[p.tier]}" fill="${p.home ? '#ffd166' : p.grandma ? '#f4a2c0' : p.tier === 'city' ? '#ff8c69' : p.tier === 'town' ? '#f2e2b8' : '#d6d0c0'}" stroke="${on ? '#fff' : '#111'}" stroke-width="${(on ? 3 : 1) / zs}"/>`;
+      if (isCur) s += `<circle cx="${p.x.toFixed(0)}" cy="${p.y.toFixed(0)}" r="${R[p.tier] + 6 / zs}" fill="none" stroke="#5ac8fa" stroke-width="${2.5 / zs}"><animate attributeName="r" values="${R[p.tier] + 4 / zs};${R[p.tier] + 10 / zs};${R[p.tier] + 4 / zs}" dur="2s" repeatCount="indefinite"/></circle>`;
+      if (on || p.tier === 'city' || p.tier === 'town' || p.home || p.grandma || (p.tier === 'small' && z >= 1.5) || z >= 2.4) s += `<text x="${(p.x + R[p.tier] + 4 / z).toFixed(1)}" y="${(p.y + 4).toFixed(0)}" font-size="${((p.tier === 'city' ? 15 : p.tier === 'town' ? 12.5 : 10.5) / z).toFixed(1)}" fill="#f4f1e8" font-family="system-ui" font-weight="${p.tier === 'city' || p.home ? 700 : 500}" paint-order="stroke" stroke="#0d1520" stroke-width="${3 / z}">${esc(p.name)}</text>`;
       s += '</g>';
     });
-    s += `<text x="14" y="${H - 14}" font-size="13" fill="#9fb0c4" font-family="system-ui">${esc(D.state)} · ${D.places.length} places · — rail · ▬ highway</text></svg>`;
+    s += `<text x="${vb[0] + 14 / z}" y="${vb[1] + vb[3] - 14 / z}" font-size="${13 / z}" fill="#9fb0c4" font-family="system-ui">${esc(D.state)} · ${D.places.length} places · - - rail · ▬ highway</text></svg>`;
     return s;
   };
 
@@ -137,7 +161,7 @@
       <div class="arow">📶 Free wifi: ${sv.wifi.length ? esc(sv.wifi.join(', ')) : 'none. Bring data.'} · ${p.station ? '🚆 Station' : ''} ${p.busStop ? '🚌 Bus stop' : 'No bus'}</div>
       <div class="arow">👥 ${p.people.map((x) => `<b>${esc(x.n)}</b> ${esc(x.role)} <i>(${esc(x.mood)})</i>`).join('; ')}</div>
       ${p.grandma ? `<div class="arow">💗 Grandma lives here.${SH.f('grandmaAddr') ? ' 41 Larkspur Lane.' : ' You don\'t know the exact address.'}</div>` : ''}
-      ${modes.length ? `<div class="sech" style="margin-top:8px">GETTING THERE</div>${modes.map((m) => m.blocked ? `<div class="arow muted">🚫 ${m.n}: ${esc(m.blocked)}</div>` : `<div class="arow">${m.k === 'walk' ? '🚶' : m.k === 'bike' ? '🚲' : '🚌'} ${m.n}: ${Math.floor(m.mins / 60)}h ${m.mins % 60}m${m.cost ? ' · $' + m.cost : ''} ${m.note ? '<i>' + esc(m.note) + '</i>' : ''} ${canGo ? `<button class="btn small" onclick="SH.Atlas.go('${p.id}','${m.k}')">Go</button>` : ''}</div>`).join('')}${G.phase !== 'run' ? '<div class="muted" style="font-size:11.5px">Just looking. (You haven\'t left home.)</div>' : ''}` : ''}</div>`;
+      ${modes.length ? `<div class="sech" style="margin-top:8px">GETTING THERE</div>${modes.map((m) => m.blocked ? `<div class="arow muted">🚫 ${m.n}: ${esc(m.blocked)}</div>` : `<div class="arow">${/^[\w ]/.test(m.n) ? (m.k === 'walk' ? '🚶' : m.k === 'bike' ? '🚲' : '🚌') + ' ' : ''}${m.n}: ${Math.floor(m.mins / 60)}h ${m.mins % 60}m${m.cost ? ' · $' + m.cost : ''} ${m.note ? '<i>' + esc(m.note) + '</i>' : ''} ${canGo ? `<button class="btn small" onclick="SH.Atlas.go('${p.id}','${m.k}')">Go</button>` : ''}</div>`).join('')}${G.phase !== 'run' ? '<div class="muted" style="font-size:11.5px">Just looking. (You haven\'t left home.)</div>' : ''}` : ''}</div>`;
   };
 
   /* ---------- phone app ---------- */
@@ -156,10 +180,16 @@
     const m = A.modes(from, to).find((x) => x.k === mode); if (!m || m.blocked) return;
     if (m.cost && G.money < m.cost) return SH.UI.toast('Not enough money.');
     if (to.home) { G.away = null; SH.money(-(m.cost || 0)); SH.advance(m.mins, { interrupt: false }); SH.st('energy', -m.e); G.loc = 'bus'; SH.UI.log(`Back in Harlow. It looks exactly the same, which feels rude.`, 'sys'); SH.UI.afterAction(); SH.Phone.render(); return; }
+    A.arrive(to, m);
+  };
+  A.arrive = function (to, m, extraLog) {
+    const G = SH.G, id = to.id;
+    if (to.home) { G.away = null; SH.money(-(m.cost || 0)); SH.advance(m.mins, { interrupt: false }); SH.st('energy', -m.e); if (G.ended) return; G.loc = 'bus'; SH.UI.log(`Back in Harlow. It looks exactly the same, which feels rude.`, 'sys'); if (extraLog) SH.UI.log(extraLog, 'sys'); SH.UI.afterAction(); SH.Phone.render(); return; }
     if (m.cost) SH.money(-m.cost);
     SH.st('energy', -m.e); SH.st('full', -Math.round(m.mins / 30));
     SH.advance(m.mins, { interrupt: false });
     if (G.ended) return;
+    if (extraLog) SH.UI.log(extraLog, 'sys');
     G.away = id; G.awayVisits = G.awayVisits || {}; G.awayVisits[id] = (G.awayVisits[id] || 0) + 1; G.awayNotice = 0;
     SH.UI.log(`You arrive in ${to.name}. ${to.tier === 'village' ? 'One street, a church, a grain elevator. A dog watches you like it\'s going to report you.' : to.tier === 'small' ? 'A main street with a diner, a hardware store, and a lot of people who know each other\'s trucks.' : to.tier === 'town' ? 'Bigger than Harlow. Nobody looks twice. Yet.' : 'Noise, traffic, a thousand strangers. Invisible feels good for about ten minutes.'}`, 'day');
     if (to.grandma) SH.UI.log(SH.f('grandmaAddr') ? 'Grandma\'s street is ten minutes from here. 41 Larkspur Lane.' : 'Grandma is somewhere in this town. You don\'t know the address.', 'sys');

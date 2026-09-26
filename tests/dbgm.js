@@ -2,7 +2,7 @@ const { chromium } = require('playwright-core');
 (async () => {
   const b = await chromium.launch({ executablePath: '/usr/bin/chromium', args: ['--no-sandbox'] });
   const p = await b.newPage(); const errs = []; p.on('pageerror', (e) => errs.push(e.message));
-  await p.goto('file:///home/user/smallhours/SmallHours.html'); await p.waitForTimeout(300);
+  await p.goto('file:///home/user/runawayy-game/SmallHours.html'); await p.waitForTimeout(300);
   await p.fill('#seedIn', 'chat'); await p.click('#startBtn'); await p.waitForTimeout(500);
   console.log(await p.evaluate(() => {
     const out = []; const c = { turn: 1 };

@@ -2,7 +2,7 @@ const { chromium } = require('playwright-core');
 (async () => {
   const b = await chromium.launch({ executablePath: '/usr/bin/chromium', args: ['--no-sandbox'] });
   const p = await b.newPage(); const errs = []; p.on('pageerror', (e) => errs.push(e.message));
-  await p.goto('file:///home/user/smallhours/src/index.html'); await p.waitForTimeout(500); await p.click('#startBtn'); await p.waitForTimeout(400);
+  await p.goto('file:///home/user/runawayy-game/src/index.html'); await p.waitForTimeout(500); await p.click('#startBtn'); await p.waitForTimeout(400);
   console.log(await p.evaluate(() => { const o = [], G = SH.G, A = SH.Atlas, D = A.data(), H = D.places[0]; document.querySelector('#modal').classList.add('hidden');
     G.owned = ['x_kick', 'x_escoot']; const far = D.places.find((x) => A.miles(H, x) > 30 && x.tier !== 'village');
     o.push('modes near: ' + A.modes(H, D.places[3]).map((m) => m.k).join(',')); o.push('modes far: ' + A.modes(H, far).map((m) => m.k + ':' + m.cost).join(','));

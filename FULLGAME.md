@@ -108,7 +108,7 @@ Vanilla JS + canvas (no React). Entertainment, **not** a guide for real runaways
 39. **Driving skill:** TubeYou theory + **a farmer teaching on private farmland in a village** (legal on private land) + go-kart tracks in bigger towns. Choose which friend in the group learns.
 40. Hitchhiking (dangerous; triggers safety events).
 
-### E2. Transport network & a bigger Averland (added turn 18: planned, not built)
+### E2. Transport network & a bigger Averland ✅ BUILT (turn 19): see §6 progress log for what shipped
 **Why:** right now companies "go anywhere" within their allowed town sizes. There are no real routes, stops or departure times, and only 37 places.
 
 **Bigger Atlas (seeded, same every replay of a seed):**
@@ -277,6 +277,11 @@ Open `src/index.html` to play. CSS: `style.css, style2.css, style3.css`. Tests l
 | `travel2.js` | 2 KB | Part 2a: getting around Averland. Rides: walk, kick scooter, e-scooter (battery!), bike, your own vehicle (fuel + driving skill). Tickets: County Transit (anyone), CheapR |
 | `travel3.js` | 5 KB | Part 2b: the trip itself — tickets, battery, fuel, and things that happen on the road. |
 | `junkyard.js` | 7 KB | Part 2c: junkyards (every town; size varies) and vehicles you can buy for cash, fix, fuel, sleep in, and (badly, then less badly) drive. No theft: the owner sells "as-is, |
+| `routes.js` | 17 KB | E2a: operators (famous 4 + 7 randomized), route + timetable generator, journeys (direct / 1 change), departures, seats, delays. `SH.Routes` |
+| `routes_go.js` | 13 KB | E2b: Atlas journey modes (`rt:` keys), riding (wait, age check, seats, delays, transfers, incidents), departures board |
+| `routes_web.js` | 4 KB | E2d: a website per operator + AverRides hub |
+| `routes_end.js` | 8 KB | E2c: endings for transport incidents |
+| `atlas_map.js` | 5 KB | E2e: Atlas phone view with zoom / pan / pinch / search / route highlight |
 | `endx_core.js` | 5 KB | ending engine. Sits in front of SH.Endings.show: whenever the story reaches an ending, the engine builds a context (who's with you, where, weather, vehicle, money, days g |
 | `okafor.js` | 18 KB | Ms. Okafor v2: an actual counselor. She tracks what you've told her (this visit AND past visits), reflects your specifics back, asks the NEXT question instead of the same |
 | `lex.js` | 18 KB | lexicon v3. A deeper parse of whatever the player types: - ~350 more slang / shorthand / misspelling mappings and multi-word phrase rewrites - more ways to say every feel |
@@ -314,6 +319,29 @@ US: National Runaway Safeline 1-800-786-2929 · 988 · UK: 116 000 · Childline 
   - Ticket strictness per company; road incidents (some are just scares, some end the run)
   - Junkyards everywhere: buy car / tempo / minivan / camper for cash, install parts, work on it, fuel it, sleep in it
   - Ending engine (context-aware ending picker + endings-found counter on title screen)
+- **E2 DONE** (turn 19):
+  - **Averland is ~112 places:** 5 cities, 16 towns, 31 small towns, 60 villages. Villages are scattered evenly over the map on a jittered grid, **not clustered around market towns**.
+  - **Road graph:** nearest-neighbour roads, a highway spanning tree through towns and cities, and forced connectivity. Road miles are winding (highway ×1.05, county ×1.15, village roads ×1.3).
+  - **2–3 named rail lines.** The Northline always runs Harlow – Cedar Falls – Port Aldine. Little unstaffed **halts** sit beside the lines, and only the slow train stops there.
+  - The atlas is **no longer stored in the save**. It's regenerated from the seed and cached (saves are smaller).
+  - **11 operators per story:**
+    - **The famous 4:** Averline (pro express coach), CheapRide (unprofessional bus), Averland Regional Rail (the pro county intercity train), County Transit (local buses).
+    - **7 randomized:** an **unprofessional train company** (always one), 3 bus companies, a tempo traveller service, a minivan shuttle and a shared-car pool. Names, colours and slogans come from pools.
+    - Styles are pro / unprofessional / sketchy-but-safe, with at least one of each. The crew is never the danger.
+  - **Real routes (~330 incl. reverse):**
+    - Each has stops along the road (or rail) path, a daily timetable (per type: count, window, speed, dwell), delays and breakdowns by style, and a price by distance × style.
+    - **Buses stop along the way** (towns and small towns, some villages as flag stops). Express coaches only stop at towns and cities. Tempos stop everywhere, villages included. Shared cars go direct. Some sketchy buses and old trains have night runs.
+  - **Journeys:** direct or one change (no backtracking), shown in the Atlas as "Leaves 9:12 · arrives 10:40 · 4 stops · change at X". About 10 remote villages have no service at all (walk, bike or drive).
+  - **Riding:**
+    - A wait prompt (with ⚠️ for night runs) and age checks by style: pro refuses and may call someone; unprofessional lets you try a cover story; sketchy never asks.
+    - Seats per departure. A group that doesn't fit waits for the next one together (no splits); sketchy drivers squeeze you in.
+    - Delays, breakdowns, missed connections (you're stranded at the hub), flavour text per vehicle, and incidents → endings.
+  - **Departures board** in every served town hub, plus Harlow's bus and train stations during the run. Pick a departure, then pick any stop further down the line.
+  - **Company websites** (the famous 4 now show real timetables) + **AverRides** (rides.av) listing every operator.
+  - **Atlas map:** zoom (buttons, wheel, pinch), drag to pan, search, labels that appear as you zoom, and the best ride drawn in the company's colour.
+  - **New endings:** conductor (group + solo), oldTrain, kindDriver, posterDriver, busAgent, nightbus, tempoBreak, railCapital, cheapDriver/cheaprideCity.
+  - **Drive bug fixed** (the car and Sam now always arrive together).
+  - Test `tests/e2.js`. Tests now use the `/home/user/runawayy-game` path.
 - **Part 2 TODO:** driving lessons (farmer + go-kart), physical shops, ~100 new endings + never-found endings, ending text for all new trigger keys (they fall back to "found by police" for now)
 
 ---
