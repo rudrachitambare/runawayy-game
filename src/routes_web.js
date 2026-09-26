@@ -25,7 +25,7 @@
   const install = () => {
     const N = R.net(); if (!N) return false;
     N.ops.forEach((o, i) => {
-      const key = o.id + '.av';
+      const key = o.id + '.av'; if (B.SITES[key] && B.SITES[key]._book) return; // rides_web2.js owns the page now
       B.SITES[key] = Object.assign(B.SITES[key] || {}, { n: o.n.split(' ')[0], icon: o.icon, col: o.col, mb: 1, tile: !!o.famous, order: 10 + i, render: () => page(o) });
     });
     return true;

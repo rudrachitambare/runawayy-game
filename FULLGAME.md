@@ -489,3 +489,9 @@ Tests: `tests/parts.js` (runs `tests/part2.js`…`part7.js`, fresh page each).
 | `groupchat.js` | Group chats with memory: the class chat (topics, beef/apologies, "what did X say", "catch me up", next-day callbacks; while you're missing, posting your location raises heat) and the friends' chat "the squad" (each friend replies in their own voice, says what they're really up to, hears what you share) |
 | `talkfix.js` | Friend conversation threads: running away (where → how bad → their decision, decided once and remembered → when), low mood ("what happened?"), plans ("wanna draw later?"), promises; negated feelings and "or nah / tell quick" understood; friends' questions always end in "?" |
 | `talkfix2.js` | Consequences: a friend who's in texts you that evening, one who helps offers their place, a scared friend without a promise tells their parent the next day (mom gets a call, or heat +8 if you've left); greetings remember the thread; PIP ◉ options follow the thread, rotate on every press, never repeat what you already said |
+
+## REQUESTS #27–28 BUILT: fullscreen maps, real booking and boarding, rebuilt websites
+- **Book** on AverRides (rides.av) or any company site. You get a ticket code, the boarding point (for example "Bay 2 · Harlow bus depot" or "Platform 1 · Harlow Station"), a "be there by" time, and changes. Pay by card (mom sees it) or reserve and pay cash on board.
+- **Board**: go to that spot and tap 🎫 Board (town menu when away; the depot or station in Harlow). From home that's the moment you run away, possible only within 90 minutes of departure. Miss it and the ticket's gone.
+- **AverMaps** is a real maps site: explore, place pages, directions, and nearby filters. The ⛶ button makes any map fullscreen.
+- Browser home page, Seekr instant answers, TubeYou, and PIP ticket help. See FULLMEMORY #27/#28 for the APIs.

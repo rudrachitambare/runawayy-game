@@ -48,7 +48,7 @@
     const strand = (msg) => A.arrive(from, { mins: 0, cost: 0, e: 0 }, msg);
     // boarding: age check depends on the company's style
     const heat = (g.heat || 0) / 100, look = g.flags && g.flags.disguise ? 0.15 : 0;
-    const s = Math.max(0, o.strict + heat * 0.3 - look - (grp() - 1) * 0.05);
+    const s = Math.max(0, o.strict + heat * 0.3 - look - (grp() - 1) * 0.05 - (jr.prepaid ? 0.08 : 0)); // a booked ticket gets waved through a bit more
     if (chance(s)) {
       if (o.style === 'pro') {
         if (g.reported && chance(0.5)) return SH.Endings.found(o.T.rail ? 'agent' : 'bus');
@@ -70,7 +70,11 @@
         return D(o.n, msg + ` Next one: ${fmt(nx)}${day(nx)}.`, [{ t: 'Wait for the next one', fn: () => R.take(retime(jr, li, nx), dest, li) }, { t: 'Forget it', fn: () => (li ? strand() : back()) }]);
       }
       if (free < grp()) SH.UI.log(`It's already full. The driver waves you in anyway: "Squeeze. Three to a seat, kids on laps, it's fine." It is not fine. It's warm, though.`, 'sys');
-      const fare = R.price(rt, L.i, L.j) * grp(); SH.money(-fare); (g.tx = g.tx || []).push({ t: g.t, d: `${o.n}: ${from.name} → ${to.name}`, a: -fare });
+      const fare = R.price(rt, L.i, L.j) * grp();
+      if (!jr.prepaid) { // paid online already? then no money changes hands at the door
+        if (g.money < fare) return D(o.n, `The driver holds out a hand. $${fare}${grp() > 1 ? ' for all of you' : ''}. You have $${Math.floor(g.money)}. "Then you're not riding."`, [{ t: 'Okay', fn: () => (li ? strand() : back()) }]);
+        SH.money(-fare); (g.tx = g.tx || []).push({ t: g.t, d: `${o.n}: ${from.name} → ${to.name}`, a: -fare });
+      } else if (!li) SH.UI.log(`The ${o.T.rail ? 'conductor' : 'driver'} scans the code on your phone. Beep. Ticket ${jr.tk || ''} is good.`, 'sys');
       g.lastRide = 'rt_' + o.type; g.rides = (g.rides || 0) + 1;
       const late = R.delay(rt, L.dep), ride = L.arr - L.dep + late;
       flavor(o, from, to, late);

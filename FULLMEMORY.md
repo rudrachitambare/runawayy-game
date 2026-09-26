@@ -300,3 +300,31 @@ Next ideas (not started, need "go"): two-change trip planning; balance pass on m
 - Consequences (talkfix2): daily, if `mayTell` is due, the friend's parent calls mom (or heat +8 when you've left) and the friend apologizes (`f.told`). At 7 PM on `rt.when` the friend texts "still on for tonight?". `Mem.greeting` for friends: "are u mad at me?", "are we still doing it?", "u still thinking about the X thing?".
 - converse `followUp`: feelings get sympathy (`SH.CONV_LOW`); "go on" only for story-like input; topic questions only stand alone when the talk has stalled; on repeats, no random topic swap.
 - PIP ◉: friend-specific pools per thread state (where / how bad / when / tell / decide / are-u-ok / general, using their hobby). Each tone rotates through a history (`_sugH`) so every press changes, and anything you've already said (talk log or text thread) is excluded.
+
+## Request #27: fullscreen maps (`src/mapfull.js`, tests/mapshot.js)
+- ⛶ button on the Atlas and AverMaps: landscape on desktop, full-screen portrait on mobile. Esc, the backdrop, or leaving the map exits. Tapping places keeps you in fullscreen.
+- Gotcha: on mobile `#right` is `position:fixed`, which creates its own stacking layer. In mapfull, lift `#right` (z 95), hide `#mfBg`, and hide `#top` and `#tabbar`.
+
+## Request #28: "make all the websites 10x better, actually usable. where do u actually book / board?"
+- `web_ui.js`: shared site kit (header, tabs, rows, inputs with a place datalist, pills, flash banner).
+- `tickets.js`: **real tickets** (`G.tickets`). `SH.Tickets.book(key, destId, {pay:'card'|'cash', age})` returns a code, boarding point (bay or platform plus the depot or station), and changes.
+  - Card: PocketPal charge (mom sees it, heat). Cash: reserve now, pay the driver when you board.
+  - Strict pro companies refuse under-15 bookings. Lying about your age works online, but the door check still happens.
+  - Cash-only companies refuse card payments.
+  - States: booked / used / missed / cancelled. Card cancel refunds 90% (pro) or 50% (other companies).
+- **Where you board:**
+  - Away from home, the 🎫 Board option is in the town menu.
+  - In Harlow, it's in the Actions list at the bus depot (`loc 'bus'`) or train station (`loc 'station'`) on the ticket.
+  - From home, boarding asks "This is it", then runs `Run.start('ticket')`. It is only allowed within 90 minutes of departure; otherwise a toast says when to come back.
+  - Then you wait and `R.take(jr)` runs as usual (conductor checks etc.). Prepaid card legs skip the fare.
+- `rides_web.js` / `rides_web2.js`: **AverRides (rides.av)** is the central booking site.
+  - Pages: Plan (from/to/when), results, trip page (legs, stops, rules, passengers, payment, Book), My trips, Departures, Companies.
+  - Operator `.av` sites now show Book rows.
+- `avermaps_web.js`: **AverMaps**.
+  - Pan, zoom and pinch; tap a dot to open the place page (rides there and from there, motels, services, signal, police, how much people notice newcomers).
+  - Directions page with bookable rides; Nearby filters (motel, wifi, shelter, hospital, no police, quiet, train, rides).
+- `web_more.js`: browser home (grouped app tiles, next ticket, recent pages).
+  - Seekr instant answers ("bus to X", place names).
+  - TubeYou how-to videos; StayFinder booking note ("walk in at the desk").
+  - PIP answers "where do I board / my ticket".
+- Tests: `tests/part14.js` (booking, boarding from home, a full ride to Cedar Falls, card, age rule, cash-only, missed, cancel, AverMaps, Seekr, company sites, PIP).

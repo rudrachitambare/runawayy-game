@@ -785,6 +785,68 @@ body.v3 #left .need .trk{display:none}
 #pbody input:focus,#pbody textarea:focus{border-color:#7ab8ff88}
 #pbody .seg button.on{background:#ffffff1f}
 
+/* ---------- fullscreen maps (mapfull.js): landscape on desktop, portrait on mobile ---------- */
+.mfbtn{background:#ffffff14;border:1px solid #ffffff26;color:#e6eaf2;border-radius:8px;padding:2px 8px;font-size:14px;line-height:20px;cursor:pointer;flex:none}
+.mfbtn:hover{background:#ffffff26}
+#mfBg{display:none}
+body.mapfull #mfBg{display:block;position:fixed;inset:0;background:rgba(3,5,9,.82);backdrop-filter:blur(3px);z-index:90}
+body.mapfull #phone{position:fixed!important;z-index:91;margin:0!important}
+body.mapfull #pbody .appbody{display:flex;flex-direction:column;overflow:hidden}
+body.mapfull #pbody .maplay{flex:1;min-height:0;overflow:hidden}
+body.mapfull #pbody .mapc{display:flex;flex-direction:column;min-height:0}
+body.mapfull #pbody .mapc>svg,body.mapfull #pbody .mapc>.mapsvg{flex:1;min-height:0}
+body.mapfull #pbody .mapc svg{height:100%!important;width:100%!important}
+body.mapfull #pbody .mapside{overflow-y:auto;min-height:0;scrollbar-width:none}
+body.mapfull #pbody .mapside::-webkit-scrollbar{display:none}
+@media (min-width:761px){
+  body.mapfull #phone{left:50%;top:50%;transform:translate(-50%,-50%)!important;width:min(94vw,1180px)!important;height:min(86vh,660px)!important;max-height:none!important}
+  body.mfanim #phone{animation:mfRot .45s cubic-bezier(.2,.8,.2,1)}
+  body.mapfull #notch{top:50%;left:8px;transform:translateY(-50%);width:24px;height:92px}
+  body.mapfull #sbar{height:30px;padding:0 22px 4px 46px}
+  body.mapfull #pbody .maplay{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:12px;padding:8px 12px 12px 40px}
+}
+@keyframes mfRot{from{transform:translate(-50%,-50%) rotate(-90deg) scale(.5);opacity:.3}to{transform:translate(-50%,-50%) rotate(0) scale(1);opacity:1}}
+@media (max-width:760px){
+  body.mapfull #phone{left:0!important;top:0!important;right:0;bottom:0;transform:none!important;width:100%!important;height:100dvh!important;max-height:none!important;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)!important;background:#050608!important}
+  body.mapfull #screen{border-radius:0}
+  body.mapfull #mfBg{display:none}
+  body.mapfull #right{z-index:95!important}
+  body.mapfull #top,body.mapfull #tabbar{visibility:hidden}
+  body.mapfull #pbody .maplay{display:flex;flex-direction:column;gap:8px}
+  body.mapfull #pbody .mapc{flex:0 0 56%}
+  body.mapfull #pbody .mapside{flex:1}
+}
+
+/* ---------- web kit (web_ui.js): usable sites ---------- */
+.wsh{display:flex;align-items:center;gap:10px;margin:-8px -10px 8px;padding:11px 12px;color:#fff}
+.wsh .wsi{font-size:22px;width:34px;height:34px;display:flex;align-items:center;justify-content:center;background:#0003;border-radius:9px;flex:none}
+.wsh b{display:block;font-size:15px;letter-spacing:-.2px}.wsh small{display:block;font-size:11px;opacity:.85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wtabs{display:flex;gap:4px;margin:0 0 8px;overflow-x:auto;scrollbar-width:none}.wtabs::-webkit-scrollbar{display:none}
+.wtabs a{flex:none;padding:5px 10px;border-radius:14px;background:#ffffff10;color:#cfd6e4;text-decoration:none;font-size:11.5px;font-weight:600}
+.wtabs a.on{background:#fff;color:#111}
+.wrow{display:flex;align-items:center;gap:9px;padding:8px 9px;margin:5px 0;background:#ffffff0b;border:1px solid #ffffff12;border-radius:10px}
+.wrow.tap{cursor:pointer}.wrow.tap:hover{background:#ffffff16}
+.wri{font-size:18px;flex:none;width:24px;text-align:center}.wrm{flex:1;min-width:0}.wrt{font-size:12.5px;font-weight:600;line-height:1.3}
+.wrs{font-size:11px;color:#9aa4b8;line-height:1.35;margin-top:1px}.wrr{flex:none;text-align:right;font-size:12px;font-weight:700}.wra{color:#6b7488;font-size:18px;flex:none}
+.winp{width:100%;box-sizing:border-box;padding:8px 10px;border-radius:9px;border:1px solid #ffffff26;background:#0009;color:inherit;font-size:12.5px}
+.wform{display:grid;gap:6px;margin:6px 0}.wform label{font-size:10.5px;color:#9aa4b8;font-weight:700;letter-spacing:.4px;text-transform:uppercase}
+.wform .two{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.wbtn{width:100%;padding:9px;border-radius:10px;border:none;background:#2d6cdf;color:#fff;font-weight:700;font-size:13px;cursor:pointer}.wbtn:hover{filter:brightness(1.1)}
+.wbtn.alt{background:#ffffff18}.wbtn.ok{background:#1f9d55}.wbtn.bad{background:#b33a3a}
+.wnote{padding:8px 10px;border-radius:9px;margin:6px 0;font-size:11.5px;line-height:1.4;border:1px solid}
+.wnote.info{background:#2d6cdf1f;border-color:#2d6cdf55}.wnote.good{background:#1f9d5522;border-color:#1f9d5566}
+.wnote.warn{background:#f2c14e1c;border-color:#f2c14e66}.wnote.bad{background:#ff6b6b1c;border-color:#ff6b6b66}
+.wpill{display:inline-block;padding:1px 7px;border-radius:9px;font-size:10px;font-weight:700;border:1px solid #ffffff30;background:#ffffff14;margin-right:3px;white-space:nowrap}
+.wsec{font-size:10.5px;font-weight:800;letter-spacing:.6px;color:#8a93a6;margin:12px 0 4px;text-transform:uppercase}
+.wtl{border-left:2px solid #ffffff30;margin:6px 0 6px 8px;padding-left:12px}.wtl>div{position:relative;margin:0 0 9px;font-size:12px}
+.wtl>div:before{content:'';position:absolute;left:-17px;top:4px;width:8px;height:8px;border-radius:50%;background:var(--c,#7ab8ff)}
+.wtk{background:linear-gradient(135deg,#1c2436,#141a26);border:1px dashed #ffffff40;border-radius:12px;padding:10px;margin:7px 0}
+.wtk .code{font:700 15px ui-monospace,monospace;letter-spacing:2px}
+.wtiles{display:grid;grid-template-columns:repeat(4,1fr);gap:8px 4px;text-align:center}
+.wtile{color:inherit;text-decoration:none;font-size:10.5px;line-height:1.2}
+.wtile span{width:42px;height:42px;margin:0 auto 3px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;box-shadow:0 2px 6px #0006}
+body.mapfull #pbody .wtabs{margin-bottom:0}
+
 </style>
 </head>
 <body>
@@ -8548,7 +8610,7 @@ window.SH = window.SH || {};
     const strand = (msg) => A.arrive(from, { mins: 0, cost: 0, e: 0 }, msg);
     // boarding: age check depends on the company's style
     const heat = (g.heat || 0) / 100, look = g.flags && g.flags.disguise ? 0.15 : 0;
-    const s = Math.max(0, o.strict + heat * 0.3 - look - (grp() - 1) * 0.05);
+    const s = Math.max(0, o.strict + heat * 0.3 - look - (grp() - 1) * 0.05 - (jr.prepaid ? 0.08 : 0)); // a booked ticket gets waved through a bit more
     if (chance(s)) {
       if (o.style === 'pro') {
         if (g.reported && chance(0.5)) return SH.Endings.found(o.T.rail ? 'agent' : 'bus');
@@ -8570,7 +8632,11 @@ window.SH = window.SH || {};
         return D(o.n, msg + ` Next one: ${fmt(nx)}${day(nx)}.`, [{ t: 'Wait for the next one', fn: () => R.take(retime(jr, li, nx), dest, li) }, { t: 'Forget it', fn: () => (li ? strand() : back()) }]);
       }
       if (free < grp()) SH.UI.log(`It's already full. The driver waves you in anyway: "Squeeze. Three to a seat, kids on laps, it's fine." It is not fine. It's warm, though.`, 'sys');
-      const fare = R.price(rt, L.i, L.j) * grp(); SH.money(-fare); (g.tx = g.tx || []).push({ t: g.t, d: `${o.n}: ${from.name} → ${to.name}`, a: -fare });
+      const fare = R.price(rt, L.i, L.j) * grp();
+      if (!jr.prepaid) { // paid online already? then no money changes hands at the door
+        if (g.money < fare) return D(o.n, `The driver holds out a hand. $${fare}${grp() > 1 ? ' for all of you' : ''}. You have $${Math.floor(g.money)}. "Then you're not riding."`, [{ t: 'Okay', fn: () => (li ? strand() : back()) }]);
+        SH.money(-fare); (g.tx = g.tx || []).push({ t: g.t, d: `${o.n}: ${from.name} → ${to.name}`, a: -fare });
+      } else if (!li) SH.UI.log(`The ${o.T.rail ? 'conductor' : 'driver'} scans the code on your phone. Beep. Ticket ${jr.tk || ''} is good.`, 'sys');
       g.lastRide = 'rt_' + o.type; g.rides = (g.rides || 0) + 1;
       const late = R.delay(rt, L.dep), ride = L.arr - L.dep + late;
       flavor(o, from, to, late);
@@ -8665,7 +8731,7 @@ window.SH = window.SH || {};
   const install = () => {
     const N = R.net(); if (!N) return false;
     N.ops.forEach((o, i) => {
-      const key = o.id + '.av';
+      const key = o.id + '.av'; if (B.SITES[key] && B.SITES[key]._book) return; // rides_web2.js owns the page now
       B.SITES[key] = Object.assign(B.SITES[key] || {}, { n: o.n.split(' ')[0], icon: o.icon, col: o.col, mb: 1, tile: !!o.famous, order: 10 + i, render: () => page(o) });
     });
     return true;
@@ -8771,13 +8837,13 @@ window.SH = window.SH || {};
     const D = A.data(), sel = (A.sel && D.places.find((p) => p.id === A.sel)) || A.here();
     const hits = q.length > 1 ? D.places.filter((p) => p.name.toLowerCase().includes(q.toLowerCase())).slice(0, 6) : [];
     const cnt = {}; D.places.forEach((p) => (cnt[p.tier] = (cnt[p.tier] || 0) + 1));
-    body.innerHTML = P.hdr('🧭 Atlas') + `<div class="appbody">
+    body.innerHTML = P.hdr('🧭 Atlas', SH.MapFull ? SH.MapFull.btn() : '') + `<div class="appbody maplay"><div class="mapc">
       <div style="display:flex;gap:5px;margin-bottom:6px"><input id="atq" value="${esc(q)}" placeholder="Find a place… (${D.places.length})" style="flex:1;min-width:0;padding:6px 10px;border-radius:14px;border:1px solid #ffffff22;background:#0008;color:inherit;font-size:12px">
         <button class="btn small" id="atm">−</button><button class="btn small" id="atp">+</button><button class="btn small" id="ath" title="Where am I">⌖</button></div>
       ${hits.length ? `<div style="margin:-2px 0 6px">${hits.map((p) => `<button class="btn small athit" data-id="${p.id}" style="margin:2px">${esc(p.name)} <small class="muted">${p.tier === 'small' ? 'small town' : p.tier}</small></button>`).join('')}</div>` : ''}
-      <div id="atmap" style="touch-action:none;border-radius:10px;overflow:hidden;position:relative">${A.svg(D, sel.id, W, H, { z: A.cam.z, vb: vb(), hl: highlight(D, sel) })}</div>
-      <div class="muted" style="font-size:10.5px;margin:4px 0 2px">${cnt.city} cities · ${cnt.town} towns · ${cnt.small} small towns · ${cnt.village} villages · drag to pan, pinch or scroll to zoom</div>
-      ${A.card(sel)}</div>`;
+      <div id="atmap" class="mapsvg" style="touch-action:none;border-radius:10px;overflow:hidden;position:relative">${A.svg(D, sel.id, W, H, { z: A.cam.z, vb: vb(), hl: highlight(D, sel) })}</div>
+      <div class="muted" style="font-size:10.5px;margin:4px 0 2px">${cnt.city} cities · ${cnt.town} towns · ${cnt.small} small towns · ${cnt.village} villages · drag to pan, pinch or scroll to zoom</div></div>
+      <div class="mapside">${A.card(sel)}</div></div>`;
     const re = () => P.render();
     body.querySelector('#atp').onclick = () => { A.zoomBy(1.6); re(); };
     body.querySelector('#atm').onclick = () => { A.zoomBy(1 / 1.6); re(); };
@@ -8790,7 +8856,7 @@ window.SH = window.SH || {};
     box.addEventListener('pointerdown', (e) => { pts.set(e.pointerId, [e.clientX, e.clientY]); drag = { x: e.clientX, y: e.clientY, cx: A.cam.cx, cy: A.cam.cy, z: A.cam.z, d: null }; moved = false; });
     box.addEventListener('pointermove', (e) => {
       if (!drag || !pts.has(e.pointerId)) return; pts.set(e.pointerId, [e.clientX, e.clientY]);
-      const rc = box.getBoundingClientRect(), k = W / A.cam.z / rc.width;
+      const rc = box.getBoundingClientRect(), k = Math.max(W / A.cam.z / rc.width, H / A.cam.z / rc.height); // map may be letterboxed in fullscreen
       if (pts.size === 2) { const [a, b] = [...pts.values()], d = Math.hypot(a[0] - b[0], a[1] - b[1]); if (!drag.d) { drag.d = d; drag.z = A.cam.z; } A.cam.z = clamp(drag.z * d / drag.d, 1, 6); moved = true; setVB(); return; }
       const dx = e.clientX - drag.x, dy = e.clientY - drag.y; if (Math.abs(dx) + Math.abs(dy) > 5) moved = true;
       if (moved) { A.cam.cx = drag.cx - dx * k; A.cam.cy = drag.cy - dy * k; setVB(); }
@@ -12848,6 +12914,451 @@ window.SH = window.SH || {};
   // a drag shouldn't also count as a tap on whatever was under the cursor
   document.addEventListener('click', (e) => { if (moved && e.target.closest && e.target.closest('#pbody')) { e.stopPropagation(); e.preventDefault(); moved = false; } }, true);
 })();
+
+</script>
+<script>
+/* mapfull.js */
+/* SMALL HOURS — fullscreen maps. The ⛶ button in the Atlas app and on AverMaps (avermaps.av) toggles fullscreen:
+   - desktop: the phone turns sideways (landscape), centered over a dimmed game: map on the left, info on the right.
+   - mobile (≤760px wide): the phone fills the whole screen but stays portrait: map on top, the list scrolls below.
+   Esc, the button again, or tapping the dimmed area exits. Leaving the map (Back, another app/site) exits too. */
+(function (SH) {
+  const P = SH.Phone; if (!P) return;
+  const B = () => document.body;
+  const on = () => B().classList.contains('mapfull');
+  const isMap = () => { const v = P.view || {}; return v.app === 'atlas' || (v.app === 'browser' && SH.Browser && /^avermaps\.av/.test(SH.Browser.url || '')); };
+  const bg = () => { let d = document.getElementById('mfBg'); if (!d) { d = document.createElement('div'); d.id = 'mfBg'; d.onclick = () => MF.set(false); document.body.appendChild(d); } return d; };
+  const MF = SH.MapFull = {
+    btn: () => `<button class="mfbtn" title="${on() ? 'Exit fullscreen (Esc)' : 'Fullscreen'}" onclick="SH.MapFull.toggle();event.stopPropagation()">${on() ? '🗗' : '⛶'}</button>`,
+    set(v) {
+      if (v === on()) return; bg();
+      B().classList.toggle('mapfull', v);
+      if (v) { B().classList.add('mfanim'); setTimeout(() => B().classList.remove('mfanim'), 500); }
+      SH.Audio && SH.Audio.click && SH.Audio.click();
+      P.render();
+    },
+    toggle() { MF.set(!on()); },
+    on,
+  };
+  const bR = P.render;
+  P.render = function () { const r = bR.apply(this, arguments); if (on() && !isMap()) B().classList.remove('mapfull'); return r; };
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && on()) { e.stopPropagation(); e.preventDefault(); MF.set(false); } }, true);
+})(window.SH);
+
+</script>
+<script>
+/* web_ui.js */
+/* SMALL HOURS — web kit: every site gets the same usable building blocks.
+   B.head(site, sub)      branded header bar (icon, name, tagline) in the site's color
+   B.tabs(list, active)   tab strip: [[url, label, key]...]
+   B.row(o)               tappable list row {t, sub, right, go, js, icon}
+   B.inp(id, ph, val, enter, list)  text input; Enter runs `enter` (a JS string); list = datalist id
+   B.sel(id, opts, val)   select: opts [[value, label]...]
+   B.note(html, kind)     banner: info | good | warn | bad
+   B.flash(html, kind)    banner shown once on the next page render (confirmations)
+   B.places()             <datalist id="avpl"> of every place name (autocomplete for from/to fields)
+   B.val(id)              read an input's value
+   Sites without their own header get B.head() added automatically (site.own = true opts out). */
+(function (SH) {
+  const B = SH.Browser, P = SH.Phone; if (!B || !P) return;
+  const esc = B.esc;
+  B.head = (s, sub) => `<div class="wsh" style="background:${s.col || '#333'}"><span class="wsi">${s.icon || '🌐'}</span><div style="min-width:0"><b>${esc(s.n)}</b>${sub ? `<small>${sub}</small>` : ''}</div></div>`;
+  B.tabs = (L, act) => `<div class="wtabs">${L.map(([u, l, k]) => `<a href="#" class="${k === act ? 'on' : ''}" onclick="SH.Browser.go('${u}');return false">${l}</a>`).join('')}</div>`;
+  B.row = (o) => {
+    const click = o.go ? `SH.Browser.go('${o.go}')` : o.js || '';
+    return `<div class="wrow${click ? ' tap' : ''}" ${click ? `onclick="${click}"` : ''}>${o.icon ? `<span class="wri">${o.icon}</span>` : ''}<div class="wrm"><div class="wrt">${o.t}</div>${o.sub ? `<div class="wrs">${o.sub}</div>` : ''}</div>${o.right ? `<div class="wrr">${o.right}</div>` : ''}${click && !o.noArrow ? '<span class="wra">›</span>' : ''}</div>`;
+  };
+  B.inp = (id, ph, val, enter, list) => `<input id="${id}" class="winp" placeholder="${esc(ph || '')}" value="${esc(val || '')}"${enter ? ` data-enter="${esc(enter)}"` : ''}${list ? ` list="${list}"` : ''} autocomplete="off">`;
+  B.sel = (id, opts, val) => `<select id="${id}" class="winp">${opts.map(([v, l]) => `<option value="${esc(v)}"${String(v) === String(val) ? ' selected' : ''}>${esc(l)}</option>`).join('')}</select>`;
+  B.note = (h, k) => `<div class="wnote ${k || 'info'}">${h}</div>`;
+  B.pill = (t, c) => `<span class="wpill" style="${c ? `background:${c}33;color:${c};border-color:${c}66` : ''}">${t}</span>`;
+  B.val = (id) => { const e = document.getElementById(id); return e ? e.value.trim() : ''; };
+  B.flash = (h, k) => { B._flash = B.note(h, k || 'good'); };
+  B.places = () => { const D = SH.Atlas && SH.Atlas.data(); if (!D) return ''; return `<datalist id="avpl">${D.places.map((p) => `<option value="${esc(p.name)}">`).join('')}</datalist>`; };
+  B.findPlace = (q) => {
+    q = String(q || '').trim(); if (!q || !SH.Atlas) return null; const D = SH.Atlas.data(), ql = q.toLowerCase();
+    return D.places.find((p) => p.name.toLowerCase() === ql) || D.places.find((p) => p.name.toLowerCase().startsWith(ql)) || (SH.PIP && SH.PIP.findPlace ? SH.PIP.findPlace(q) : null) || D.places.find((p) => p.name.toLowerCase().includes(ql));
+  };
+  // Enter-to-submit, flash banners, and the automatic header
+  const bR = P.render;
+  P.render = function () {
+    const r = bR.apply(this, arguments);
+    document.querySelectorAll('#pbody input[data-enter]').forEach((i) => { if (i._we) return; i._we = 1; i.addEventListener('keydown', (e) => { e.stopPropagation(); if (e.key === 'Enter') { e.preventDefault(); try { new Function(i.dataset.enter)(); } catch (x) { console.warn(x); } } }); });
+    return r;
+  };
+  const wrapAll = () => Object.entries(B.SITES).forEach(([d, s]) => {
+    if (s._wrapped || typeof s.render !== 'function') return; const inner = s.render; s._wrapped = true;
+    s.render = function () {
+      let h = inner.apply(this, arguments); const f = B._flash || ''; B._flash = null;
+      if (h.includes('<!--flash-->')) return h.replace('<!--flash-->', f); // site says where banners go
+      return (!s.own && !/class="wsh"/.test(h) ? B.head(s, s.sub) : '') + f + h;
+    };
+  });
+  B.wrapAll = wrapAll;
+  const bGo = B.go; B.go = function () { wrapAll(); return bGo.apply(this, arguments); };
+  document.addEventListener('DOMContentLoaded', () => setTimeout(wrapAll, 200));
+})(window.SH);
+
+</script>
+<script>
+/* tickets.js */
+/* SMALL HOURS — real tickets. Book on AverRides (rides.av) or any company site; board at the right spot at the right time.
+   BOOKING  T.book(key, destId, {pay, age}) → a ticket with a code, a boarding point, a status.
+     pay 'card' = PocketPal now (Mom sees card charges; on the run that pins you). Not on cash-only (sketchy) companies.
+     pay 'cash' = reserve a seat, pay the driver/counter when you board (you need the cash then).
+     Companies that check ages (professional ones, except County Transit) ask the youngest passenger's age.
+     12 → refused online ("under 15 can't travel alone"). Saying 15+ books it, but the door check still happens.
+   WHERE YOU BOARD  T.point(placeId, route): Harlow → "Bay 3 · Harlow bus depot" / "Platform 2 · Harlow Station";
+     cities: central terminal bays; towns: depot bays; small towns/villages: a kerbside stop outside a landmark;
+     sketchy vans/car pools: a parking lot; rail: platforms, or a halt (a sign and a bench) in tiny places.
+   BOARDING  "🎫 Board" shows in the town menu (away) or at the Harlow bus depot / station, and in My trips when you're
+     there. From home, boarding IS running away (it asks first). You wait until departure, then ride as usual.
+     Prepaid tickets skip paying at the door and make the check a bit less likely.
+   MISSED / CANCEL  missed rides are marked missed; cancelling refunds card tickets (pro 90%, others 50%), cash
+     reservations cancel free. A reminder shows an hour before. */
+(function (SH) {
+  const R = SH.Routes, A = SH.Atlas; if (!R || !A) return;
+  const G = () => SH.G, fmt = R.fmt, NP = (id) => R.net().P[id];
+  const grp = () => 1 + ((G().party || []).length);
+  const T = SH.Tickets = {};
+  T.all = () => (G().tickets = G().tickets || []);
+  T.get = (code) => T.all().find((t) => t.code === code);
+  const pk = (r, a) => a[Math.floor(r() * a.length)];
+  T.checks = (o) => o.style === 'pro' && o.id !== 'county' && o.strict >= 0.2;
+  T.point = function (pid, rt) {
+    const p = NP(pid), o = rt.op, r = R.rng('bp' + pid + o.id);
+    if (o.T.rail) {
+      if (p.home) return { n: 'Harlow Station', at: 'Platform ' + (1 + Math.floor(r() * 2)), loc: 'station' };
+      return p.station || p.tier === 'city' || p.tier === 'town' ? { n: p.name + ' Station', at: 'Platform ' + (1 + Math.floor(r() * (p.tier === 'city' ? 6 : 3))) } : { n: p.name + ' halt', at: 'a sign and a bench by the tracks' };
+    }
+    if (p.home) return { n: 'Harlow bus depot', at: 'Bay ' + (1 + Math.floor(r() * 6)), loc: 'bus' };
+    if (o.style === 'sketchy' || o.type === 'car' || o.type === 'minivan') return { n: pk(r, ['the gas station lot', 'the diner parking lot', 'the corner by the laundromat', 'the lot behind the feed store']) + ', ' + p.name, at: o.type === 'car' ? `a car with a ${o.n} sign in the window` : `the ${o.T.v} with the engine running` };
+    if (p.tier === 'city') return { n: p.name + ' Central Bus Terminal', at: 'Bay ' + (1 + Math.floor(r() * 14)) };
+    if (p.tier === 'town') return { n: p.name + ' bus depot', at: 'Bay ' + (1 + Math.floor(r() * 6)) };
+    if (o.type === 'tempo') return { n: 'the tempo stand, ' + p.name, at: 'by the ' + pk(r, ['water pump', 'tea stall', 'feed store', 'big oak']) };
+    return { n: 'the stop in ' + p.name, at: 'outside the ' + pk(r, p.tier === 'village' ? ['church', 'general store', 'grain elevator', 'war memorial'] : ['post office', 'gas station', 'diner', 'library']) };
+  };
+  T.ptxt = (pt) => (/^(Bay|Platform)/.test(pt.at) ? `${pt.at} · ${pt.n}` : `${pt.n} (${pt.at})`);
+  const code = (key) => { const r = R.rng(key + G().t), c = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; let s = ''; for (let i = 0; i < 6; i++) s += c[Math.floor(r() * c.length)]; return s.slice(0, 3) + '-' + s.slice(3); };
+  T.left = (t) => { const m = t - G().t; if (m < 0) return 'left ' + fmt(t); if (m < 60) return 'in ' + m + ' min'; return 'in ' + Math.floor(m / 60) + 'h ' + (m % 60) + 'm'; };
+  T.state = (tk) => { if (tk.st === 'booked' && G().t > tk.dep + 2) tk.st = 'missed'; return tk.st; };
+
+  T.book = function (key, destId, o) {
+    o = o || {}; const g = G(), jr = R.byKey(key), to = NP(destId); if (!jr || !to) return { ok: false, msg: 'That trip doesn\'t exist anymore.' };
+    if (jr.dep < g.t + 5) return { ok: false, msg: 'Too late. That one\'s already boarding or gone.' };
+    const ops = jr.legs.map((l) => l.rt.op), n = grp(), cost = jr.cost * n;
+    const cashOnly = ops.find((x) => x.S.cash);
+    if (o.pay === 'card' && cashOnly) return { ok: false, msg: `${cashOnly.n} is cash only. Reserve the seat and pay the driver.` };
+    const strict = ops.find(T.checks);
+    if (strict && !(+o.age >= 15)) return { ok: false, msg: `${strict.n}: "Unaccompanied minors under 15 can't be booked online. An adult must book and travel with the child." (You could say you're older. The door check still happens.)` };
+    const L0 = jr.legs[0]; if (R.seats(L0.rt, L0.dep) < n && L0.rt.op.style !== 'sketchy') return { ok: false, msg: `Sold out: fewer than ${n} seats left on the ${fmt(L0.dep)}.` };
+    if (T.all().some((t) => t.key === key && t.st === 'booked')) return { ok: false, msg: 'You already have a ticket for that one. Check My trips.' };
+    const from = NP(L0.rt.stops[L0.i]);
+    if (o.pay === 'card' && !(SH.Bank && SH.Bank.pay(cost, `AverRides: ${ops[0].n} ${from.name} → ${to.name}`))) return { ok: false, msg: 'Payment didn\'t go through.' };
+    const tk = { code: code(key), key, to: to.id, toN: to.name, from: from.id, fromN: from.name, dep: jr.dep, arr: jr.arr, n, cost, pay: o.pay === 'card' ? 'card' : 'cash', lied: !!strict && +o.age >= 15,
+      ops: ops.map((x) => x.icon + ' ' + x.n), pts: jr.legs.map((l) => T.ptxt(T.point(l.rt.stops[l.i], l.rt))), loc: T.point(L0.rt.stops[L0.i], L0.rt).loc || null, st: 'booked', t: g.t };
+    T.all().unshift(tk); if (T.all().length > 30) T.all().pop();
+    return { ok: true, tk };
+  };
+  T.cancel = function (c) {
+    const tk = T.get(c); if (!tk || T.state(tk) !== 'booked') return;
+    let msg = 'Reservation cancelled.';
+    if (tk.pay === 'card') { const jr = R.byKey(tk.key), pro = jr && jr.legs.every((l) => l.rt.op.style === 'pro'), back = Math.floor(tk.cost * (pro ? 0.9 : 0.5)); if (back > 0 && SH.Bank) SH.Bank.deposit(back, 'AverRides refund ' + tk.code); msg = `Cancelled. $${back} back to PocketPal${pro ? ' (10% fee)' : ' (this company refunds half)'}.`; }
+    tk.st = 'cancelled'; SH.UI.toast(msg); SH.Phone.render();
+  };
+  T.here = (tk) => { const g = G(); if (A.here().id !== tk.from) return false; return !!g.away || !tk.loc || g.loc === tk.loc; };
+  T.board = function (c) {
+    const tk = T.get(c), g = G(); if (!tk) return; if (T.state(tk) !== 'booked') return SH.UI.toast('That ticket is ' + tk.st + '.');
+    if (A.here().id !== tk.from) return SH.UI.toast(`This leaves from ${tk.fromN}. You're in ${A.here().name}.`);
+    if (!g.away && tk.loc && g.loc !== tk.loc) return SH.UI.toast(`Go to the ${tk.loc === 'station' ? 'train station' : 'bus depot'} first. ${tk.pts[0]}.`);
+    const go = () => { tk.st = 'used'; const jr = R.byKey(tk.key); jr.prepaid = tk.pay === 'card'; jr.tk = tk.code; SH.Mobile && SH.Mobile.is && SH.Mobile.is() && SH.Mobile.tab('story'); document.body.classList.remove('mapfull'); R.take(jr, A.data().places.find((p) => p.id === tk.to)); };
+    const wait = tk.dep - g.t;
+    const waitThen = () => (wait > 3 ? SH.UI.dialog({ title: `🎫 ${tk.code}`, text: [`You wait at ${tk.pts[0]}. It leaves at ${fmt(tk.dep)} (${Math.floor(wait / 60) ? Math.floor(wait / 60) + 'h ' : ''}${wait % 60}m).`], choices: [{ t: 'Wait for it', cls: 'safe', fn: go }, { t: 'Not yet', fn: () => {} }] }) : go());
+    if (g.phase === 'home' && wait > 90) return SH.UI.toast(`It leaves at ${fmt(tk.dep)}. Come back after ${fmt(tk.dep - 90)}. Sitting at the depot for hours is how people notice you.`);
+    if (g.phase === 'home') return SH.UI.dialog({ title: 'This is it', text: ['If you get on, you\'ve run away. No going back upstairs and pretending.', `${tk.ops[0]} to ${tk.toN}, ${fmt(tk.dep)}.`], choices: [{ t: 'Go', cls: 'hot', fn: () => { SH.Run.start('ticket', false); setTimeout(waitThen, 60); } }, { t: 'Not today', cls: 'safe', fn: () => {} }] });
+    waitThen();
+  };
+  const boardable = (p) => T.all().filter((t) => T.state(t) === 'booked' && t.from === p.id && t.dep - G().t <= 12 * 60);
+  (A.extra = A.extra || []).push((p, ch) => { boardable(p).forEach((t) => ch.unshift({ t: `🎫 Board: ${fmt(t.dep)} → ${t.toN}`, sub: `${t.pts[0]} · leaves ${T.left(t.dep)}`, cls: 'safe', fn: () => T.board(t.code) })); });
+  const AC = SH.Actions;
+  if (AC && AC.list) { const bl = AC.list; AC.list = function () { const r = bl.apply(this, arguments), g = G(); if (!g || g.away || !r || !r.acts) return r; boardable(A.here()).filter((t) => t.loc === g.loc).forEach((t) => r.acts.unshift({ label: `🎫 Board your ${fmt(t.dep)} ride → ${t.toN}`, sub: `${t.pts[0]} · ${T.left(t.dep)}`, cls: 'safe', fn: () => T.board(t.code) })); return r; }; }
+  if (SH.K && SH.K.hourly) SH.K.hourly.push(() => { T.all().forEach((t) => { if (T.state(t) === 'booked' && t.dep - G().t <= 75 && t.dep - G().t > 0 && !t.rem) { t.rem = 1; SH.UI.toast(`🎫 ${fmt(t.dep)} to ${t.toN} leaves ${T.left(t.dep)} from ${t.pts[0]}.`); } }); });
+})(window.SH);
+
+</script>
+<script>
+/* rides_web.js */
+/* SMALL HOURS — AverRides (rides.av): the booking site. Plan → results → trip details → book → My trips.
+   rides.av                         plan a trip (from/to with autocomplete, when) + your next ticket + what's leaving
+   rides.av/find?f=ID&t=ID&w=now    journeys (direct, one or two changes): times, price for your group, seats,
+                                    how strict each company is, where you board, night warnings
+   rides.av/trip/KEY?to=ID          the timeline (board here → change there → arrive), "get off at" picker, booking form
+   Tabs for My trips / Departures / Companies live in rides_web2.js. Tickets themselves: tickets.js. */
+(function (SH) {
+  const B = SH.Browser, R = SH.Routes, T = SH.Tickets; if (!B || !R || !T || !B.row) return;
+  const esc = B.esc, fmt = R.fmt, G = () => SH.G, NP = (id) => R.net().P[id];
+  const grp = () => 1 + ((G().party || []).length);
+  const ST = { pro: ['✅ checks IDs', '#6fdc8c'], unprof: ["🤷 driver's call", '#f2c14e'], sketchy: ['🫣 no questions', '#ff9f6b'] };
+  const Rd = SH.Rides = {};
+  const dur = (m) => (m >= 60 ? Math.floor(m / 60) + 'h ' : '') + (m % 60) + 'm';
+  Rd.day = (t) => { const d = Math.floor(t / 1440) - Math.floor(G().t / 1440); return d === 0 ? 'Today' : d === 1 ? 'Tomorrow' : SH.dateStr ? SH.dateStr(t).split(',')[0] : 'Later'; };
+  const night = (t) => { const h = Math.floor((t % 1440) / 60); return h >= 21 || h < 5; };
+  const when = (w) => { const t = G().t, d0 = Math.floor(t / 1440) * 1440; if (w === 'eve') return t < d0 + 1080 ? d0 + 1080 : d0 + 1440 + 1080; if (w === 'tmr') return d0 + 1440 + 420; if (w === 'tmra') return d0 + 1440 + 780; return t; };
+  const q = (path, k) => decodeURIComponent((path.match(new RegExp('[?&]' + k + '=([^&]*)')) || [])[1] || '');
+  Rd.styleOf = (jr) => (jr.legs.some((l) => l.rt.op.style === 'pro' && T.checks(l.rt.op)) ? 'pro' : jr.legs.some((l) => l.rt.op.style === 'unprof') ? 'unprof' : jr.legs.every((l) => l.rt.op.style === 'sketchy') ? 'sketchy' : 'unprof');
+  Rd.top = (act, sub) => B.head(B.SITES['rides.av'], sub || 'Every bus, tempo, shuttle, car pool and train in Averland') + B.tabs([['rides.av', '🔎 Plan', 'plan'], ['rides.av/tickets', '🎫 My trips' + (T.all().filter((t) => T.state(t) === 'booked').length ? ' •' : ''), 'tix'], ['rides.av/deps', '🚏 Departures', 'deps'], ['rides.av/ops', '🏢 Companies', 'ops']], act) + '<!--flash-->';
+  Rd.find = function () {
+    const f = B.findPlace(B.val('rf')) || SH.Atlas.here(), t = B.findPlace(B.val('rt')), w = B.val('rw') || 'now';
+    if (!B.val('rt')) { B.flash('Where to? Type a town in the "To" box.', 'warn'); return SH.Phone.render(); }
+    if (!t) { B.flash(`Couldn't find "${esc(B.val('rt'))}". Start typing and pick from the list.`, 'bad'); return SH.Phone.render(); }
+    if (t.id === f.id) { B.flash(`You're already going from ${esc(f.name)}. Pick somewhere else.`, 'warn'); return SH.Phone.render(); }
+    B.go(`rides.av/find?f=${f.id}&t=${t.id}&w=${w}`);
+  };
+  Rd.form = (f, t, w) => `<div class="wform"><label>From</label>${B.inp('rf', 'From', f ? f.name : SH.Atlas.here().name, 'SH.Rides.find()', 'avpl')}<label>To</label>${B.inp('rt', 'Where to? (town, village, city)', t ? t.name : '', 'SH.Rides.find()', 'avpl')}
+    <label>When</label>${B.sel('rw', [['now', 'Leaving now'], ['eve', 'This evening (6 PM)'], ['tmr', 'Tomorrow morning (7 AM)'], ['tmra', 'Tomorrow afternoon (1 PM)']], w || 'now')}<button class="wbtn" onclick="SH.Rides.find()">Search rides</button></div>${B.places()}`;
+  Rd.jrow = (jr, to) => {
+    const L = jr.legs, st = ST[Rd.styleOf(jr)], seats = R.seats(L[0].rt, L[0].dep), n = grp();
+    const via = L.length > 1 ? ' → change at ' + L.slice(1).map((l, k) => esc(NP(L[k].rt.stops[L[k].j]).name) + ' → ' + l.rt.op.icon + ' ' + esc(l.rt.op.n)).join(' → ') : ' · direct';
+    return B.row({ go: `rides.av/trip/${encodeURIComponent(jr.key)}?to=${to.id}`, t: `${fmt(jr.dep)} → ${fmt(jr.arr)} <span style="font-weight:400;color:#9aa4b8">· ${dur(jr.arr - jr.dep)}${Rd.day(jr.dep) !== 'Today' ? ' · ' + Rd.day(jr.dep) : ''}</span>`,
+      sub: `${L[0].rt.op.icon} ${esc(L[0].rt.op.n)}${via}<br>Board at ${esc(T.ptxt(T.point(L[0].rt.stops[L[0].i], L[0].rt)))}<br>${B.pill(st[0], st[1])}${L[0].rt.op.style !== 'sketchy' ? B.pill(seats < n ? 'full' : seats <= 3 ? seats + ' seats left' : seats + ' seats', seats < n ? '#ff6b6b' : '') : B.pill('squeeze in')}${night(jr.dep) ? B.pill('⚠️ night', '#ff9f6b') : ''}${L.some((l) => l.rt.op.S.cash) ? B.pill('💵 cash only') : ''}`,
+      right: `$${jr.cost * n}${n > 1 ? `<br><small style="font-weight:400;color:#9aa4b8">for ${n}</small>` : ''}` });
+  };
+  function plan() {
+    const here = SH.Atlas.here(), next = T.all().find((t) => T.state(t) === 'booked'), B0 = R.board(here, G().t, 240).slice(0, 4);
+    return Rd.top('plan') + Rd.form(null, null, 'now') + (next ? `<div class="wsec">Your next trip</div>` + B.row({ go: 'rides.av/tickets', icon: '🎫', t: `${fmt(next.dep)} ${Rd.day(next.dep)} → ${esc(next.toN)}`, sub: `Board at ${esc(next.pts[0])} · leaves ${T.left(next.dep)}` }) : '') +
+      `<div class="wsec">Leaving ${esc(here.name)} soon</div>` + (B0.length ? B0.map((b) => { const end = b.rt.stops.length - 1; return B.row({ icon: b.rt.op.icon, go: `rides.av/trip/${encodeURIComponent('rt:' + b.rt.id + '/' + b.i + '/' + end + '/' + b.dep)}?to=${b.rt.stops[end]}`, t: `${fmt(b.dep)} ${esc(b.rt.op.n)} → ${esc(NP(b.rt.stops[end]).name)}`, sub: esc(T.ptxt(T.point(here.id, b.rt))) }); }).join('') : B.note(`Nothing leaves ${esc(here.name)}. You'll have to walk or bike to a bigger place first.`, 'warn')) +
+      B.note('<b>How it works:</b> search, pick a ride, book it. Pay with PocketPal now, or reserve and pay cash when you board. Then go to the boarding spot on your ticket before it leaves and tap <b>🎫 Board</b> there (it shows in the town menu, or at the Harlow bus depot/station).', 'info');
+  }
+  function find(path) {
+    const f = NP(q(path, 'f')) || SH.Atlas.here(), t = NP(q(path, 't')), w = q(path, 'w') || 'now'; if (!t) return plan();
+    const L = R.journeys(f, t, when(w), 7);
+    let h = Rd.top('plan', `${esc(f.name)} → ${esc(t.name)}`) + Rd.form(f, t, w) + `<div class="wsec">${L.length} ride${L.length === 1 ? '' : 's'} · ${esc(f.name)} → ${esc(t.name)} · ${SH.Atlas.miles(f, t)} mi</div>`;
+    if (L.length) return h + L.map((jr) => Rd.jrow(jr, t)).join('') + `<p class="muted" style="font-size:10.5px">Prices are for your whole group (${grp()}). Tap a ride for stops, rules and booking.</p>`;
+    const near = SH.Atlas.data().places.filter((p) => p.id !== t.id && (R.net().at[p.id] || []).length).map((p) => [p, SH.Atlas.miles(p, t)]).sort((a, b) => a[1] - b[1]).slice(0, 3);
+    return h + B.note(`No bus, train or van reaches ${esc(t.name)}${w === 'now' ? ' today' : ''}. The closest places that have rides:`, 'warn') + near.map(([p, mi]) => B.row({ go: `rides.av/find?f=${f.id}&t=${p.id}&w=${w}`, t: esc(p.name), sub: `${mi} mi from ${esc(t.name)} · walk or bike the rest`, right: '🔎' })).join('');
+  }
+  function trip(path) {
+    const key = decodeURIComponent((path.match(/^trip\/([^?]*)/) || [])[1] || ''), jr = R.byKey(key), to = NP(q(path, 'to'));
+    if (!jr || !to) return Rd.top('plan') + B.note('That trip isn\'t available anymore.', 'bad');
+    const L = jr.legs, n = grp(), g = G(), strict = L.map((l) => l.rt.op).find(T.checks), cashOnly = L.some((l) => l.rt.op.S.cash), bk = SH.Bank && SH.Bank.state();
+    const tl = L.map((l, k) => { const o = l.rt.op, a = NP(l.rt.stops[l.i]), b = NP(l.rt.stops[l.j]); return `<div style="--c:${o.col}"><b>${fmt(l.dep)}</b> board at ${esc(T.ptxt(T.point(a.id, l.rt)))}<br><span class="muted">${o.icon} ${esc(o.n)} ${esc(o.T.v)} · ${l.j - l.i} stop${l.j - l.i > 1 ? 's' : ''}${l.j - l.i > 1 ? ' via ' + l.rt.stops.slice(l.i + 1, l.j).slice(0, 4).map((id) => esc(NP(id).name)).join(', ') : ''} · $${R.price(l.rt, l.i, l.j)} each</span><br><i class="muted" style="font-size:10.5px">${esc(o.rule || '')}</i></div>${k < L.length - 1 ? `<div style="--c:#f2c14e"><b>${fmt(l.arr)}</b> get off at ${esc(b.name)}: change (${dur(L[k + 1].dep - l.arr)} to make it)</div>` : ''}`; }).join('') + `<div style="--c:#6fdc8c"><b>${fmt(jr.arr)}</b> arrive in ${esc(to.name)}</div>`;
+    const one = L.length === 1 ? `<label>Get off at</label><select class="winp" onchange="SH.Browser.go(this.value)">${L[0].rt.stops.slice(L[0].i + 1).map((id, k) => { const j = L[0].i + 1 + k; return `<option value="rides.av/trip/${encodeURIComponent('rt:' + L[0].rt.id + '/' + L[0].i + '/' + j + '/' + L[0].dep)}?to=${id}"${id === to.id ? ' selected' : ''}>${esc(NP(id).name)} · ${fmt(L[0].dep + L[0].rt.off[j] - L[0].rt.off[L[0].i])} · $${R.price(L[0].rt, L[0].i, j) * n}</option>`; }).join('')}</select>` : '';
+    const who = ['You'].concat((g.party || []).map((id) => (SH.NPCS_META[id] || {}).n || id)).join(', ');
+    return Rd.top('plan', `${Rd.day(jr.dep)} · ${fmt(jr.dep)} → ${fmt(jr.arr)} · ${dur(jr.arr - jr.dep)}`) + `<div class="wtl">${tl}</div>` + `<div class="wsec">Book</div><div class="wform">${one}
+      <div class="two"><div><label>Passengers</label><div style="font-size:12px;padding:4px 0">${esc(who)}</div></div><div><label>Total</label><div style="font-size:18px;font-weight:800">$${jr.cost * n}</div></div></div>
+      ${strict ? `<label>Youngest passenger's age</label>${B.sel('ra', [['', 'Choose…'], ['12', '12 (the truth)'], ['15', '15'], ['16', '16'], ['18', '18+']], '')}<div class="muted" style="font-size:10.5px">${esc(strict.n)} checks. Say 12 and it won't book. Lie and staff may still check at the door.</div>` : ''}
+      <label>Payment</label>${B.sel('rp', (cashOnly ? [] : [['card', `💳 PocketPal now ($${bk ? bk.bal.toFixed(2) : '0'} on card)`]]).concat([['cash', `💵 Reserve, pay $${jr.cost * n} cash when you board (you have $${Math.floor(g.money)})`]]), cashOnly ? 'cash' : 'card')}
+      ${bk && bk.linked && !cashOnly ? B.note(`PocketPal is linked to Mom. She sees card charges${g.phase === 'run' ? ', and a charge shows roughly where you are' : ''}. Cash doesn't show up anywhere.`, 'warn') : ''}
+      <button class="wbtn ok" onclick="SH.Rides.book('${encodeURIComponent(key)}','${to.id}')">Book ${n > 1 ? n + ' seats' : 'seat'}</button></div>`;
+  }
+  Rd.book = function (k, to) {
+    const key = decodeURIComponent(k), age = B.val('ra'), pay = B.val('rp') || 'cash';
+    if (document.getElementById('ra') && !age) { B.flash('Pick the youngest passenger\'s age first.', 'warn'); return SH.Phone.render(); }
+    const r = T.book(key, to, { pay, age }); SH.Audio && SH.Audio.click && SH.Audio.click();
+    if (!r.ok) { B.flash(esc(r.msg), 'bad'); return SH.Phone.render(); }
+    B.flash(`<b>Booked! Ticket ${r.tk.code}.</b> ${fmt(r.tk.dep)} ${Rd.day(r.tk.dep)} from ${esc(r.tk.pts[0])}. Be there 10 minutes early and tap 🎫 Board.`, 'good'); B.go('rides.av/tickets');
+  };
+  Rd.pages = { plan, find, trip };
+  B.SITES['rides.av'] = { n: 'AverRides', icon: '🧭', col: '#2c3e50', mb: 0.8, tile: true, order: 1, own: true, sub: 'Book buses, trains, vans', render(path) {
+    const p = path || ''; if (/^find/.test(p)) return find(p); if (/^trip\//.test(p)) return trip(p);
+    const x = Rd.extra && Rd.extra(p); return x != null ? x : plan();
+  } };
+})(window.SH);
+
+</script>
+<script>
+/* rides_web2.js */
+/* SMALL HOURS — AverRides part 2: My trips (tickets with code, boarding spot, "be there by", Board / Cancel / directions),
+   the departures board for where you are, the company list, and a Book button on every company site's departures. */
+(function (SH) {
+  const B = SH.Browser, R = SH.Routes, T = SH.Tickets, Rd = SH.Rides; if (!B || !R || !T || !Rd) return;
+  const esc = B.esc, fmt = R.fmt, G = () => SH.G, NP = (id) => R.net().P[id];
+  const ST = { pro: ['✅ Professional', '#6fdc8c'], unprof: ['🤷 Unprofessional', '#f2c14e'], sketchy: ['🫣 Sketchy (but safe)', '#ff9f6b'] };
+  const LBL = { booked: ['Booked', '#6fdc8c'], used: ['Used', '#8a93a6'], missed: ['Missed', '#ff6b6b'], cancelled: ['Cancelled', '#8a93a6'] };
+  function tickets() {
+    const L = T.all(); L.forEach(T.state);
+    const live = L.filter((t) => t.st === 'booked'), old = L.filter((t) => t.st !== 'booked').slice(0, 6);
+    const card = (t) => {
+      const soon = t.st === 'booked' && t.dep - G().t <= 60, here = t.st === 'booked' && T.here(t);
+      const lb = soon ? ['Boarding soon', '#f2c14e'] : LBL[t.st];
+      return `<div class="wtk" style="${t.st !== 'booked' ? 'opacity:.6' : ''}"><div style="display:flex;justify-content:space-between;align-items:center"><span class="code">${t.code}</span>${B.pill(lb[0], lb[1])}</div>
+        <div style="font-size:15px;font-weight:800;margin:4px 0 2px">${esc(t.fromN)} → ${esc(t.toN)}</div>
+        <div style="font-size:12px">${Rd.day(t.dep)} · <b>${fmt(t.dep)}</b> → ${fmt(t.arr)} · ${t.n} passenger${t.n > 1 ? 's' : ''}</div>
+        <div class="muted" style="font-size:11px;margin:3px 0">${t.ops.map(esc).join(' → ')}</div>
+        ${t.st === 'booked' ? `<div style="font-size:12px;margin:6px 0;padding:6px 8px;background:#0005;border-radius:8px">📍 <b>Board at:</b> ${esc(t.pts[0])}<br>⏰ Be there by <b>${fmt(t.dep - 10)}</b> · leaves ${T.left(t.dep)}${t.pts.length > 1 ? '<br>🔁 Change: ' + t.pts.slice(1).map(esc).join(' · ') : ''}</div>
+        <div style="font-size:11.5px">${t.pay === 'card' ? `✅ Paid $${t.cost} with PocketPal` : `💵 Pay <b>$${t.cost}</b> cash when you board (you have $${Math.floor(G().money)})`}${t.lied ? ' · <span style="color:#f2c14e">booked as 15+</span>' : ''}</div>
+        <div style="display:flex;gap:6px;margin-top:8px">${here ? `<button class="wbtn ok" onclick="SH.Tickets.board('${t.code}')">🎫 Board</button>` : `<button class="wbtn alt" onclick="SH.Browser.go('avermaps.av/p/${t.from}')">${SH.Atlas.here().id === t.from ? `🗺️ Go to ${t.loc === 'station' ? 'the station' : t.loc === 'bus' ? 'the bus depot' : 'the stop'}` : `🗺️ Get to ${esc(t.fromN)}`}</button>`}<button class="wbtn bad" style="width:auto;padding:9px 12px" onclick="SH.Tickets.cancel('${t.code}')">Cancel</button></div>
+        ${!here ? `<div class="muted" style="font-size:10.5px;margin-top:5px">${SH.Atlas.here().id !== t.from ? `You're in ${esc(SH.Atlas.here().name)}. This leaves from ${esc(t.fromN)}.` : G().away ? '' : `Walk to the ${t.loc === 'station' ? 'train station' : 'bus depot'} on the map, then tap 🎫 Board there.`}</div>` : ''}` :
+        t.st === 'missed' ? `<button class="wbtn alt" style="margin-top:6px" onclick="SH.Browser.go('rides.av/find?f=${t.from}&t=${t.to}&w=now')">Find the next one</button>` : ''}</div>`;
+    };
+    return Rd.top('tix', 'Your tickets') + (live.length ? live.map(card).join('') : B.note('No upcoming trips. Book one from the 🔎 Plan tab.', 'info')) + (old.length ? '<div class="wsec">Past</div>' + old.map(card).join('') : '') +
+      B.note('<b>Boarding:</b> be at the spot on your ticket before it leaves. Away from home, the <b>🎫 Board</b> button is in the town menu. In Harlow, go to the bus depot or the train station. Miss it and the ticket is gone (card tickets can be cancelled before for a partial refund).', 'info');
+  }
+  function deps() {
+    const here = SH.Atlas.here(), L = R.board(here, G().t, 360);
+    return Rd.top('deps', `Departures · ${esc(here.name)} · ${fmt(G().t)}`) + (L.length ? L.map((b) => { const end = b.rt.stops.length - 1, o = b.rt.op; return B.row({ icon: o.icon, go: `rides.av/trip/${encodeURIComponent('rt:' + b.rt.id + '/' + b.i + '/' + end + '/' + b.dep)}?to=${b.rt.stops[end]}`, t: `${fmt(b.dep)}${Rd.day(b.dep) !== 'Today' ? ' ' + Rd.day(b.dep) : ''} · ${esc(o.n)} → ${esc(NP(b.rt.stops[end]).name)}`, sub: `${esc(T.ptxt(T.point(here.id, b.rt)))}<br>${b.rt.stops.slice(b.i + 1, -1).slice(0, 5).map((id) => esc(NP(id).name)).join(' · ') || 'direct'}`, right: `$${R.price(b.rt, b.i, end)}+` }); }).join('') : B.note(`Nothing leaves ${esc(here.name)}. No stop, no station.`, 'warn'));
+  }
+  function ops() {
+    const N = R.net(), here = SH.Atlas.here(), at = N.at[here.id] || [];
+    return Rd.top('ops', `${N.ops.length} companies this story`) + N.ops.map((o) => { const n = at.filter(([r]) => r.op === o).length; return B.row({ icon: o.icon, go: o.id + '.av', t: esc(o.n), sub: `${esc(o.T.v)} · ${N.routes.filter((r) => r.op === o).length / 2} lines · ${n ? 'stops in ' + esc(here.name) : 'not in ' + esc(here.name)}<br>${B.pill(ST[o.style][0], ST[o.style][1])}${o.S.cash ? B.pill('💵 cash only') : B.pill('💳 PocketPal ok')}` }); }).join('');
+  }
+  Rd.extra = (p) => (/^tickets/.test(p) ? tickets() : /^deps/.test(p) ? deps() : /^ops/.test(p) ? ops() : null);
+
+  // company sites: every departure gets a Book button, plus a quick search box
+  function page(o) {
+    const N = R.net(), here = SH.Atlas.here(), t = G().t, mine = N.routes.filter((r) => r.op === o), lines = mine.filter((r) => r.id.endsWith(':0'));
+    const deps = []; (N.at[here.id] || []).filter(([r, i]) => r.op === o && i < r.stops.length - 1).forEach(([r, i]) => { let d = R.next(r, i, t); for (let n = 0; n < 3 && d != null; n++) { deps.push([r, i, d]); d = R.next(r, i, d + 1); } });
+    deps.sort((a, b) => a[2] - b[2]);
+    return `<div class="wsh" style="background:${o.col}"><span class="wsi">${o.icon}</span><div><b>${esc(o.n)}</b><small>${esc(o.tag)} · ${B.pill(ST[o.style][0])}</small></div></div><!--flash-->
+      ${B.note(`<b>🧒 Traveling alone?</b> ${esc(o.rule || '')}`, o.style === 'pro' ? 'warn' : 'info')}
+      <div class="wsec">Book from ${esc(here.name)}</div>${deps.length ? deps.slice(0, 8).map(([r, i, d]) => { const end = r.stops.length - 1; return B.row({ go: `rides.av/trip/${encodeURIComponent('rt:' + r.id + '/' + i + '/' + end + '/' + d)}?to=${r.stops[end]}`, t: `${fmt(d)}${Rd.day(d) !== 'Today' ? ' ' + Rd.day(d) : ''} → ${esc(NP(r.stops[end]).name)}`, sub: `${esc(T.ptxt(T.point(here.id, r)))}<br>${r.stops.slice(i + 1).slice(0, 6).map((id) => esc(NP(id).name)).join(' · ')}`, right: `<span class="wpill" style="background:#1f9d55;color:#fff;border-color:#1f9d55">Book</span>` }); }).join('') : B.note(`We don't stop in ${esc(here.name)}. ${B.lnk('rides.av', 'Plan a trip with a change →')}`, 'warn')}
+      <div class="wsec">Our lines (${lines.length})</div>${lines.map((r) => `<div style="font-size:11.5px;margin:4px 0">${r.stops.map((id) => esc(NP(id).name)).join(' – ')} <span class="muted">· ${r.deps.length}×/day · ${Math.floor(r.off[r.off.length - 1] / 60)}h${String(r.off[r.off.length - 1] % 60).padStart(2, '0')}</span></div>`).join('')}
+      <p class="muted" style="font-size:11px">${o.S.cash ? 'Cash only. Reserve here, pay the driver.' : 'Pay by PocketPal, or reserve and pay cash when you board.'} ${o.S.delay > 30 ? 'Times are approximate.' : ''} ${B.lnk('rides.av/tickets', 'My trips →')}</p>`;
+  }
+  const install = () => { const N = R.net(); if (!N) return; N.ops.forEach((o) => { const s = B.SITES[o.id + '.av']; if (s && !s._book) { s._book = true; s.own = true; s.render = () => page(o); s._wrapped = false; } }); B.wrapAll && B.wrapAll(); };
+  const bGo = B.go; B.go = function () { try { install(); } catch (e) {} return bGo.apply(this, arguments); };
+})(window.SH);
+
+</script>
+<script>
+/* avermaps_web.js */
+/* SMALL HOURS — AverMaps (avermaps.av), rebuilt. A map you can actually use:
+   Explore   search any place (autocomplete), zoom +/− / wheel / pinch, drag to pan, tap a dot to open it, ⌖ back to you.
+   Place     distance + compass direction, the best ride there (Book), walk/bike times, what leaves from there,
+             motels (price, strict or not), youth shelter, stores, hospital/library/wifi, cell signal, police or sheriff,
+             how much people notice newcomers, kid jobs, who's around. The best ride is drawn on the map.
+   Directions  from/to: walking, biking and every bus/train option with Book buttons (→ AverRides).
+   Nearby    filters: motels, free wifi, shelter, hospital, no police, quiet, station, rides. Sorted by distance.
+   ⛶ fullscreen (mapfull.js): landscape on desktop, portrait on mobile. Map taps/zoom don't cost extra data. */
+(function (SH) {
+  const B = SH.Browser, A = SH.Atlas, R = SH.Routes, P = SH.Phone; if (!B || !A || !B.row) return;
+  const esc = B.esc, G = () => SH.G, W = 900, H = 600, fmt = R ? R.fmt : (t) => t;
+  const M = SH.AverMaps = { cam: { cx: 450, cy: 300, z: 1 } };
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  const vb = () => { const c = M.cam, w = W / c.z, h = H / c.z; c.cx = clamp(c.cx, w / 2, W - w / 2); c.cy = clamp(c.cy, h / 2, H - h / 2); return [c.cx - w / 2, c.cy - h / 2, w, h]; };
+  const byId = (id) => A.data().places.find((p) => p.id === id);
+  const q = (path, k) => decodeURIComponent((path.match(new RegExp('[?&]' + k + '=([^&]*)')) || [])[1] || '');
+  const dir = (a, b) => { const ang = (Math.atan2(-(b.y - a.y), b.x - a.x) * 180) / Math.PI; return ['E', 'NE', 'N', 'NW', 'W', 'SW', 'S', 'SE'][Math.round(((ang + 360) % 360) / 45) % 8]; };
+  const served = (p) => R && (R.net().at[p.id] || []).length;
+  const best = (a, b) => (R && a.id !== b.id ? R.journeys(a, b, G().t, 3) : []);
+  M.zoom = (k) => { M.cam.z = clamp(M.cam.z * k, 1, 6); P.render(); };
+  M.focus = (id) => { const p = byId(id); if (!p) return; M.cam.cx = p.x; M.cam.cy = p.y; M.cam.z = Math.max(M.cam.z, 2.2); };
+  M.open = (id) => { M.focus(id); B.url = 'avermaps.av/p/' + id; P.render(); }; // no new page load: taps are free
+  M.search = (fld) => { const p = B.findPlace(B.val(fld || 'amq')); if (!p) { B.flash(`No place called "${esc(B.val(fld || 'amq'))}". Pick one from the list as you type.`, 'bad'); return P.render(); } M.focus(p.id); B.go('avermaps.av/p/' + p.id); };
+  M.dir = () => { const f = B.findPlace(B.val('adf')) || A.here(), t = B.findPlace(B.val('adt')); if (!t) { B.flash('Type where you want to go.', 'warn'); return P.render(); } B.go(`avermaps.av/dir?f=${f.id}&t=${t.id}`); };
+  const top = (act, sub) => B.head(B.SITES['avermaps.av'], sub || esc(A.data().name)) + `<div style="display:flex;gap:6px;align-items:center;margin-bottom:6px"><div class="wtabs" style="margin:0;flex:1">${[['avermaps.av', '🗺️ Explore', 'ex'], ['avermaps.av/dir', '🧭 Directions', 'dir'], ['avermaps.av/near', '📍 Nearby', 'near']].map(([u, l, k]) => `<a href="#" class="${k === act ? 'on' : ''}" onclick="SH.Browser.go('${u}');return false">${l}</a>`).join('')}</div>${SH.MapFull ? SH.MapFull.btn() : ''}</div><!--flash-->`;
+  const hl = (sel) => { const here = A.here(); if (!sel || sel.id === here.id) return null; const jr = best(here, sel)[0]; return jr ? jr.legs.map((l) => ({ ids: l.rt.stops.slice(l.i, l.j + 1), col: l.rt.op.col })) : null; };
+  const map = (sel) => `<div class="mapc"><div style="display:flex;gap:5px;margin-bottom:6px">${B.inp('amq', `Search ${A.data().places.length} places…`, '', 'SH.AverMaps.search()', 'avpl')}<button class="btn small" onclick="SH.AverMaps.zoom(1/1.6)">−</button><button class="btn small" onclick="SH.AverMaps.zoom(1.6)">+</button><button class="btn small" title="Where am I" onclick="SH.AverMaps.focus(SH.Atlas.here().id);SH.AverMaps.open(SH.Atlas.here().id)">⌖</button></div>
+    <div id="ammap" class="mapsvg" style="touch-action:none;border-radius:10px;overflow:hidden;position:relative">${A.svg(A.data(), sel ? sel.id : A.here().id, W, H, { z: M.cam.z, vb: vb(), hl: hl(sel) })}</div><div class="muted" style="font-size:10.5px;margin-top:3px">Tap a dot · drag to pan · scroll or pinch to zoom</div>${B.places()}</div>`;
+  const mot = { pro: 'chain, wants ID + card', loose: 'family-run, asks questions', sloppy: 'cash, no questions' };
+  function place(p) {
+    const here = A.here(), me = p.id === here.id, mi = A.miles(here, p), sv = p.services || {}, c = SH.Net && SH.Net.cell ? SH.Net.cell(p) : null;
+    const mots = SH.Motels ? SH.Motels.motels(p) : [], st = SH.Stores ? (SH.Stores.BY_TIER[p.tier] || []).map((s) => SH.Stores.STORES[s].n) : [];
+    const J = me ? [] : best(here, p), walk = me ? null : A.modes(here, p).filter((m) => /walk|bike|scoot|kick/.test(m.k) && !m.blocked);
+    const deps = R ? R.board(p, G().t, 300).slice(0, 4) : [];
+    const noticeTxt = p.notice > 0.6 ? 'a lot: everyone knows everyone' : p.notice > 0.3 ? 'some' : 'barely: easy to blend in';
+    let h = `<div style="display:flex;justify-content:space-between;align-items:baseline;gap:6px"><b style="font-size:17px">${esc(p.name)}</b>${B.pill(A.TIERS[p.tier].n)}</div><div class="muted" style="font-size:11.5px">pop. ${p.pop.toLocaleString()} · ${esc(p.biome)} · ${me ? '<b style="color:#5ac8fa">you are here</b>' : `${mi} mi ${dir(here, p)} of ${esc(here.name)}`}</div><div class="muted" style="font-size:11px;font-style:italic;margin:2px 0 6px">${esc(p.motto || '')}</div>`;
+    h += `<div style="display:flex;gap:5px;margin:6px 0">${me ? '' : `<button class="wbtn" onclick="SH.Browser.go('avermaps.av/dir?f=${here.id}&t=${p.id}')">🧭 Directions</button>`}<button class="wbtn ok" onclick="SH.Browser.go('rides.av/find?f=${me ? p.id : here.id}&t=${me ? '' : p.id}&w=now')">🎫 ${me ? 'Rides from here' : 'Book a ride'}</button></div>`;
+    if (!me) h += `<div class="wsec">Getting there</div>` + (J[0] ? B.row({ icon: J[0].legs[0].rt.op.icon, go: `rides.av/trip/${encodeURIComponent(J[0].key)}?to=${p.id}`, t: `${fmt(J[0].dep)} → ${fmt(J[0].arr)} · $${J[0].cost}`, sub: `${esc(J[0].legs.map((l) => l.rt.op.n).join(' → '))}${J[0].legs.length > 1 ? ' · 1 change' : ' · direct'}${J.length > 1 ? ` · +${J.length - 1} more` : ''}`, right: 'Book' }) : B.note('No bus or train goes there from here today.', 'warn')) + (walk || []).map((m) => `<div style="font-size:11.5px;margin:3px 2px">${m.k === 'walk' ? '🚶' : m.k === 'bike' ? '🚲' : '🛴'} ${esc(m.n)}: ${Math.floor(m.mins / 60)}h ${m.mins % 60}m</div>`).join('');
+    h += `<div class="wsec">Leaving from ${esc(p.name)}</div>` + (deps.length ? deps.map((b) => `<div style="font-size:11.5px;margin:3px 2px">${b.rt.op.icon} <b>${fmt(b.dep)}</b> ${esc(b.rt.op.n)} → ${esc(R.net().P[b.rt.stops[b.rt.stops.length - 1]].name)}</div>`).join('') : '<div class="muted" style="font-size:11.5px">Nothing. No stop, no station.</div>');
+    h += `<div class="wsec">Sleep</div>` + (mots.length ? mots.map((m) => `<div style="font-size:11.5px;margin:3px 2px">🛏️ <b>${esc(m.n)}</b> · $${m.rate}/night · <span class="muted">${mot[m.k] || ''}</span></div>`).join('') : '<div class="muted" style="font-size:11.5px">No motels.</div>') + (sv.shelter ? '<div style="font-size:11.5px;margin:3px 2px">🏠 <b>Youth shelter</b>: open 24/7, ages 11–17</div>' : '');
+    h += `<div class="wsec">Around town</div><div style="font-size:11.5px;line-height:1.6">🛒 ${st.length ? esc(st.join(', ')) : 'one general store'}<br>${sv.hospital ? '🏥 Hospital' : '🏥 No hospital'} · ${sv.library ? '📚 Library' : 'no library'}<br>📶 ${c ? `${c.gen}, ${c.base >= 4 ? 'strong' : c.base >= 2 ? 'patchy' : 'weak'} signal${c.spot ? ` (best: ${esc(c.spot)})` : ''}` : ''} · free wifi: ${sv.wifi && sv.wifi.length ? esc(sv.wifi.join(', ')) : 'none'}<br>🚓 ${esc(p.police || '')}<br>👀 People notice newcomers: ${noticeTxt}${c ? ` · about ${Math.round(c.online * 100)}% are online` : ''}</div>`;
+    h += `<div class="wsec">A kid could earn</div><div style="font-size:11.5px">${esc((p.kidjobs || []).join('; '))}</div><div class="wsec">Locals</div><div style="font-size:11.5px;line-height:1.5">${(p.people || []).map((x) => `<b>${esc(x.n)}</b>, ${esc(x.role)}`).join('<br>')}</div>`;
+    if (p.grandma) h += B.note(`💗 Grandma lives here.${SH.f && SH.f('grandmaAddr') ? ' 41 Larkspur Lane.' : ' You don\'t know the exact address.'}`, 'good');
+    return h;
+  }
+  function explore(path) { const id = (path.match(/^p\/(\w+)/) || [])[1], sel = (id && byId(id)) || A.here(); if (id && M._f !== id) M.focus(id); M._f = id; return top('ex', id ? esc(sel.name) : '') + `<div class="maplay">${map(sel)}<div class="mapside">${place(sel)}</div></div>`; }
+  function directions(path) {
+    const f = byId(q(path, 'f')) || A.here(), t = byId(q(path, 't'));
+    let h = top('dir') + `<div class="maplay">${map(t)}<div class="mapside"><div class="wform"><label>From</label>${B.inp('adf', 'From', f.name, 'SH.AverMaps.dir()', 'avpl')}<label>To</label>${B.inp('adt', 'To', t ? t.name : '', 'SH.AverMaps.dir()', 'avpl')}<button class="wbtn" onclick="SH.AverMaps.dir()">Get directions</button></div>`;
+    if (t && t.id !== f.id) {
+      const J = best(f, t), ms = A.modes(f, t).filter((m) => /walk|bike|scoot|kick|drive/.test(m.k));
+      h += `<div class="wsec">${esc(f.name)} → ${esc(t.name)} · ${A.miles(f, t)} mi ${dir(f, t)}</div>` + (J.length ? J.map((jr) => SH.Rides ? SH.Rides.jrow(jr, t) : '').join('') : B.note('No bus or train connects these today.', 'warn'));
+      h += ms.map((m) => B.row({ icon: m.k === 'walk' ? '🚶' : m.k === 'bike' ? '🚲' : m.k === 'drive' ? '🚗' : '🛴', t: esc(m.n), sub: m.blocked ? esc(m.blocked) : esc(m.note || ''), right: m.blocked ? '—' : `${Math.floor(m.mins / 60)}h ${m.mins % 60}m` })).join('');
+    }
+    return h + '</div></div>';
+  }
+  const F = { motel: ['🛏️ Motels', (p) => SH.Motels && SH.Motels.motels(p).length, (p) => 'from $' + Math.min(...SH.Motels.motels(p).map((m) => m.rate)) + '/night'], wifi: ['📶 Free wifi', (p) => p.services.wifi.length, (p) => p.services.wifi.join(', ')], shelter: ['🏠 Shelter', (p) => p.services.shelter, () => 'youth shelter, 24/7'], hospital: ['🏥 Hospital', (p) => p.services.hospital, () => 'hospital'], nopolice: ['🤠 No police', (p) => !p.hasPolice, () => 'sheriff covers it'], quiet: ['🤫 Quiet', (p) => p.notice < 0.3, () => 'people don\'t notice much'], station: ['🚆 Train', (p) => p.station || p.rail || p.halt, (p) => (p.station ? 'station' : 'halt')], rides: ['🚌 Rides', served, (p) => served(p) + ' routes stop here'] };
+  function near(path) {
+    const k = q(path, 'k') || 'motel', here = A.here(), f = F[k] || F.motel;
+    const L = A.data().places.filter((p) => { try { return f[1](p); } catch (e) { return false; } }).map((p) => [p, A.miles(here, p)]).sort((a, b) => a[1] - b[1]).slice(0, 15);
+    return top('near', `Near ${esc(here.name)}`) + B.tabs(Object.entries(F).map(([x, v]) => [`avermaps.av/near?k=${x}`, v[0], x]), k) + L.map(([p, mi]) => B.row({ js: `SH.AverMaps.open('${p.id}')`, t: `${esc(p.name)}${p.id === here.id ? ' (here)' : ''}`, sub: `${A.TIERS[p.tier].n} · ${esc(f[2](p))}`, right: p.id === here.id ? '📍' : `${mi} mi ${dir(here, p)}` })).join('');
+  }
+  B.SITES['avermaps.av'] = { n: 'AverMaps', icon: '🗺️', col: '#2f8f5b', mb: 1.2, tile: true, order: 2, own: true, render(path) { const p = path || ''; return /^dir/.test(p) ? directions(p) : /^near/.test(p) ? near(p) : explore(p); } };
+  // map gestures on the page: tap a dot, drag, wheel, pinch (re-render only, no reload)
+  const bR = P.render;
+  P.render = function () {
+    const r = bR.apply(this, arguments), box = document.getElementById('ammap'); if (!box) return r; const svg = box.querySelector('svg'); if (!svg) return r;
+    let drag = null, moved = false; const pts = new Map(), setVB = () => svg.setAttribute('viewBox', vb().map((v) => v.toFixed(1)).join(' '));
+    box.addEventListener('pointerdown', (e) => { pts.set(e.pointerId, [e.clientX, e.clientY]); drag = { x: e.clientX, y: e.clientY, cx: M.cam.cx, cy: M.cam.cy, z: M.cam.z, d: null }; moved = false; });
+    box.addEventListener('pointermove', (e) => { if (!drag || !pts.has(e.pointerId)) return; pts.set(e.pointerId, [e.clientX, e.clientY]); const rc = box.getBoundingClientRect(), k = Math.max(W / M.cam.z / rc.width, H / M.cam.z / rc.height);
+      if (pts.size === 2) { const [a, b] = [...pts.values()], d = Math.hypot(a[0] - b[0], a[1] - b[1]); if (!drag.d) { drag.d = d; drag.z = M.cam.z; } M.cam.z = clamp(drag.z * d / drag.d, 1, 6); moved = true; setVB(); return; }
+      const dx = e.clientX - drag.x, dy = e.clientY - drag.y; if (Math.abs(dx) + Math.abs(dy) > 5) moved = true; if (moved) { M.cam.cx = drag.cx - dx * k; M.cam.cy = drag.cy - dy * k; setVB(); } });
+    const up = (e) => { pts.delete(e.pointerId); if (!pts.size) drag = null; }; box.addEventListener('pointerup', up); box.addEventListener('pointercancel', up);
+    box.addEventListener('wheel', (e) => { e.preventDefault(); M.cam.z = clamp(M.cam.z * (e.deltaY < 0 ? 1.25 : 0.8), 1, 6); setVB(); }, { passive: false });
+    box.querySelectorAll('.apl').forEach((g) => (g.onclick = () => { if (moved) { moved = false; return; } M.open(g.dataset.id); }));
+    return r;
+  };
+})(window.SH);
+
+</script>
+<script>
+/* web_more.js */
+/* SMALL HOURS — the rest of the web, made usable.
+   Browser home: big search, your next ticket, sites grouped (Getting around / Money & a bed / News & help), recent pages.
+   Seekr instant answers: "bus to cedar falls", "harlow to ironton", "how do i get to X" → real rides with Book;
+     a place name → its AverMaps card; weather words → today's forecast.
+   TubeYou (tubeyou.av): was a dead link. Now short how-to videos with the useful bit written out.
+   StayFinder: how booking works (walk in; online needs a card and an adult), map links.
+   PIP: "my ticket / where do I board / how do I book" answered from your real tickets. */
+(function (SH) {
+  const B = SH.Browser, P = SH.Phone; if (!B || !B.row) return;
+  const esc = B.esc, G = () => SH.G, R = SH.Routes, T = SH.Tickets;
+  const SUB = { 'seekr.av': "the search engine that doesn't judge", 'skycast.av': '7-day forecast', 'stayfinder.av': 'Motels & hotels, real reviews', 'givetogether.av': 'Fundraisers', 'everything.av': 'Anything. Next-day pickup.', 'swapspot.av': 'Used stuff near you', 'threadly.av': 'Ask anything', 'worknow.av': 'Jobs near you', 'safeline.av': 'Talk to someone, 24/7', 'history.av': 'Pages you visited', 'tubeyou.av': 'How-to videos' };
+  const fix = () => { Object.entries(SUB).forEach(([d, s]) => { if (B.SITES[d]) B.SITES[d].sub = s; }); if (B.SITES['ledger.av']) B.SITES['ledger.av'].own = true; };
+  const tile = (d) => { const s = B.SITES[d]; if (!s) return ''; return `<a href="#" onclick="SH.Browser.go('${d}');return false" class="wtile"><span style="background:${s.col || '#333'}">${s.icon}</span>${esc(s.n)}</a>`; };
+  const GROUPS = [['Getting around', ['rides.av', 'avermaps.av', 'skycast.av', 'averline.av', 'cheapride.av', 'rail.av', 'county.av']], ['Money & a bed', ['stayfinder.av', 'worknow.av', 'everything.av', 'swapspot.av', 'givetogether.av']], ['News & help', ['safeline.av', 'ledger.av', 'threadly.av', 'tubeyou.av', 'history.av']]];
+  function home() {
+    fix(); const next = T && T.all().find((t) => T.state(t) === 'booked'), h = B.hist().slice(0, 3);
+    return `<div style="text-align:center;margin:8px 0 8px"><div style="font-size:26px;font-weight:800;letter-spacing:-1px">Seekr</div><div class="muted" style="font-size:11px">search places, rides, jobs, stuff, help</div></div>
+      <div style="display:flex;gap:6px;margin-bottom:6px">${B.inp('bq2', 'Try "bus to Cedar Falls" or "motel"', '', "SH.Browser.search(SH.Browser.val('bq2'))", 'avpl')}<button class="btn primary" onclick="SH.Browser.search(SH.Browser.val('bq2'))">Go</button></div>${B.places()}
+      ${next ? B.row({ icon: '🎫', go: 'rides.av/tickets', t: `${R.fmt(next.dep)} → ${esc(next.toN)} · ${next.code}`, sub: `Board at ${esc(next.pts[0])} · ${T.left(next.dep)}` }) : ''}
+      ${GROUPS.map(([n, L]) => `<div class="wsec">${n}</div><div class="wtiles">${L.map(tile).join('')}</div>`).join('')}
+      ${h.length ? `<div class="wsec">Recent</div>` + h.map((x) => B.row({ go: x.url, t: esc(x.url), sub: SH.fmt12 ? SH.fmt12(x.t) : '' })).join('') : ''}
+      <div class="muted" style="font-size:10.5px;margin-top:10px;text-align:center">Every page uses a little data. History can be seen by anyone who picks up your phone.</div>`;
+  }
+  const bV = P.V.browser;
+  P.V.browser = function (body) { const r = bV.apply(this, arguments); if (B.url === 'home') { const ab = body.querySelector('.appbody'); if (ab) ab.innerHTML = home(); } return r; };
+
+  // Seekr instant answers
+  const inst = (q) => {
+    if (!SH.Atlas || !R) return ''; const t = q.toLowerCase().trim(); let m, f = null, to = null;
+    if ((m = t.match(/^(?:bus|train|ride|tickets?|coach|van|how (?:do i|to|can i) get|get|go|travel|directions?)(?: from ([a-z .']+?))? to ([a-z .']+)$/)) || (m = t.match(/^([a-z .']+?) to ([a-z .']+)$/))) { f = m[1] ? B.findPlace(m[1]) : SH.Atlas.here(); to = B.findPlace(m[2]); }
+    if (to && f && to.id !== f.id) { const J = R.journeys(f, to, G().t, 3); return `<div class="wsec">Rides · ${esc(f.name)} → ${esc(to.name)}</div>` + (J.length && SH.Rides ? J.map((jr) => SH.Rides.jrow(jr, to)).join('') : B.note('No bus or train connects these today.', 'warn')) + B.row({ go: `rides.av/find?f=${f.id}&t=${to.id}&w=now`, icon: '🧭', t: 'More times on AverRides', sub: 'tomorrow, evenings, other companies' }); }
+    const p = SH.Atlas.data().places.find((x) => x.name.toLowerCase() === t); if (p) { const here = SH.Atlas.here(); return B.row({ go: 'avermaps.av/p/' + p.id, icon: '🗺️', t: `${esc(p.name)} · ${SH.Atlas.TIERS[p.tier].n}`, sub: `${p.id === here.id ? 'You are here' : SH.Atlas.miles(here, p) + ' mi away'} · pop. ${p.pop.toLocaleString()} · motels, rides, police, wifi on AverMaps` }) + (p.id !== here.id ? B.row({ go: `rides.av/find?f=${here.id}&t=${p.id}&w=now`, icon: '🎫', t: `Rides to ${esc(p.name)}`, sub: 'Book on AverRides' }) : ''); }
+    if (/weather|rain|cold|forecast|snow/.test(t) && SH.weatherDay) { const w = SH.weatherDay(SH.day()) || {}; return B.row({ go: 'skycast.av', icon: '🌦️', t: `Today: ${esc(w.c || '')} · ${w.hi}° / ${w.lo}°`, sub: w.lo < 38 ? 'Cold night. Don\'t sleep outside without a sleeping bag.' : 'Full forecast on SkyCast' }); }
+    return '';
+  };
+  const hook = () => { const s = B.SITES['seekr.av']; if (!s || s._inst) return; s._inst = true; const r0 = s.render; s.render = function (path) { const q = decodeURIComponent((String(path).match(/q=([^&]*)/) || [])[1] || ''); const h = r0.apply(this, arguments); return q ? inst(q) + h : h; }; s._wrapped = false; B.wrapAll && B.wrapAll(); };
+
+  // TubeYou: the dead link, now useful
+  const VIDS = [['How to read a bus timetable (so you don\'t miss it)', '4:12', 'Times on the left are when it leaves each stop. "Tomorrow" means the next day. Be at the stop 10 minutes early: professional buses leave on the dot, the cheap ones leave whenever.'], ['Pitching a tent in the dark', '6:40', 'Flat ground, no dips (water pools there). Stakes at 45°, door away from the wind. Practice once in daylight.'], ['What to do if you\'re lost', '3:05', 'Stop. Find a public place: a library, a gas station, a diner. Ask a worker, not a random driver. Your phone\'s map works offline if you opened it before.'], ['Staying warm on a cold night', '5:18', 'Layers, a hat, dry socks. Sleep off the ground. Cotton wet = cold. A sleeping bag rated for the lows is the one thing worth spending on.'], ['Spotting online scams', '7:02', '"Pay a deposit first," "come alone," "send a photo," "don\'t tell anyone." Every one of those is a stop sign. Block and report.'], ['Cheap food that fills you up', '4:44', 'Peanut butter, bread, bananas, oats, rice. Gas-station hot dogs are $2 and honestly fine.']];
+  B.SITES['tubeyou.av'] = { n: 'TubeYou', icon: '▶️', col: '#c4302b', mb: 2.2, tile: false, render(path) { const i = +((path.match(/^v\/(\d+)/) || [])[1]); if (path && VIDS[i]) { const v = VIDS[i]; return `<div style="aspect-ratio:16/9;background:#000;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:40px">▶️</div><div style="font-size:14px;font-weight:700;margin:6px 0 2px">${esc(v[0])}</div><div class="muted" style="font-size:11px">${v[1]} · the useful part:</div>` + B.note(esc(v[2]), 'info') + B.lnk('tubeyou.av', '← more videos'); } return VIDS.map((v, k) => B.row({ go: 'tubeyou.av/v/' + k, icon: '▶️', t: esc(v[0]), sub: v[1] })).join(''); } };
+  B.index(/video|how to|tutorial|watch|tent|lost|warm|scam|timetable/, 'tubeyou.av', 'TubeYou · how-to videos', 'Timetables, tents, staying warm, scams.');
+
+  // StayFinder: say how booking actually works
+  const hookStay = () => { const s = B.SITES['stayfinder.av']; if (!s || s._x) return; s._x = true; const r0 = s.render; s.render = function () { return r0.apply(this, arguments) + B.note('<b>Booking:</b> walk in and ask at the desk (the Motel option in the town menu). Online booking needs a card and an adult 18+. Chains want ID. Family-run places haggle.', 'info') + B.row({ go: 'avermaps.av/near?k=motel', icon: '🗺️', t: 'Motels in other towns', sub: 'Sorted by distance on AverMaps' }); }; s._wrapped = false; B.wrapAll && B.wrapAll(); };
+  const bGo = B.go; B.go = function () { try { fix(); hook(); hookStay(); } catch (e) {} return bGo.apply(this, arguments); };
+
+  // PIP knows your tickets
+  if (SH.PIP && SH.PIP.reply) { const bP = SH.PIP.reply; SH.PIP.reply = function (raw) { const t = String(raw || '').toLowerCase();
+    if (T && /\b(my (ticket|trip|ride|booking)s?|where do i board|where do i get on|when'?s my (bus|train|ride)|how do i (book|buy a ticket))\b/.test(t)) {
+      const L = T.all().filter((x) => T.state(x) === 'booked');
+      if (!L.length) return 'No tickets. Open the browser → AverRides (rides.av): search, pick a ride, book it (PocketPal or reserve and pay cash). Then be at the boarding spot on the ticket before it leaves.';
+      return L.slice(0, 3).map((x) => `${x.code}: ${R.fmt(x.dep)} ${SH.Rides ? SH.Rides.day(x.dep).toLowerCase() : ''} ${x.fromN} → ${x.toN}. Board at ${x.pts[0]}, be there by ${R.fmt(x.dep - 10)}. ${x.pay === 'card' ? 'Paid.' : `Bring $${x.cost} cash.`}`).join(' ') + ' Tap 🎫 Board in the town menu when you\'re there.';
+    }
+    return bP.apply(this, arguments); }; }
+})(window.SH);
 
 </script>
 </body>

@@ -21,13 +21,13 @@
     const D = A.data(), sel = (A.sel && D.places.find((p) => p.id === A.sel)) || A.here();
     const hits = q.length > 1 ? D.places.filter((p) => p.name.toLowerCase().includes(q.toLowerCase())).slice(0, 6) : [];
     const cnt = {}; D.places.forEach((p) => (cnt[p.tier] = (cnt[p.tier] || 0) + 1));
-    body.innerHTML = P.hdr('🧭 Atlas') + `<div class="appbody">
+    body.innerHTML = P.hdr('🧭 Atlas', SH.MapFull ? SH.MapFull.btn() : '') + `<div class="appbody maplay"><div class="mapc">
       <div style="display:flex;gap:5px;margin-bottom:6px"><input id="atq" value="${esc(q)}" placeholder="Find a place… (${D.places.length})" style="flex:1;min-width:0;padding:6px 10px;border-radius:14px;border:1px solid #ffffff22;background:#0008;color:inherit;font-size:12px">
         <button class="btn small" id="atm">−</button><button class="btn small" id="atp">+</button><button class="btn small" id="ath" title="Where am I">⌖</button></div>
       ${hits.length ? `<div style="margin:-2px 0 6px">${hits.map((p) => `<button class="btn small athit" data-id="${p.id}" style="margin:2px">${esc(p.name)} <small class="muted">${p.tier === 'small' ? 'small town' : p.tier}</small></button>`).join('')}</div>` : ''}
-      <div id="atmap" style="touch-action:none;border-radius:10px;overflow:hidden;position:relative">${A.svg(D, sel.id, W, H, { z: A.cam.z, vb: vb(), hl: highlight(D, sel) })}</div>
-      <div class="muted" style="font-size:10.5px;margin:4px 0 2px">${cnt.city} cities · ${cnt.town} towns · ${cnt.small} small towns · ${cnt.village} villages · drag to pan, pinch or scroll to zoom</div>
-      ${A.card(sel)}</div>`;
+      <div id="atmap" class="mapsvg" style="touch-action:none;border-radius:10px;overflow:hidden;position:relative">${A.svg(D, sel.id, W, H, { z: A.cam.z, vb: vb(), hl: highlight(D, sel) })}</div>
+      <div class="muted" style="font-size:10.5px;margin:4px 0 2px">${cnt.city} cities · ${cnt.town} towns · ${cnt.small} small towns · ${cnt.village} villages · drag to pan, pinch or scroll to zoom</div></div>
+      <div class="mapside">${A.card(sel)}</div></div>`;
     const re = () => P.render();
     body.querySelector('#atp').onclick = () => { A.zoomBy(1.6); re(); };
     body.querySelector('#atm').onclick = () => { A.zoomBy(1 / 1.6); re(); };
@@ -40,7 +40,7 @@
     box.addEventListener('pointerdown', (e) => { pts.set(e.pointerId, [e.clientX, e.clientY]); drag = { x: e.clientX, y: e.clientY, cx: A.cam.cx, cy: A.cam.cy, z: A.cam.z, d: null }; moved = false; });
     box.addEventListener('pointermove', (e) => {
       if (!drag || !pts.has(e.pointerId)) return; pts.set(e.pointerId, [e.clientX, e.clientY]);
-      const rc = box.getBoundingClientRect(), k = W / A.cam.z / rc.width;
+      const rc = box.getBoundingClientRect(), k = Math.max(W / A.cam.z / rc.width, H / A.cam.z / rc.height); // map may be letterboxed in fullscreen
       if (pts.size === 2) { const [a, b] = [...pts.values()], d = Math.hypot(a[0] - b[0], a[1] - b[1]); if (!drag.d) { drag.d = d; drag.z = A.cam.z; } A.cam.z = clamp(drag.z * d / drag.d, 1, 6); moved = true; setVB(); return; }
       const dx = e.clientX - drag.x, dy = e.clientY - drag.y; if (Math.abs(dx) + Math.abs(dy) > 5) moved = true;
       if (moved) { A.cam.cx = drag.cx - dx * k; A.cam.cy = drag.cy - dy * k; setVB(); }
