@@ -229,14 +229,22 @@
     return null;
   }
 
-  function followUp(id, an, c) {
+  // A reply when the brain had nothing specific. Rules: feelings get sympathy (never "then what");
+  // "go on" only for story-like input; a topic question only stands ALONE and only when the talk has stalled.
+  const STORY = /\b(was|were|did|went|said|told|got|came|saw|happened|yelled|hit|left|took|made)\b/;
+  function followUp(id, an, c, repeat) {
     const S = cs(c); const st = sty(id);
     if (an.has('thanks') || /\b(thanks|thank you|thx|ty)\b/.test(an.t)) return pick(SDEF[st].thanks);
-    const q = nextQ(id, c);
-    if (an.len >= 5) { const r = N.reflect ? N.reflect(an.t) : null; if (r && st === 'warm' && !/^you (miss|love|like|hate)\b/i.test(r)) return cap(r) + '. ' + (q || pick(mv(id, 'go'))); }
-    if (q && (an.q || an.len <= 3)) return q;
-    if (q && Math.random() < 0.6) return pick(mv(id, 'go').filter((x) => !/\?/.test(x))) + ' ' + q;
-    return pick(mv(id, 'go'));
+    const low = an.has('sad') || an.has('scared') || an.has('angry') || (an.I && an.I.low) || an.sent < 0;
+    const unused = (a) => { const u = a.filter((x) => !S.said.includes(norm(x))); return pick(u.length ? u : a); };
+    if (low) return unused(((SH.CONV_LOW || {})[st]) || ['I\'m sorry. What happened?']);
+    if (an.len >= 5) { const r = N.reflect ? N.reflect(an.t) : null; if (r && st === 'warm' && !/^you (miss|love|like|hate)\b/i.test(r)) return cap(r) + '. ' + unused(mv(id, 'go')); }
+    if (an.len >= 6 && STORY.test(an.t)) return unused(mv(id, 'go'));
+    if (an.q) return unused(st === 'teen' ? ['idk honestly', 'hm. good question', 'wait why u asking'] : st === 'kid' ? ['i don\'t know!', 'hmm'] : st === 'gruff' ? ['Don\'t know.'] : ['Hm. I\'m not sure, honestly.', 'Good question.']);
+    const stalled = an.len <= 2 && !repeat;
+    const q = stalled || c.turn > 3 ? nextQ(id, c) : '';
+    if (q) return q;
+    return unused(st === 'teen' ? ['fair', 'ya', 'mood', 'real'] : st === 'kid' ? ['okay!', 'hehe'] : st === 'gruff' ? ['Mm.', 'Okay.'] : ['Mm. I hear you.', 'Okay.']);
   }
 
   function wrap(id, inner) {
@@ -266,7 +274,7 @@
         const said = norm(r.say); const repeat = said.length > 6 && S.said.includes(said);
         const lastQ = (String(r.say).match(/[^.!?]*\?\s*$/) || [''])[0]; const sayTops = topicsOf(lastQ);
         const badQ = !SELF.includes(id) && !!lastQ && sayTops.some((t) => S.blocked[t] || (filler && S.top[t] != null && S.top[t] < c.turn));
-        if (!r.end && ((filler && !SELF.includes(id)) || repeat || badQ)) { const alt = followUp(id, an, c); if (alt && norm(alt) !== said) r = Object.assign({}, r, { say: alt }); }
+        if (!r.end && ((filler && !SELF.includes(id)) || repeat || badQ)) { const alt = followUp(id, an, c, repeat); if (alt && norm(alt) !== said) r = Object.assign({}, r, { say: alt }); }
       }
       if (an.meta !== 'alreadyTold') tops.forEach((t) => { P.tops[t] = { t: SH.G.t, raw: String(an.raw || '').slice(0, 90) }; });
       S.said.push(norm(r.say)); S.lastRaw = r.say;

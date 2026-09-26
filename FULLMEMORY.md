@@ -282,3 +282,21 @@ Next ideas (not started, need "go"): two-change trip planning; balance pass on m
   - 21-day sim (tests/part11): a village without a cover is found around day 5, with one it settles; a small town with a cover stays around 42; a town reported with a friend, cover and room stays around 48 (before: found on day 9).
 - Tests: `tests/part8.js` (trips), `part9.js` (memory + understanding), `part10.js` (PIP), `part11.js` (balance). parts.js now accepts multi-digit part numbers; `TPMAX=n` env raises the print limit. All parts plus p1, p1b, p2, e2, bot and cell pass.
 - ⚠️ Lesson: `src/mind.js` already existed (the original Mind). Always `ls`/grep before creating a file.
+
+## Request #23: group chats with memory (`src/groupchat.js`, tests/part12.js)
+- Class chat: remembers topics and who said what (`G.gc[id].log`), holds a grudge after insults until you apologize, answers "what did devon say / who said page 42 / did I say X / catch me up" (recap skips its own recall lines), remembers facts you share (`G.gc.class.facts`) and brings them up the next day.
+- While missing: classmates react, and posting where you are raises heat (+14, `toldClassPlace`).
+- "the squad" (`crew`) is created once you've met 2+ friends. Each friend answers through their own brain, says what they're really doing (`KIDS[x].hang`) and learns what you share; party members joke that they're right next to you.
+- memory.js's unattributed callback lines are filtered out of group threads.
+
+## Request #24: speech engine fixes, memory → actions, useful PIP (`src/talkfix.js`, `src/talkfix2.js`, converse.js followUp, tests/part13.js)
+- The bug (Marco transcript): friend questions had no "?" so answers were ignored; repeats were swapped for random topic questions; filler glued "then what" onto a question; "things aren't great" wasn't a feeling; PIP repeated lines.
+- Friend thread engine (wraps every `SH.Brain[kid]`, state in `c.mem.th`, persistent in `FR.st(id).rt {asks, where, dec, when}`):
+  - run: where → how bad → decision → when. `rt.dec` ('in' / 'help' / 'no') is computed once from knows, rel and risk; asking again restates it.
+  - 'in' → `f.wouldRun`; 'help' → `f.offer`; 'no' → `f.worry`, and at 2 worries without a promise `f.mayTell = tomorrow`.
+  - "don't tell anyone / promise" → `f.secret` if rel ≥ 25 or they're in.
+  - low mood → "what happened? home stuff?" → a yes or story sets `f.knows` (offer at rel ≥ 30). Plans ("wanna draw later?") → `f.plan`.
+  - The thread engine's lines are fed into converse's said-list so they aren't repeated.
+- Consequences (talkfix2): daily, if `mayTell` is due, the friend's parent calls mom (or heat +8 when you've left) and the friend apologizes (`f.told`). At 7 PM on `rt.when` the friend texts "still on for tonight?". `Mem.greeting` for friends: "are u mad at me?", "are we still doing it?", "u still thinking about the X thing?".
+- converse `followUp`: feelings get sympathy (`SH.CONV_LOW`); "go on" only for story-like input; topic questions only stand alone when the talk has stalled; on repeats, no random topic swap.
+- PIP ◉: friend-specific pools per thread state (where / how bad / when / tell / decide / are-u-ok / general, using their hobby). Each tone rotates through a history (`_sugH`) so every press changes, and anything you've already said (talk log or text thread) is excluded.

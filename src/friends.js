@@ -126,7 +126,7 @@
       }
       if (an.has('run') || tp.run) {
         if (f.knows && rel >= 50 && Math.random() < k.risk + 0.2) { f.wouldRun = true; return R(pick(['if you go, i\'m coming. not letting you go alone. i mean it', 'ok but take me. seriously. two is safer than one right']), { rel: 3 }, { narr: `${k.n} would come with you. You're not sure if that makes it better or worse.` }); }
-        return R(f.offer ? 'dude. don\'t. just come to mine instead. please' : pick(['wait like run away?? where would you even go', 'that sounds scary. are things that bad?']), { rel: 1 });
+        return R(f.offer ? 'dude. don\'t. just come to mine instead. please' : pick(['wait like run away?? where would you even go?', 'that sounds scary. are things that bad?']), { rel: 1 });
       }
       const FAV = { nia: 'drawing. dragons mostly. and that one anime nobody else watches', marco: 'skating. and making people laugh. and my mom\'s food truck tacos, no contest', priya: 'science olympiad. don\'t laugh. also baking when my mom lets me', eli: 'skyforge. obviously. and old handheld games', theo: 'basketball. and my little brothers, but don\'t tell them', hazel: 'climbing stuff. trees, fences, the water tower once (don\'t tell)' };
       if (/\b(fav(orite|ourite|e)?|what do (you|u) (like|do for fun)|what are (you|u) into|hobby|hobbies)\b/.test(t)) { bump(id, 1); f.asked = (f.asked || 0) + 1; return R(FAV[id] + (f.asked === 1 ? '. what about u' : ''), { mood: 1 }); }
