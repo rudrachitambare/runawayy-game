@@ -11,7 +11,7 @@
   K.D = (title, text, choices, who) => SH.UI.dialog({ title, who, text: [].concat(text), choices: choices || [{ t: 'Okay', fn: K.back }] });
   K.ok = (fn) => [{ t: 'Okay', fn: fn || K.back }];
   K.pay = (amt, desc) => { const g = SH.G; if (g.money < amt) { SH.UI.toast(`That's $${amt}. You have $${Math.floor(g.money)}.`); return false; } SH.money(-amt); (g.tx = g.tx || []).push({ t: g.t, d: desc || 'Cash', a: -amt }); return true; };
-  K.party = () => (SH.G.party || []).filter((id) => SH.NPCS_META[id]);
+  K.party = () => (SH.G.party || []).concat(SH.G.rkids || []).filter((id) => SH.NPCS_META[id]);
   K.nm = (id) => (SH.NPCS_META[id] || {}).n || id;
   K.grp = () => 1 + K.party().length;
   K.days = () => (SH.G.missingAt ? (SH.G.t - SH.G.missingAt) / 1440 : 0);
