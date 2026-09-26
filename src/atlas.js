@@ -216,8 +216,9 @@
     SH.UI.dialog({ title: p.name, text: [`${A.TIERS[p.tier].n}, pop. ${p.pop.toLocaleString()} · ${SH.fmt()} · ${dark ? 'dark' : 'daylight'}`, noticeLine(p)], choices: ch });
   };
   function noticeLine(p) { const n = SH.G.awayNotice || 0; return n > 60 ? 'People are definitely looking at you now.' : n > 30 ? 'The woman at the gas station looked at you a second too long.' : p.tier === 'city' ? 'Nobody\'s looking at you. That\'s good and bad.' : 'So far nobody\'s asked who you are.'; }
+  A.noticed = (p, k) => noticed(p, k);
   function noticed(p, k) {
-    const G = SH.G; G.awayNotice = (G.awayNotice || 0) + Math.round(100 * p.notice * k * (G.reported ? (SH.Net && SH.Net.posterMult ? SH.Net.posterMult(p) : 1.6) : 0.8) * (G.party && G.party.length ? 1.4 : 1));
+    const G = SH.G; G.awayNotice = (G.awayNotice || 0) + Math.round(100 * p.notice * k * (G.reported ? (SH.Net && SH.Net.posterMult ? SH.Net.posterMult(p) : 1.6) : 0.8) * (G.party && G.party.length ? 1.4 : 1) * (A.mods || []).reduce((m, f) => { try { return m * f(p, k); } catch (e) { return m; } }, 1));
     if (G.awayNotice >= 100) { G.away = null; SH.Endings.found(p.hasPolice ? 'away' : 'sheriff'); return true; }
     return false;
   }
