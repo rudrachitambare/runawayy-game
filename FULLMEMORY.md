@@ -421,3 +421,18 @@ Files: `src/village_life.js`, `src/later.js` (both loaded right after shack.js);
   - The second ending is `X.trigger('later')`: laterShort (<21 d, p6), laterShack (≥5 shack parts here, p5), laterFriends, laterBase, laterMoney (≥$300), laterSpring (fallback). Being found also counts as the second ending.
   - The second ending gets a "SECOND ENDING · N DAYS AFTER …" banner. Once per run. "Disappear for good" is hidden while `G.later` is set.
   - Never-found (gone and later) ending screens now replace the generic "After" section with never-found aftermath text.
+
+## 41. More story: village stories, home, calendar (turn 41; user asked for "all")
+File: `src/tales.js`, loaded after later.js.
+- State: `G.tale = {q, done, kid, dog, cover, cards, lastCard}`. `SH.Tale = {pending, show, queue}`.
+- Scenes are queued from K.hourly and shown after `SH.UI.afterAction` when nothing else is open (no modal, no talk, no quiet days). `village_life.js` exports `V.quietOn()`, and quiet days stop with "Something came up" when a scene is pending. Log-only scenes (search, drawing, vigil, cold, quiet) run immediately. The dedupe key is id + pid + key.
+- Village stories (villages and small towns):
+  - The kid your age, `kidOf(p)`, six steps, after school when you have a base or pile here. Truth or lie. The deputy warning (−12 notice), the emergency-kit socks, the "say bye" promise (flag kidPromise) or the purple coat in winter. "Go away" ends it.
+  - The farmer's missing dog, after meeting the farmer and 5+ days: finding it gives a cover story (`G.tale.cover[pid]`, notice ×0.85).
+  - The diner lady's son Danny (needs the diner perk and 9+ days); flag promisedCall.
+  - The harvest supper (a fall Saturday at 4 PM).
+  - The storm night at base: the shack holds with a roof and 2+ warmth; otherwise the farmer's truck (if you've met them) or the church porch.
+- Home (days missing): 3 sibling message, 6 search party, 9 mom's plea (flag toldSafe, −15 heat), 13 stepdad (a log line if rickGone), 18 drawing, 24 mom's email reply (needs toldSafe; flag momWrote), 30 vigil, 42 case goes cold, 60 sibling's birthday (mail a gift), 90 quiet. Wording depends on whether you're online (phone) or offline (overheard in town).
+- Postcards: at an open gas station while missing, $1, once a week, +3 heat, and `cards++`.
+- Calendar: first snow, Thanksgiving (4th Thursday of November), Christmas Eve (a call home sets flag calledHome, +10 heat), New Year's Eve, and the first warm spring day (the stone footing matters).
+- New later endings: laterCall (p7, calledHome) and laterPostcards (p5, 3+ cards). The other later endings get a line about the kid (if you told the kid the truth) and about Mom's emails (momWrote). The never-found "After" section's Mom line changes if you kept in contact.

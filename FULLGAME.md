@@ -532,3 +532,9 @@ Every town you reach has its own map, streets, open/closed places, people with n
 - Quiet days: let 3, 7 or 14 days pass at your base, with a summary. It stops if anything goes wrong.
 - The phone weather app shows where you are, what it means for you, and needs signal. You can also read the sky at the edge of town.
 - Keep living it: after a never-found ending, play on for up to 4 more months, stop any time, and get a second ending.
+
+## REQUEST #41 BUILT: more story
+- Village stories: a local kid your age finds your shack (bread, a secret, a warning about a deputy, an emergency kit, a promise to say goodbye), the farmer's lost dog (find her and you get a cover story and a made-up grandma), the diner lady's son who ran away years ago, the church harvest supper, and a storm night at the shack.
+- Back home: your sibling's message, the search party, your mom's TV plea (you can let her know you're alive), the stepdad in the driveway, the vigil, the case going cold, your sibling's birthday. You can also mail postcards home.
+- The calendar: first snow, Thanksgiving, Christmas Eve (call home?), New Year's, the first warm day of spring.
+- Two new second endings: The Call and Postcards.

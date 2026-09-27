@@ -38,7 +38,8 @@
     const h = [...md.querySelectorAll('h4')].find((x) => /^after$/i.test(x.textContent.trim())); if (!h) return;
     let n = h.nextElementSibling; while (n && n.tagName !== 'H4') { const nx = n.nextElementSibling; n.remove(); n = nx; }
     const nm = (x) => (SH.nm ? SH.nm(x) : x), rick = nm('Rick'), mom = nm('Mom'), sib = nm('Lily');
-    const L = [[mom, `${mom} keeps your room the way it was. Some nights she calls your old number just to hear the voicemail, and then she hangs up before the beep, because she doesn't know what to say to it.`],
+    const contact = SH.f('calledHome') || SH.f('momWrote') || (g.tale && g.tale.cards >= 3);
+    const L = [[mom, contact ? `${mom} keeps your room the way it was, and a shoebox by the phone: ${SH.f('calledHome') ? 'the dates of every call, written on the lid' : 'every postcard and every printed email'}. She stopped asking where a long time ago. She asks how, now. She's getting better at listening to the answer.` : `${mom} keeps your room the way it was. Some nights she calls your old number just to hear the voicemail, and then she hangs up before the beep, because she doesn't know what to say to it.`],
       [rick, `${rick} tells anybody who asks that you'll come back when you get hungry. You don't. After a while nobody asks him anymore, and the house gets very quiet around him.`],
       [sib, g.rel && g.rel.lily > 50 ? `${sib} sleeps in your hoodie. She draws the same picture over and over: a house in the woods with smoke coming out of the chimney. She says you live there. She's not wrong.` : `${sib} stops asking where you went. She starts leaving the porch light on instead.`],
       ['The posters', 'Your face stays on the corkboard at the Harlow library for a year. Then somebody pins a lost-cat flyer over one corner, and then another over the rest.']];
