@@ -124,7 +124,7 @@ window.SH = window.SH || {};
     sandwich: { n: 'PB&J sandwich', w: 0.35, i: '🥪', d: '+25 fullness. Squished.', food: 25 },
     apple: { n: 'Apple', w: 0.3, i: '🍎', d: '+10 fullness.', food: 10 },
     hotdog: { n: 'QuikMart hot dog', w: 0.3, i: '🌭', d: '+22 fullness. Questionable.', food: 22 },
-    inhaler: { n: 'Inhaler', w: 0.1, i: '🫁', d: 'Albuterol. For asthma attacks. Cold air and stress trigger them.' },
+    inhaler: { n: 'Old inhaler', w: 0.1, i: '🫁', d: 'Not needed anymore.' }, // turn 51: asthma removed; kept only so very old saves never crash (saves.js strips it)
     flashlight: { n: 'Flashlight', w: 0.4, i: '🔦', d: 'Makes dark places slightly less terrible.' },
     clothes: { n: 'Change of clothes', w: 1, i: '👖', d: 'Use for +25 hygiene (once).', hyg: 25 },
     toothbrush: { n: 'Toothbrush', w: 0.1, i: '🪥', d: 'Use at any sink for +6 hygiene.' },

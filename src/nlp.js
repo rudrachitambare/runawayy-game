@@ -137,7 +137,6 @@
       if (G.money < 10 && (SH.wd() === 1 || SH.wd() === 3)) out.push('Mrs. Patel pays $8 to walk Newton on Tuesdays and Thursdays after 4. Newton is 14 and walks like a loaf of bread. Easy money.');
       if (SH.f('runUnlocked')) {
         const miss = [];
-        if (!SH.has('inhaler')) miss.push('your INHALER (you have asthma, genius)');
         if (!SH.has('coat')) miss.push('a coat (it hits ' + SH.weatherDay(SH.day() + 1).lo + '°F at night)');
         if (!SH.has('charger') && !SH.has('powerbank')) miss.push('a way to charge me');
         if (SH.foodInBag().length < 2) miss.push('food');

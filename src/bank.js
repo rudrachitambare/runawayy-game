@@ -97,7 +97,7 @@
     const g = G(), c = g.crew; if (!c || c.bal < amt) return SH.UI.toast('Not that much in the pot.');
     if (Bk.access()) return SH.UI.toast(Bk.access());
     if (amt <= 15) { c.bal -= amt; SH.money(amt); c.log.unshift({ t: g.t, who: 'me', d: 'took out (' + why + ')', a: -amt }); P.render(); return; }
-    const good = /food|room|motel|bus|ticket|medicine|inhaler|charger|tent|sleeping|rent|shelter|goal|scooter|bike/.test(why.toLowerCase()) || (c.goal && why.toLowerCase().includes(c.goal.name.toLowerCase()));
+    const good = /food|room|motel|bus|ticket|medicine|charger|tent|sleeping|rent|shelter|goal|scooter|bike/.test(why.toLowerCase()) || (c.goal && why.toLowerCase().includes(c.goal.name.toLowerCase()));
     const yes = c.members.filter((id) => Bk.att(id) + (good ? 30 : -10) + Math.random() * 30 > 55);
     const pass = yes.length * 2 >= c.members.length;
     c.log.unshift({ t: g.t, who: 'vote', d: `vote: take ${$2(amt)} for "${why}": ${yes.length}/${c.members.length} yes`, a: 0 });
@@ -123,7 +123,7 @@
 
   /* ---------- pawn counter (mall) ---------- */
   const VAL = { console: 60, game1: 12, game2: 12, watch: 0, sketchbook: 1, hoodie: 3, coat: 8, charger: 4, flashlight: 3, umbrella: 2, blanket: 3 };
-  Bk.pawnable = () => G().bag.filter((id) => SH.ITEMS[id] && !SH.ITEMS[id].fixed && !['key', 'buspass', 'inhaler', 'phone'].includes(id) && (VAL[id] || SH.ITEMS[id].price));
+  Bk.pawnable = () => G().bag.filter((id) => SH.ITEMS[id] && !SH.ITEMS[id].fixed && !['key', 'buspass', 'phone'].includes(id) && (VAL[id] || SH.ITEMS[id].price));
 
   /* ---------- PocketPal app ---------- */
   Bk.tab = 'acct';

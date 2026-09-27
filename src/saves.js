@@ -7,6 +7,7 @@
   // bring any save (old or new) up to the current shape
   SH.migrate = function (G) {
     if (!G) return G;
+    { const gone = (a) => (Array.isArray(a) ? a.filter((i) => i !== 'inhaler' && i !== 'x_inhaler2') : a); G.bag = gone(G.bag); G.stash = gone(G.stash); G.owned = gone(G.owned); if (G.stored) Object.keys(G.stored).forEach((k) => { G.stored[k] = gone(G.stored[k]); }); delete G.puffs; } // turn 51: asthma removed
     G.world = G.world || {}; const W = G.world;
     W.ev = W.ev || {}; W.log = W.log || []; W.discovered = W.discovered || {}; W.seen = W.seen || {}; W.props = W.props || {};
     G.mem = G.mem || {}; G.convos = G.convos || {}; G.rumors = G.rumors || {}; G.notifs = G.notifs || []; G.gallery = G.gallery || [];

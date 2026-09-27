@@ -25,7 +25,7 @@
     ['pads', 'Period pads', '🩹', 6, 0.2, 'hygiene', {}], ['tp', 'Toilet paper (4)', '🧻', 5, 0.6, 'hygiene', {}],
     ['bandaids', 'Band-aids', '🩹', 4, 0.05, 'health', { heal: 4 }], ['firstaid', 'First-aid kit', '⛑️', 18, 0.5, 'health', { heal: 12 }],
     ['sunscreen', 'Sunscreen', '🧴', 8, 0.2, 'health', {}], ['painkiller', 'Pain reliever', '💊', 7, 0.05, 'health', { restricted: 'medicine' }],
-    ['coldmeds', 'Cold medicine', '💊', 9, 0.1, 'health', { restricted: 'medicine' }], ['inhaler2', 'Rescue inhaler', '🫁', 60, 0.1, 'health', { restricted: 'prescription' }],
+    ['coldmeds', 'Cold medicine', '💊', 9, 0.1, 'health', { restricted: 'medicine' }],
     // camping & shelter
     ['sleepbag', 'Sleeping bag', '🛌', 35, 2.5, 'camping', { sleepWarm: 40 }], ['tent1', 'Small tent (1–2)', '⛺', 45, 3, 'camping', { shelter: 1, big: true }],
     ['tent4', 'Big tent (4–6)', '🏕️', 120, 7, 'camping', { shelter: 2, big: true }], ['tarp', 'Tarp', '🟦', 12, 1, 'camping', { rain: true }],

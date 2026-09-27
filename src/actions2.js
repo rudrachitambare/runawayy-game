@@ -38,7 +38,6 @@
     if (r === 'bathroom') {
       a.push(act('Shower', '15 min', () => { doTime(15); G.s.hyg = 100; SH.st('mood', 3); log('The hot water runs out after six minutes. It always does.', 'sys'); done(); }));
       a.push(act('Look in the mirror', '', () => { const s = G.s; log(`${s.energy < 30 ? 'Purple under your eyes. ' : ''}${s.hyg < 35 ? 'Your hair is a crime scene. ' : ''}${SH.f('bruise') ? 'Four fingerprint bruises on your arm, going yellow at the edges. ' : ''}${s.mood < 30 ? 'You don\'t recognize the face. It looks like someone who stopped expecting things.' : 'Just you. Twelve. Tired. Still here.'}`, 'sys'); done(); }));
-      if (SH.inStash('inhaler') && !SH.has('inhaler')) a.push(act('Take your inhaler', `It\'s in the cabinet. ${G.puffs} puffs.`, () => { SH.rmStash('inhaler'); SH.addBag('inhaler', true); log('Inhaler in your pocket. Just in case.', 'sys'); done(); }));
     }
     a.push(act('Wait', '1 hour', () => { doTime(60, { interrupt: true }); done(); }));
     return out;
@@ -124,7 +123,7 @@
         <div class="mtext" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;font-family:system-ui;font-size:13px">
           <div><h4 style="margin:0 0 6px;color:var(--muted)">IN YOUR ROOM</h4><div class="inv">${G.stash.map((id, i) => row(id, 'stash', i)).join('') || '<small>Empty</small>'}</div></div>
           <div><h4 style="margin:0 0 6px;color:var(--muted)">BACKPACK</h4><div class="inv">${G.bag.map((id, i) => row(id, 'bag', i)).join('')}</div></div></div>
-        <div class="hint">Click to move items. Think: coat, inhaler, charger, food, money, something with Grandma's address. A bulging backpack might get noticed.</div>
+        <div class="hint">Click to move items. Think: coat, charger, food, money, something with Grandma's address. A bulging backpack might get noticed.</div>
         <div class="mchoices"><button class="btn primary" id="packDone">Done</button></div></div>`;
       md.querySelectorAll('.invi').forEach((el) => el.onclick = () => {
         const i = +el.dataset.i;
@@ -149,7 +148,6 @@
     if (id === 'card') { SH.flag('okaforCard'); log('Ms. Okafor\'s card. Her cell is on the back. You could call her from the Phone app.', 'sys'); return done(); }
     if (id === 'powerbank') { if (G.pbCharge <= 0) return SH.UI.toast('Power bank is empty.'); const give = Math.min(100 - G.phone.bat, G.pbCharge); G.phone.bat += give; G.pbCharge -= give; log('Phone charging off the power bank.', 'sys'); SH.advance(15, { interrupt: false }); return done(); }
     if (id === 'sketchbook') { SH.advance(30, { interrupt: false }); SH.st('stress', -6); SH.st('mood', 3); log('You draw until your hands stop shaking.', 'good'); return done(); }
-    if (id === 'inhaler') return SH.UI.toast(`${G.puffs} puffs left. Used automatically during an attack.`);
     if (id === 'ticket') return SH.UI.toast('Greyline to Cedar Falls. 7:10 AM · 1:40 PM · 7:20 PM. Go to the bus depot.');
     SH.UI.toast(it.d);
   };

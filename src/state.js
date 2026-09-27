@@ -87,8 +87,8 @@
       missingAt: null, discoveredAt: null, reported: false,
       rel: { mom: 45, rick: -15, lily: 72, jordan: 62, grandma: 50, okafor: 15, dex: 5, wren: 0, dolores: 0, patel: 30, tyler: -40 },
       bag: ['phone', 'key', 'buspass', 'hoodie'],
-      stash: ['charger', 'coat', 'blanket', 'water', 'flashlight', 'clothes', 'toothbrush', 'sketchbook', 'umbrella', 'inhaler', 'game1', 'game2', 'console'],
-      puffs: 30, pbCharge: 0,
+      stash: ['charger', 'coat', 'blanket', 'water', 'flashlight', 'clothes', 'toothbrush', 'sketchbook', 'umbrella', 'game1', 'game2', 'console'],
+      pbCharge: 0,
       phone: { bat: 71, share: true, airplane: false, low: false, cracked: false, confiscated: false },
       flags: { hasBike: true, knowsGrandmaNum: true },
       threads: {}, unread: {}, feed: [], journal: [], tags: [], log: [],
@@ -202,10 +202,6 @@
 
   SH.hourly = function (opts) {
     const G = SH.G;
-    // asthma
-    let p = 0.004; if (!SH.locIndoor() && SH.tempF() < 45) p += 0.05; if (G.s.stress > 80) p += 0.03; if ((opts.exert || 0) > 3) p += 0.03;
-    if (G.s.warmth < 30) p += 0.05;
-    if (!opts.sleep && U.chance(p)) SH.Events.queue({ id: 'asthma', run: () => SH.Events.asthma() });
     // phone ambient
     SH.Phone && SH.Phone.hourly();
     // home suspicion natural decay

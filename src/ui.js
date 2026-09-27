@@ -98,7 +98,7 @@
       ${G.phase === 'run' || !SH.locIndoor() ? bar('🌡 Warmth', s.warmth, good) : ''}</div>
       ${UI.today()}${meter}
       <div class="sect"><h4>Cash · $${G.money.toFixed(2)} ${G.phase === 'home' ? `<span style="text-transform:none;letter-spacing:0">(+$${G.shoebox} shoebox)</span>` : ''}</h4>
-      <div style="font-size:12px;color:var(--muted)">📱 ${Math.round(G.phone.bat)}%${G.phone.share ? ' · 📍 sharing on' : ''}${SH.has('inhaler') ? ' · 🫁 ' + G.puffs + ' puffs' : ' · 🫁 no inhaler!'} · grades ${UI.gradeWord(G.grades)}</div></div>
+      <div style="font-size:12px;color:var(--muted)">📱 ${Math.round(G.phone.bat)}%${G.phone.share ? ' · 📍 sharing on' : ''} · grades ${UI.gradeWord(G.grades)}</div></div>
       <div class="sect"><h4>Backpack · ${SH.bagWeight().toFixed(1)}/${SH.BAG_CAP} kg</h4><div class="inv">${G.bag.map((id, i) => `<div class="invi" data-id="${id}" title="${esc(SH.ITEMS[id].d)}"><span>${SH.ITEMS[id].i} ${SH.ITEMS[id].n}</span><small>use</small></div>`).join('')}</div></div>
       <div class="sect"><h4>People</h4>${relIds.map((id) => `<div class="relrow"><span>${SH.NPCS_META[id].n}</span><small class="relw">${SH.relWord ? esc(SH.relWord(id)) : hearts(G.rel[id] || 0)}</small></div>`).join('')}</div>`;
     $('#left').querySelectorAll('.invi').forEach((el) => (el.onclick = () => SH.Actions.useItem(el.dataset.id)));
@@ -158,7 +158,7 @@
     UI.dialog({ title: 'How to play', text: [
       'You are 12. Home is falling apart. You have about three weeks before things get worse, and a choice to make: stay, tell someone, or run.',
       'TIME moves when you act. Every action costs minutes or hours. Mom\'s shifts, Rick\'s drinking, school, stores and buses all run on a real schedule.',
-      'NEEDS: Fullness, Energy, Hygiene, Mood, Stress, Health, and Warmth outside. Cold nights and stress can trigger asthma, so carry your inhaler.',
+      'NEEDS: Fullness, Energy, Hygiene, Mood, Stress, Health, and Warmth outside. Cold nights outside wear your health down, so pack warm.',
       'CONVERSATIONS have no menus. Type whatever you want to say. People react to tone, honesty, what you reveal, and whether they\'re sober. Press ◉ PIP for suggested replies.',
       'THE PHONE: text anyone, call them, post on Chirp (careful), check the weather, play Skyforge, and ask PIP, your sarcastic assistant. PIP reads your situation. Try "what should I do?"',
       'THE MAP [M]: click a place to see travel times. Walk, bike, or take the city bus. If you run, red zones show where people are searching.',

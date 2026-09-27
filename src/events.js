@@ -180,13 +180,6 @@
     SH.Phone.push(who, who, who === 'mom' ? 'School just called. You\'re not in class?? Where are you. Call me NOW.' : 'SCHOOL CALLED. WHERE ARE YOU.');
     SH.rel(who, -4); SH.st('stress', 6);
   };
-  E.asthma = function () {
-    const G = SH.G;
-    if (SH.has('inhaler') && G.puffs > 0) { G.puffs -= 2; SH.st('health', -3); SH.st('stress', 5); SH.UI.log(`Your chest tightens like a fist. Wheezing. You fumble for your inhaler — two puffs — and the band slowly loosens. (${G.puffs} puffs left)`, 'warn'); return; }
-    SH.st('health', -22); SH.st('stress', 20); SH.tag('asthmaNoInhaler');
-    D({ title: 'Can\'t Breathe', text: ['It starts as a tickle and becomes a vise. Every breath is through a straw. Your inhaler is ' + (G.phase === 'run' ? 'in the bathroom cabinet at home.' : 'not with you.'), 'You sit down hard, counting like the doctor taught you. In for four. Out for six. The edges of the world go gray.', G.phase === 'run' && !SH.locIndoor() ? 'It passes. Barely. You realize, very clearly, that you could die out here over something this stupid.' : 'It passes. Barely.'],
-      choices: [{ t: 'Keep breathing', fn: () => {} }] });
-  };
   E.passOut = function () {
     const G = SH.G; SH.UI.log('Your body decides for you. You fall asleep wherever you are.', 'bad');
     if (G.phase === 'run') SH.Run.sleep(true); else { SH.advance(360, { sleep: true, quality: 0.6, interrupt: false }); }

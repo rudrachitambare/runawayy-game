@@ -67,7 +67,7 @@
     embarrassed: /\b(embarrass\w*|cringe|humiliat\w*|awkward|so dumb of me)\b/,
     guilty: /\b(my fault|guilty|i ruin|ruined everything|i'm the problem|i'm a burden|burden|everyone would be better)\b/,
     unfair: /\b(unfair|not fair|jealous|why does (she|he|lily) get|always my fault)\b/,
-    sick: /\b(sick|stomach ?ache|headache|throw up|threw up|nauseous|fever|coughing|asthma|inhaler|wheez\w*)\b/,
+    sick: /\b(sick|stomach ?ache|headache|throw up|threw up|nauseous|fever|coughing)\b/,
     games: /\b(skyforge|video games?|gaming|console|xbox|switch|playstation|minecraft|fortnite|roblox|ice wyrm)\b/,
     art: /\b(draw(ing|s)?|art|sketch\w*|paint(ing)?|comic|doodle)\b/,
     skate: /\b(skate\w*|skateboard|kickflip|ollie|the bowl)\b/,

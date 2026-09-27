@@ -27,7 +27,7 @@
     kitchen: [['door', /run away|leave for good/i], ['mom', /\bmom\b|dana/i], ['fridge', /eat|fridge|snack|food|breakfast|lunch|cereal|sandwich|pantry|leftover|juice|milk/i], ['stove', /cook|dinner|mac|noodle|stove|make|bake/i],
       ['sink', /dish|wash|clean|chore|trash|sweep|wipe/i], ['calendar', /calendar|note|schedule|bill/i], ['table', /table|sit/i], ['window', /window/i]],
     living: [['door', /run away|leave for good|front door|slip out/i], ['rick', /rick/i], ['tv', /\btv\b|watch|cartoon|show/i], ['photos', /photo|picture|frame|album/i], ['cabinet', /cabinet|junk|mail|drawer|keys?\b/i], ['couch', /couch|sofa|sit|lily|nap/i], ['window', /window/i]],
-    bathroom: [['tub', /shower|bath/i], ['sink', /mirror|brush|teeth|wash|face|clean|hygiene|medicine|inhaler/i]],
+    bathroom: [['tub', /shower|bath/i], ['sink', /mirror|brush|teeth|wash|face|clean|hygiene|medicine/i]],
   };
   const TALK = /^(Talk to|Hang out with|Sit with|Find|Ask|Visit|Knock on|Say hi to|Approach|Check on)\s+/i;
   const BIG = (b) => /\b(hot|safe)\b/.test(b.className) || !!b.closest('.ag.leave');

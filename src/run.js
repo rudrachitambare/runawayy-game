@@ -8,7 +8,6 @@
     const G = SH.G, h = SH.hour();
     const items = G.bag.filter((i) => !['phone', 'key', 'buspass'].includes(i)).map((i) => SH.ITEMS[i].i + ' ' + SH.ITEMS[i].n);
     const warn = [];
-    if (!SH.has('inhaler')) warn.push('You don\'t have your inhaler.');
     if (!SH.has('coat')) warn.push('No coat. Tonight\'s low: ' + SH.weatherDay(SH.day() + 1).lo + '°F.');
     if (SH.foodInBag().length === 0) warn.push('No food.');
     if (!SH.has('charger') && !SH.has('powerbank')) warn.push('No way to charge your phone.');
