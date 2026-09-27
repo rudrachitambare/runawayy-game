@@ -510,3 +510,10 @@ Every town you reach has its own map, streets, open/closed places, people with n
 - Walk, ride or bus out of Harlow and you've run away, button or not.
 - Every friend has trouble of their own they'll tell you about if you ask. Talk them into coming: their trouble, a real plan, sticking together, and "you can go home any time" all count; pushing them backfires. Once they say yes, texting "come with?" works.
 - L goes back/closes menus, conversations, maps and phone screens. Long option lists scroll.
+
+## REQUEST #37 BUILT: Jordan, friends on the bus, sentences with more than one thing in them
+- Jordan offers his garage; tell him no and he says he's coming with you instead. He has his own stuff going on at home too.
+- From any other town, text a friend who said yes: they take the county bus and find you.
+- Say several things in one message and people answer all of it (the important parts first), without monologuing.
+- You can order food and drinks by asking the person at the counter.
+- Careful players can stay in a town for days without being found; careless ones still get noticed.
