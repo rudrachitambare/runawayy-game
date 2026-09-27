@@ -491,3 +491,8 @@ File: `src/tales.js`, loaded after later.js.
   and lines inside a batch stay in reading order. G.log entries carry a 4th field, the batch id (G.logB). Trimming removes the oldest (last) children.
 - mobscroll.js: the "⬆ Scene" pill is removed (sync deletes it; CSS hides #toScene). reveal() brings the newest batch into view at the top, not the bottom.
   mobile.js story tab: scrollTop 0. style3.css: .lb divider; #log top-fade mask removed so the newest line isn't faded.
+
+## #46 — No theft, for real (turn 46)
+- User lost a toothbrush and $33: that was the run.js sleep-outside robbery (40% roll took 2 items and 60% of cash). Replaced with a scare where a stranger
+  shuffles off and nothing is taken. "Older kids": Keep walking no longer loses an item, and "Give them your snacks" is now "Offer them a snack" (one item, by choice, they soften).
+- Kept (by choice or warned): Rick's drunk "I'm saving it" at home takes $20 (hustle.js:24, abuse story); the marketplace scam only happens if you pay after a warning.
