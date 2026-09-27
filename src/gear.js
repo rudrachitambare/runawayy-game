@@ -52,7 +52,7 @@
   const uses = (id, n) => { const g = G(); g.useLeft = g.useLeft || {}; if (g.useLeft[id] == null) g.useLeft[id] = n; return g.useLeft; };
   const spend = (id) => { const u = G().useLeft; if (--u[id] <= 0) { SH.rmBag(id); delete u[id]; log(`That's the last of the ${ITEM(id).n.toLowerCase()}.`, 'sys'); } };
   const hp = () => { const g = G(); return (g.hp = g.hp || { cold: 0, blist: 0, debt: 0 }); };
-  const outdoorsWater = () => { const g = G(); return !SH.locIndoor() && (/edge|park|creek|lake|river/.test(g.loc || '') || (g.away && (!SH.Actions.here || /forest|coast|lake|river|farm|hill|mount/.test(((SH.Actions.here() || {}).biome) || '')))); };
+  const outdoorsWater = () => { const g = G(); return !SH.locIndoor() && (/edge|park|creek|lake|river/.test(g.loc || '') || (g.away && (!SH.Atlas || !SH.Atlas.here || /forest|coast|lake|river|farm|hill|mount|wood|shore/.test(((SH.Atlas.here() || {}).biome) || '')))); };
   const food = () => (G().bag || []).filter((id) => { const it = ITEM(id); return it.food && !it.reusable && !/energy|water/.test(id); });
 
   const bUse = AC.useItem;

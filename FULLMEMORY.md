@@ -480,3 +480,7 @@ File: `src/tales.js`, loaded after later.js.
   - camp stove cooks food from the bag (10 fuel uses); filter straw drinks from creeks outdoors;
   - flashlight or lantern eases nights outside; tarp and paracord go on the shack pile at your base;
   - wearables' toast now says what they're actually doing.
+- #44b: user said a deputy should NOT come to a village at all, not even when you call. village_calm CHOSEN is now only harbor, grandma and cedarLost.
+  `_vol` no longer overrides it in villages. Dialing 911 in a village reaches county dispatch: "I'll pass it along", and nobody comes.
+  found('exhausted') in a village: a villager feeds you instead (stats up, no ending). The car-creep "tell the clerk" in a village: she stares the car away, and nobody calls anyone.
+  Also fixed: dialer and gear used the nonexistent SH.Actions.here; they now use SH.Atlas.here.

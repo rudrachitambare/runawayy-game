@@ -14786,7 +14786,7 @@ window.SH = window.SH || {};
   E.car = function (p) {
     D({ title: 'A man in a nice car', text: ['A silver car slows down and matches your walking speed. The window comes down. "Hey. You look lost. Need a ride? I could buy you dinner. No big deal."', 'He\'s smiling. Your stomach does the thing it does when something is wrong. Listen to your stomach.'],
       choices: [{ t: 'Walk away fast, toward people', cls: 'safe', fn: () => { SH.st('stress', 10); SH.UI.log('You turn around and walk the other way, into the first store with people in it, and stand by the register until the car is gone. Your hands shake for twenty minutes. You were right to listen.', 'bad'); SH.UI.afterAction(); } },
-        { t: 'Tell the clerk inside', cls: 'safe', fn: () => { SH.UI.log('You tell the clerk. She looks out the window, and her face goes hard. She writes down the plate. Then she looks at you, really looks.', 'warn'); SH.G._vol = 1; SH.Endings.found(p.hasPolice ? 'self' : 'sheriff'); } }] });
+        { t: 'Tell the clerk inside', cls: 'safe', fn: () => { if (SH.inVillage && SH.inVillage()) { SH.st('stress', 6); SH.UI.log('You tell the woman behind the counter. She steps out onto the porch with her arms crossed and just stares at the silver car until it leaves. Then she comes back in and gives you a pop from the cooler. "Creeps. Stay in here a bit." She doesn\'t ask where your parents are. Nobody out here does.', 'good'); SH.advance(20, { interrupt: false }); return SH.UI.afterAction(); } SH.UI.log('You tell the clerk. She looks out the window, and her face goes hard. She writes down the plate. Then she looks at you, really looks.', 'warn'); SH.G._vol = 1; SH.Endings.found(p.hasPolice ? 'self' : 'sheriff'); } }] });
   };
   E.arrive = function (L) {
     const g = SH.G, st = TW.st(), k = L.kind, first = (st.seen[k] || 0) <= 1, dark = SH.isDark();
@@ -16099,8 +16099,8 @@ window.SH = window.SH || {};
 /* village_calm.js */
 /* SMALL HOURS — villages don't care (turn 43). User rule: nobody in a village cares about a runaway kid.
    In a village: people never "notice" you (awayNotice doesn't grow), no patrol car stops you, and nothing drags you
-   home: the police/poster/tracked/heat "found" endings are cancelled while you're in a village. You can still turn
-   yourself in (dial 911/100 on the phone, tell a clerk, walk into a shelter) — that's your choice, so it still works.
+   home: the police/poster/tracked/heat "found" endings are cancelled while you're in a village. Turn 44: not even a
+   deputy you call yourself comes out here (dialing 911 in a village gets you nowhere).
    Also: soap, deodorant and the toothbrush work anywhere now, and eating says how it felt. */
 (function (SH) {
   const A = SH.Atlas, EN = SH.Endings; if (!A || !EN) return;
@@ -16120,11 +16120,19 @@ window.SH = window.SH || {};
   if (SH.Police && SH.Police.stop) { const bStop = SH.Police.stop; SH.Police.stop = function (p, ctx, then) { if ((p && p.tier === 'village') || inVillage()) { return then ? then({ result: 'ok' }) : (SH.K && SH.K.back ? SH.K.back() : null); } return bStop.apply(this, arguments); }; }
 
   /* nothing drags you home from a village. Only what YOU choose. */
-  const CHOSEN = new Set(['self', 'host', 'exhausted', 'harbor', 'grandma', 'cedarLost']);
+  // turn 44: no police or deputy ever comes to a village, not even if you call them yourself.
+  // Only endings that don't involve police can happen there.
+  const CHOSEN = new Set(['harbor', 'grandma', 'cedarLost']);
   const bFound = EN.found;
   EN.found = function (reason) {
-    const g = G(), vol = g && g._vol; if (g) g._vol = 0;
-    if (g && !vol && !CHOSEN.has(reason) && inVillage()) { console.info('village: found(' + reason + ') cancelled'); if (SH.Events && SH.Events.Q) SH.Events.Q = SH.Events.Q.filter((e) => e.id !== 'found'); return; }
+    const g = G(); if (g) g._vol = 0;
+    if (g && reason === 'exhausted' && inVillage()) {
+      if (SH.Events && SH.Events.Q) SH.Events.Q = SH.Events.Q.filter((e) => e.id !== 'longRun');
+      SH.UI.log('You don\'t really remember sitting down. Somebody\'s grandmother finds you on her porch step, clicks her tongue, and brings out soup and a blanket without asking a single question. She doesn\'t ask your name. She doesn\'t call anyone. Nobody out here ever does.', 'good');
+      SH.st('full', 40); SH.st('energy', 30); SH.st('health', 15); SH.st('warmth', 20);
+      return;
+    }
+    if (g && !CHOSEN.has(reason) && inVillage()) { console.info('village: found(' + reason + ') cancelled'); if (SH.Events && SH.Events.Q) SH.Events.Q = SH.Events.Q.filter((e) => e.id !== 'found'); return; }
     return bFound.apply(this, arguments);
   };
   // queued "found" events (heat checks, phone tracking) are dropped while you're in a village
@@ -16224,7 +16232,7 @@ window.SH = window.SH || {};
   const uses = (id, n) => { const g = G(); g.useLeft = g.useLeft || {}; if (g.useLeft[id] == null) g.useLeft[id] = n; return g.useLeft; };
   const spend = (id) => { const u = G().useLeft; if (--u[id] <= 0) { SH.rmBag(id); delete u[id]; log(`That's the last of the ${ITEM(id).n.toLowerCase()}.`, 'sys'); } };
   const hp = () => { const g = G(); return (g.hp = g.hp || { cold: 0, blist: 0, debt: 0 }); };
-  const outdoorsWater = () => { const g = G(); return !SH.locIndoor() && (/edge|park|creek|lake|river/.test(g.loc || '') || (g.away && (!SH.Actions.here || /forest|coast|lake|river|farm|hill|mount/.test(((SH.Actions.here() || {}).biome) || '')))); };
+  const outdoorsWater = () => { const g = G(); return !SH.locIndoor() && (/edge|park|creek|lake|river/.test(g.loc || '') || (g.away && (!SH.Atlas || !SH.Atlas.here || /forest|coast|lake|river|farm|hill|mount|wood|shore/.test(((SH.Atlas.here() || {}).biome) || '')))); };
   const food = () => (G().bag || []).filter((id) => { const it = ITEM(id); return it.food && !it.reusable && !/energy|water/.test(id); });
 
   const bUse = AC.useItem;
@@ -16331,7 +16339,7 @@ window.SH = window.SH || {};
     return r;
   };
 
-  const place = () => { const g = G(); return g.away && SH.Actions && SH.Actions.here ? SH.Actions.here() : null; };
+  const place = () => { const g = G(); return g.away && SH.Atlas && SH.Atlas.here ? SH.Atlas.here() : null; };
 
   // the emergency call itself
   const emergency = (n) => {
@@ -16349,6 +16357,11 @@ window.SH = window.SH || {};
           } },
           { t: '…Sorry. Wrong number.', sub: 'Hang up.', fn: () => { SH.UI.log('"Okay, hon. If you need us, call back." You hang up. Your heart is going like you ran here.', 'sys'); SH.UI.afterAction(); } },
         ] });
+    }
+    // villages: nobody comes. Not police, not a deputy. The call just goes nowhere.
+    if (SH.inVillage && SH.inVillage()) {
+      return SH.UI.dialog({ title: n, cls: 'safe', text: [`It rings for a long time. Then: "County dispatch." You tell her where you are, and there's a pause, and typing.`, `"${(p && p.name) || 'Out there'}? Okay, hon. I've got it down. I'll pass it along." She doesn't say anyone's coming, because nobody is. Out here, nobody ever comes.`],
+        choices: [{ t: 'Hang up', fn: () => { SH.UI.log('You hang up. Nobody calls back. If you ever want to go home, you\'ll have to get yourself to a bigger town first.', 'sys'); SH.UI.afterAction(); } }] });
     }
     const hasPolice = !g.away || (p && p.hasPolice);
     const where = !g.away ? 'Harlow' : (p && p.name) || 'here';

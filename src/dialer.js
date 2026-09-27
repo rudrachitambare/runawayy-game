@@ -45,7 +45,7 @@
     return r;
   };
 
-  const place = () => { const g = G(); return g.away && SH.Actions && SH.Actions.here ? SH.Actions.here() : null; };
+  const place = () => { const g = G(); return g.away && SH.Atlas && SH.Atlas.here ? SH.Atlas.here() : null; };
 
   // the emergency call itself
   const emergency = (n) => {

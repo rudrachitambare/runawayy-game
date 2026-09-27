@@ -6,7 +6,7 @@ out.push('village: '+await p.evaluate(()=>{ const m=document.querySelector('#mod
 await choose('Hang up'); await new Promise(r=>setTimeout(r,500));
 out.push('after: modal='+await p.evaluate(()=>!!document.querySelector('#modal:not(.hidden)'))+' ended='+await p.evaluate(()=>SH.G.ended));
 out.push('forced: '+await p.evaluate(()=>{ SH.G._vol=1; SH.Endings.found('sheriff'); SH.Endings.found('exhausted'); return !!document.querySelector('#modal:not(.hidden)')+' '+[...document.querySelectorAll('#log .entry, #log > div')].slice(-1)[0].innerText.slice(0,80); }));
-await p.evaluate(()=>{ SH.TownEvents.car(SH.Actions.here()); }); await new Promise(r=>setTimeout(r,300));
+await p.evaluate(()=>{ SH.TownEvents.car(SH.Atlas.here()); }); await new Promise(r=>setTimeout(r,300));
 await choose('Tell the clerk'); await new Promise(r=>setTimeout(r,500));
 out.push('clerk: modal='+await p.evaluate(()=>!!document.querySelector('#modal:not(.hidden)'))+' '+await p.evaluate(()=>[...document.querySelectorAll('#log .entry, #log > div')].slice(-1)[0].innerText.slice(0,80)));
 await goTown('p1'); await go('main');
