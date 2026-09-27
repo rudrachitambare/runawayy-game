@@ -520,3 +520,6 @@ Every town you reach has its own map, streets, open/closed places, people with n
 
 ## REQUEST #38 BUILT: villages are offline
 - About 1 in 10 villagers is online at all, and the ones who are don't follow missing-kid posts. Being "on the internet" barely matters in a village; being a strange kid alone on a school day still does.
+
+## REQUEST #39 BUILT: build a shack
+- Out past the edge of a village or small town you can gather branches, logs and stones, buy boards, straw, twine and tin from the farm down the road (or work for the farmer and get paid in them), grab lumber off FREE piles, and buy tarp/rope/nails at the gas station. Build a shack part by part: frame, walls, roof, bed, fire ring, door, stone footing. It's your base, and it counts as the campsite for endings.
