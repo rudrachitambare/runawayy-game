@@ -504,3 +504,12 @@ File: `src/tales.js`, loaded after later.js.
   - fun items (earbuds, speaker, console2, book, cards, ball, plush, notebook, markers) give mood and stress relief, once a day each.
 - Still no use effect (reported to the user): tools, cable, fan, strip, phone2, tv, kettle, batteries, car parts, helmet, bike lights, gifts, home items.
 - Logic problems reported to the user, not fixed yet (see the chat for the list).
+
+## #48 — Big logic fixes (turn 48)
+New `src/logic.js` (after dialer.js):
+1. **Weather.** SH.weatherDay now uses the story's WEATHER for days 1–31, then generates seasonal weather (monthly normals, multi-day spells, rain/storm/fog odds by season), with no more endless storm.
+   Per town, via `local()`: coast milder and foggier, hills colder, forest and valley cooler, cities +2, a hash offset, and rain shifted ±1 day. No snow (not supported by the scene).
+2. **Heat** (run.js R.tick): rises for about 2 days, plateaus until day 4, then decays (-0.35/hr, -0.7/hr in a village). Floor is 15 once reported. Event bumps still add. Tested: peaks day 3–5, then about 27 by day 14.
+3. **Stuff stays put.** On any location change (checked around SH.advance and afterAction), non-ride g.owned goes to G.stored[from] ('harlow' or pid), and G.stored[to] comes back. Logged both ways. Bikes and scooters travel with you. catalog.js overflow toast updated.
+4. **Local officer.** EN.found sets G._cop (Officer/Deputy + surname hashed from the pid). SH.nm is wrapped to swap "Officer Lowe" and rewrite the ride-home and "officer looks at you" lines. NPCS_META.officer name is swapped (and restored for Harlow).
+5. **Shoplifting** (actions2.js): per-store memory G.lift. Caught → blocked there for 7 days. Risk is 0.35 + 0.2 per try that day. On the run, loot is granola, chips or apple.

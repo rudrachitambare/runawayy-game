@@ -94,14 +94,15 @@
   const bNm = SH.nm;
   SH.nm = function (s) {
     s = bNm.apply(this, arguments); const g = SH.G;
-    if (typeof s !== 'string' || !g || s.indexOf('Lowe') < 0 && s.indexOf('streets you walked all night') < 0) return s;
+    if (typeof s !== 'string' || !g || s.indexOf('Lowe') < 0 && s.indexOf('streets you walked all night') < 0 && s.indexOf('The officer looks at you one more time') < 0) return s;
     const cop = g._cop;
     if (s.indexOf(RIDE) >= 0) {
       const long = (g.stats && g.stats.hoursOut) > 30;
       s = s.replace(RIDE, cop
-        ? `${cop.name} keeps you at the station in ${cop.place} with a blanket and a vending-machine hot chocolate until a Harlow cruiser comes for you. It's hours of highway. You watch ${cop.place} slide away through the back window, then fields, then towns you only know from the bus, and then, much too soon, the Harlow water tower.`
+        ? `${cop.name} keeps you at ${/^Deputy/.test(cop.name) ? 'the sheriff\'s substation outside ' : 'the station in '}${cop.place} with a blanket and a vending-machine hot chocolate until a Harlow cruiser comes for you. It's hours of highway. You watch ${cop.place} slide away through the back window, then fields, then towns you only know from the bus, and then, much too soon, the Harlow water tower.`
         : `Officer Lowe drives you home. You watch the town slide by from the back seat, the same streets you walked ${long ? 'for days' : 'all night'}, much shorter by car.`);
     }
+    if (cop) s = s.replace('The officer looks at you one more time, like she\'s giving you a last chance', 'The Harlow officer who drove you back looks at you one more time, like she\'s giving you a last chance');
     if (cop) s = s.replace(/Officer Lowe/g, cop.name).replace(/Officer Lowe's/g, cop.name + '\'s');
     return s;
   };
