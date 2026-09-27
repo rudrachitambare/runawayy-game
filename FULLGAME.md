@@ -523,3 +523,12 @@ Every town you reach has its own map, streets, open/closed places, people with n
 
 ## REQUEST #39 BUILT: build a shack
 - Out past the edge of a village or small town you can gather branches, logs and stones, buy boards, straw, twine and tin from the farm down the road (or work for the farmer and get paid in them), grab lumber off FREE piles, and buy tarp/rope/nails at the gas station. Build a shack part by part: frame, walls, roof, bed, fire ring, door, stone footing. It's your base, and it counts as the campsite for endings.
+
+## REQUEST #40 BUILT: village life
+- Farm work pays cash, and the farmer offers leftover materials that you can take or turn down.
+- Friends help at the shack: faster building, more gathered, and their own lines.
+- Villages warm to you week by week: boards by the fence, a saved plate at the diner, day-old hot dogs and the outlet at the gas station, a church basement shower and a blanket, and people stop looking twice. No separate ending.
+- Small trades: forage what the season has, fish, whittle spoons; eat it, cook it on the fire ring, or sell it at the farm stand or a roadside card table.
+- Quiet days: let 3, 7 or 14 days pass at your base, with a summary. It stops if anything goes wrong.
+- The phone weather app shows where you are, what it means for you, and needs signal. You can also read the sky at the edge of town.
+- Keep living it: after a never-found ending, play on for up to 4 more months, stop any time, and get a second ending.

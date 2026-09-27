@@ -29,7 +29,7 @@
   V.has = (p, k) => !!p && vs(p.id).perks.includes(k);
   const PERKS = {
     farm: { need: (p) => true, who: (p) => S.FARM(p).n,
-      line: (p, n) => `Sunday morning there's a stack of boards by ${S.FARM(p).place}'s fence with a rock on top and a note in pencil: FOR THE KID. ${n} doesn't mention it when you walk by. ${n} just lifts two fingers off the steering wheel, the way farmers wave. (Every week now: a few boards and some straw added to your pile.)` },
+      line: (p, n) => `One morning there's a stack of boards by ${S.FARM(p).place}'s fence with a rock on top and a note in pencil: FOR THE KID. ${n} doesn't mention it when you walk by. ${n} just lifts two fingers off the steering wheel, the way farmers wave. (Every week now: a few boards and some straw added to your pile.)` },
     diner: { need: (p) => !!TW.cache[p.id] && !!A.data && !!person('diner', p), who: (p) => person('diner', p),
       line: (p, n) => `At the diner, ${n} sets down a plate you didn't order. "Kitchen made too much." The kitchen did not make too much. "Come by around two, most days. There's always something." (Free plate at the diner, once a day.)` },
     gas: { need: (p) => !!person('gas', p), who: (p) => person('gas', p),
@@ -86,7 +86,8 @@
   // what the season has, by biome
   function crop(p) {
     const m = month(), b = S.biome(p);
-    if (m >= 8 && m <= 10) return b === 'coast' ? null : { k: m === 10 ? 'walnut' : pick(['walnut', 'apple']), where: b === 'fields' || b === 'hills' ? 'the old orchard behind a fallen-down farmhouse, and the black walnut trees along the fencerow' : 'the black walnut trees along the creek', how: 'You fill a feed sack with walnuts in their green husks, which stain your hands brown for a week, and pick up the good windfall apples.' };
+    if (m >= 8 && m <= 10) { if (b === 'coast') return null; const k = m === 10 || !(b === 'fields' || b === 'hills') ? 'walnut' : pick(['walnut', 'apple']);
+      return k === 'apple' ? { k, where: 'the old orchard behind a fallen-down farmhouse', how: 'Nobody has picked these trees in years. You fill your shirt with the good windfalls and one perfect one off a high branch.' } : { k, where: 'the black walnut trees along the ' + (b === 'fields' ? 'fencerow' : 'creek'), how: 'You fill a feed sack with walnuts in their green husks, which stain your hands brown for a week.' }; }
     if (m === 11) return b === 'fields' ? null : { k: 'greens', where: 'the pines', how: 'You cut low boughs off the pines with more patience than skill. The farm stand sells wreaths in December; everybody needs boughs.' };
     if (m <= 1) return null;
     if (m === 2) return { k: 'ramp', where: 'the damp woods along the creek', how: 'The first green thing in the woods: wild onions, in patches. You dig them with a stick. Your hands smell like them for hours and you don\'t care.' };
@@ -183,7 +184,7 @@
     const rows = from == null ? '' : [0, 1, 2, 3, 4].map((i) => from + i).filter((x) => x >= d).map((x) => { const w = SH.weatherDay(x); return `<div class="setrow"><span>${x === d ? 'Today' : SH.WEEKDAYS[(SH.wd() + x - d) % 7].slice(0, 3)}</span><span>${SH.WICON[w.c] || '·'}</span><span>${w.lo}° – ${w.hi}°</span></div>`; }).join('');
     const hdr = P.hdr ? P.hdr('Weather') : '';
     body.innerHTML = hdr + `<div class="appbody" style="text-align:center"><div style="font-size:13px;opacity:.7;margin-top:10px">${p ? p.name : 'Harlow'}</div>
-      ${online || stale < 30 ? `<div style="font-size:60px;font-weight:200">${SH.tempF()}°</div><div>${SH.toC ? SH.toC(SH.tempF()) + '°C · ' : ''}${W.c}</div><div style="opacity:.7;font-size:12px">H:${W.hi}° L:${W.lo}°</div>` : '<div style="font-size:40px;margin:14px 0">📵</div>'}
+      ${online || (last && stale < 30) ? `<div style="font-size:60px;font-weight:200">${SH.tempF()}°</div><div>${SH.toC ? SH.toC(SH.tempF()) + '°C · ' : ''}${W.c}</div><div style="opacity:.7;font-size:12px">H:${W.hi}° L:${W.lo}°</div>` : '<div style="font-size:40px;margin:14px 0">📵</div>'}
       ${!online ? `<div class="post" style="margin-top:10px;font-size:12px">${last ? `No signal. Showing the forecast from ${stale < 90 ? stale + ' minutes' : Math.round(stale / 60) + ' hours'} ago.` : 'No signal, and no saved forecast. Find signal, or go read the sky at the edge of town.'}</div>` : ''}
       <div style="margin-top:14px;text-align:left">${rows}</div>
       ${rows ? `<div class="sech" style="text-align:left;margin-top:14px">FOR YOU</div><div style="text-align:left;font-size:13px">${advice().map((x) => `<p style="margin:6px 0">${x}</p>`).join('')}</div>` : ''}</div>`;
@@ -195,35 +196,55 @@
     const g = G(), b = g.base;
     if (!b || b.pid !== p.id) return 'Only at your base.';
     if ((g.heat || 0) >= 60 || (g.awayNotice || 0) >= 55) return 'Too many people are looking for you right now.';
-    if (g.money < 7 && !nearMeal()) return 'You need food or money to last.';
+    if (g.money < 10 && !nearMeal()) return 'You need food or money to last.';
     return null;
   }
+  // while quiet days run, small everyday popups resolve themselves (first calm choice) and go in the summary;
+  // anything that smells like trouble stops the days and is shown for real.
+  let QD = null;
+  const DANGER = /police|officer|deputy|sheriff|\bcops?\b|recogni|poster|missing|amber|your mom|found you|fever|hospital|clinic|stranger|follow|ranger|social worker|truant|storm/i;
+  const bDlg = SH.UI.dialog;
+  SH.UI.dialog = function (o) {
+    if (!QD || QD.stop || !o) return bDlg.apply(this, arguments);
+    const txt = (o.title || '') + ' ' + [].concat(o.text || []).join(' ') + ' ' + (o.choices || []).map((c) => c.t).join(' ');
+    if (DANGER.test(txt) || QD.depth > 3) { QD.stop = o.title || 'Something'; return bDlg.apply(this, arguments); }
+    const ch = (o.choices || []).filter((c) => !c.cond || c.cond()), c = ch.find((x) => !x.cls || x.cls === 'safe') || ch[0];
+    QD.side.push(`${o.title || 'Something'}: ${c ? String(c.t).replace(/^\W+/, '').toLowerCase() : 'you let it go'}.`);
+    QD.depth++; try { c && c.fn && c.fn(); } catch (e) { console.warn('quiet auto', e); } QD.depth--;
+  };
   function quiet(p, n) {
+    QD = { side: [], depth: 0, stop: null };
+    try { return quiet0(p, n); } finally { QD = null; }
+  }
+  function quiet0(p, n) {
     const g = G(), b = g.base, lines = [], m0 = g.money, md = document.querySelector('#modal'), P0 = S.pile();
     const s = S.ok(p) ? vs(p.id) : null; let why = null, did = 0, spoons = 0, forg = 0, fishN = 0;
-    const shut = () => g.ended || (md && !md.classList.contains('hidden'));
+    const shut = () => g.ended || !!QD.stop;
     SH.UI.closeModal ? SH.UI.closeModal() : md && md.classList.add('hidden');
     for (let i = 0; i < n && !why; i++) {
       // morning: eat
-      const f = nearMeal(); if (f) { P0[f]--; SH.st('full', f === 'fish' ? 40 : 18); } else if (g.money >= 3.5) { SH.money(-3.5); SH.st('full', 30); }
+      const meal = () => { const f = nearMeal(); if (f) { P0[f]--; SH.st('full', f === 'fish' ? 40 : 25); } else if (g.money >= 3.5) { SH.money(-3.5); SH.st('full', 35); } };
+      meal();
       // day: in chunks so nights, weather and the town clock all happen
       const wake = SH.hour(); let awake = Math.max(0, Math.round(((22 - wake + 24) % 24) * 60)); if (awake > 17 * 60) awake = 14 * 60;
       let noon = false;
       while (awake > 0 && !why) { const st = Math.min(60, awake); SH.advance(st, { interrupt: false }); awake -= st; if (shut()) { why = 'Something happened.'; break; }
-        if (!noon && SH.hour() >= 12) { noon = true; if (g.money >= 3.5) { SH.money(-3.5); SH.st('full', 30); } else { const f2 = nearMeal(); if (f2) { P0[f2]--; SH.st('full', 18); } } } }
+        if (!noon && SH.hour() >= 12) { noon = true; meal(); } }
+      meal();
       if (why) break;
       // chores: wash, a small trade, one trip to town
       g.s.hyg = Math.max(g.s.hyg, V.has(p, 'church') ? 85 : 55);
       if (has('knife') && has('branch') && Math.random() < 0.6) { P0.branch--; S.add('spoon', 1); spoons++; }
       const cr = crop(p); if (cr && Math.random() < 0.5) { S.add(cr.k, 1); forg++; }
       if (has('line') && WATER.includes(S.biome(p)) && Math.random() < 0.35) { S.add('fish', 1); fishN++; }
-      if (TW.notice(0.06)) { why = 'Someone at the gas station asked where your parents were, and didn\'t let it go.'; }
+      if (TW.notice(0.06) && (g.awayNotice || 0) >= 55) { why = 'Someone at the gas station asked where your parents were, and didn\'t let it go.'; }
       if (g.ended) break;
       // night
-      SH.st('warmth', 8 * B.fx('warm')); const q = Math.min(1, 0.55 + 0.1 * B.fx('rest') + 0.08 * B.fx('warm'));
+      SH.st('warmth', 8 * B.fx('warm')); SH.st('stress', -12); SH.st('mood', 6 + 3 * B.fx('mood')); if (g.s.full > 30 && g.s.warmth > 40) SH.st('health', 4); const q = Math.min(1, 0.55 + 0.1 * B.fx('rest') + 0.08 * B.fx('warm'));
       for (let h = 0; h < 9 && !shut(); h++) SH.advance(60, { sleep: true, quality: q, interrupt: false });
       if (shut()) { why = why || 'Something happened in the night.'; }
       b.nights = (b.nights || 0) + 1; did++;
+      g.s.hyg = Math.max(g.s.hyg, V.has(p, 'church') ? 85 : 55); g.s.stress = Math.min(g.s.stress, 50 - 3 * B.fx('mood')); g.s.mood = Math.max(g.s.mood, 40 + 3 * B.fx('mood'));
       // one line for the day
       const w = SH.weatherDay(day() - 1) || {}, fr = S.crew();
       lines.push(`<b>${SH.dateStr(g.t - 600).split(',')[0]}.</b> ` + pick([
@@ -246,15 +267,17 @@
     const sum = [`${did} day${did === 1 ? '' : 's'} go by at your ${b.shack ? 'shack' : B.TYPES[b.type].n.toLowerCase()} outside ${p.name}.`].concat(lines.slice(-7));
     if (lines.length > 7) sum.splice(1, 0, `<i>(…${lines.length - 7} more days like it.)</i>`);
     sum.push([`Spent: $${spent.toFixed(2)}. Money left: $${g.money.toFixed(2)}.`, spoons ? `You carved ${spoons} spoon${spoons > 1 ? 's' : ''}.` : '', forg ? `You foraged ${forg} lots for the pile.` : '', fishN ? `Caught ${fishN} fish.` : ''].filter(Boolean).join(' '));
+    if (QD.side.length) sum.push(`<i>Along the way: ${[...new Set(QD.side)].slice(-4).join(' ')}</i>`);
     if (why) sum.push(`<b>You stop.</b> ${why}`);
     SH.UI.log(`— ${did} quiet day${did === 1 ? '' : 's'} at your base. —`, 'day');
+    QD = null;
     SH.UI.dialog({ title: `⏩ ${did} quiet day${did === 1 ? '' : 's'}`, text: sum, html: true, choices: [{ t: 'Okay', fn: K.back }] });
   }
   K.me((p, ch) => {
     const g = G(); if (!p || !g.base || g.base.pid !== p.id) return; const no = canQuiet(p);
     ch.push({ t: '⏩ Let some quiet days go by', sub: no || 'At your base. Meals, sleep, chores. Stops if anything happens.', fn: () => {
       if (no) { SH.UI.toast(no); return K.back(); }
-      K.D('Quiet days', ['Nothing much happens: you eat, wash, carve, go to town once, sleep. About $7 a day for food, less if your pile has some. If anything goes wrong, you stop.'], [3, 7, 14].map((n) => ({ t: n === 3 ? 'Three days' : n === 7 ? 'A week' : 'Two weeks', sub: `~$${(n * 7).toFixed(0)} without pile food`, fn: () => quiet(p, n) })).concat([{ t: 'Back', fn: K.back }]));
+      K.D('Quiet days', ['Nothing much happens: you eat, wash, carve, go to town once, sleep. About $10 a day for food, less if your pile has some. If anything goes wrong, you stop.'], [3, 7, 14].map((n) => ({ t: n === 3 ? 'Three days' : n === 7 ? 'A week' : 'Two weeks', sub: `~$${(n * 10).toFixed(0)} without pile food`, fn: () => quiet(p, n) })).concat([{ t: 'Back', fn: K.back }]));
     } });
   });
   V.quiet = quiet; V.crop = crop; V.sky = sky; V.advice = advice;

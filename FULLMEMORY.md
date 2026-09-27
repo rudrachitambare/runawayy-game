@@ -393,3 +393,31 @@ Next ideas (not started, need "go"): two-change trip planning; balance pass on m
 - Build (daylight) = base `G.base {type:'camp', shack:true, …}`; parts are pushed into `SH.Bases.UPS` as upgrades (so bases.js fx/sleep/threats work): sh_frame (2 logs + 6 branches) → sh_walls (16 branches | 6 boards + 6 branches; warm+hide), sh_roof (tin | tarp | 8 boards + straw; dry), sh_bed (2 straw | 12 branches; rest+warm), sh_fire (10 stones; warm+mood), sh_door (4 boards + twine + nails; safe, after walls), sh_footing (16 stones; warm+critter, after walls). K.D wrapper hides shack parts from bases.js "Fix it up" (store upgrades still work on the shack). Blocked if a base exists elsewhere or a barn/building base here. Edge shows "🛖 Build a shack / Your shack" and at night "Sleep in your shack" (Bases.sleep).
 - Endings: counts as the camp (goneCamp "The Clearing" needs ≥4 upgrades; shack variant first paragraph; ranger/found camp endings unchanged).
 
+
+## 40. Village life, trades, quiet days, weather, "Keep living it" (turn 40)
+Files: `src/village_life.js`, `src/later.js` (both loaded right after shack.js); edits in shack.js and notfound.js.
+- Farmer work (shack.js `work`): always pays cash ($10 hay / $8 stalls), then offers the materials ("Take it" / "No thanks"). Declining bumps village warmth.
+- Friends at the shack (shack.js): if `K.party()` is non-empty, build time ×0.6, gathering gets more (+3 branches, +1 log, +4 stones per friend), and a friend line is added (FLINE build/gather).
+- `SH.Village` (village_life.js): `G.vill[pid] = {pts, perks[], wk, days, farmDrop}`. K.daily counts days in a village or small town; every 7 days one perk unlocks (order farm, diner, gas, nod, church, sorted by visit points; `TW.onArrive` bumps points by location kind). Perks:
+  - farm: 3 boards + 1 straw a week;
+  - diner: a free plate once a day;
+  - gas: a free hot dog and +45% battery once a day;
+  - church: a basement shower once a day, plus the blanket flag `vBlanket` (+10 warmth a day at base);
+  - nod: notice falls.
+  - Also A.mods ×(1 − 0.05·perks − 0.1 if nod), minimum 0.7. Warm people greet you. NO ending (user rule).
+- Trades: new pile keys walnut, apple, greens, ramp, morel, berry, fish, spoon, line, knife (added to `SH.Shack.NAMES`).
+  - Forage is once a day, by month and biome.
+  - Fishing needs `line` ($3 kit at the gas station, water biomes only).
+  - Whittling needs `knife` ($7) and a branch, and works at night with a fire ring.
+  - You can eat from the pile, and cook fish at the fire ring.
+  - Sell at the farm stand (`SH.Village.sell`, inside the farm dialog) or at a main-road card table (once a day, ×1.3 price, notice 0.12).
+  - Edge: "Read the sky" (80% accurate tomorrow).
+- Quiet days: `K.me` "⏩ Let some quiet days go by" at your base (heat <60, notice <55, food or money) for 3, 7 or 14 days. Each day simulates meals ($3.50 each, or pile food), awake hours, chores (spoons, forage, fish), a notice roll, and a 9h sleep. Stats are kept sane each night.
+  - While it runs, `SH.UI.dialog` is intercepted: calm popups auto-pick their first calm choice and are listed under "Along the way"; anything matching DANGER stops the days and is shown for real.
+  - Ends with a summary dialog (html).
+- Phone Weather (`P.V.weather`) shows the current town, 5 days, and "FOR YOU" advice (freeze vs your base's warmth, rain vs your roof). Offline away from home it shows the cached forecast (`G._wx`) or nothing.
+- "Keep living it" (later.js): after any 'gone' ending, the button `#keepLiving` sets `G.later = {first, firstTitle, t0, until: +120 days, beat}`, un-ends the game, and sends phase back to run.
+  - K.me offers "🌱 Stop here (second ending)"; there are monthly log beats, and at 120 days `finish(true)` runs.
+  - The second ending is `X.trigger('later')`: laterShort (<21 d, p6), laterShack (≥5 shack parts here, p5), laterFriends, laterBase, laterMoney (≥$300), laterSpring (fallback). Being found also counts as the second ending.
+  - The second ending gets a "SECOND ENDING · N DAYS AFTER …" banner. Once per run. "Disappear for good" is hidden while `G.later` is set.
+  - Never-found (gone and later) ending screens now replace the generic "After" section with never-found aftermath text.

@@ -15,6 +15,7 @@
     const g = G(), md = document.querySelector('#modal'); if (!g || !g.ended || !md || md.classList.contains('hidden') || md._later) return;
     const box = md.querySelector('.mchoices'), h1 = md.querySelector('.ending h1'); if (!box || !h1) return;
     md._later = 1;
+    if (isGone(g.endKey) || X.defs.some((d) => d.k === g.endKey && d.on.includes('later'))) afterNeverFound(md, g);
     if (g.later && !g.later.done) {
       g.later.done = true; g.later.second = g.endKey; g.later.secondTitle = h1.textContent;
       h1.insertAdjacentHTML('beforebegin', `<small style="display:block;color:var(--amber);letter-spacing:2px;margin-bottom:4px">SECOND ENDING · ${ex(g)} DAYS AFTER “${g.later.firstTitle}”</small>`);
@@ -31,6 +32,17 @@
       SH.UI.log(`— You keep going. Up to four more months, until ${SH.longDate ? SH.longDate(g.later.until) : 'spring'}. You can stop any time from “You & your group”. —`, 'day');
       SH.UI.afterAction();
     };
+  }
+  // never-found endings: the generic "After" section (Mom hugging you, etc.) doesn't fit, so tell what happens at home instead
+  function afterNeverFound(md, g) {
+    const h = [...md.querySelectorAll('h4')].find((x) => /^after$/i.test(x.textContent.trim())); if (!h) return;
+    let n = h.nextElementSibling; while (n && n.tagName !== 'H4') { const nx = n.nextElementSibling; n.remove(); n = nx; }
+    const nm = (x) => (SH.nm ? SH.nm(x) : x), rick = nm('Rick'), mom = nm('Mom'), sib = nm('Lily');
+    const L = [[mom, `${mom} keeps your room the way it was. Some nights she calls your old number just to hear the voicemail, and then she hangs up before the beep, because she doesn't know what to say to it.`],
+      [rick, `${rick} tells anybody who asks that you'll come back when you get hungry. You don't. After a while nobody asks him anymore, and the house gets very quiet around him.`],
+      [sib, g.rel && g.rel.lily > 50 ? `${sib} sleeps in your hoodie. She draws the same picture over and over: a house in the woods with smoke coming out of the chimney. She says you live there. She's not wrong.` : `${sib} stops asking where you went. She starts leaving the porch light on instead.`],
+      ['The posters', 'Your face stays on the corkboard at the Harlow library for a year. Then somebody pins a lost-cat flyer over one corner, and then another over the rest.']];
+    h.insertAdjacentHTML('afterend', L.map(([w, t]) => `<p><b style="font-family:system-ui;font-size:13px;color:var(--amber)">${w}.</b> ${t}</p>`).join(''));
   }
   const sched = () => setTimeout(after, 80);
   const bShow = EN.show; EN.show = function () { const r = bShow.apply(this, arguments); sched(); return r; };
@@ -55,11 +67,11 @@
   const whenNow = (c) => `${mon(c.g.t)}`;
   X.add([
     { k: 'laterShort', on: ['later'], p: 6, w: (c) => ex(c.g) < 21, t: 'A Few More Weeks', sub: 'You stopped. That\'s allowed.',
-      x: (c) => [`You gave it ${wk(c)} more. Then one morning in ${c.town} you woke up and knew you'd had enough of it. Not of being free. Of being careful every minute of every day.`,
+      x: (c) => [`${ex(c.g) < 2 ? 'You barely gave it another day' : `You gave it ${wk(c)} more`}. Then one morning in ${c.town} you woke up and knew you'd had enough of it. Not of being free. Of being careful every minute of every day.`,
         `${c.name} stayed out of sight for exactly as long as ${c.name} wanted to, which is more than most people ever get to say about anything.`,
         `What came after is yours. The story stops here because you stopped it. That was the point all along: somebody else was always deciding. This time you did.`] },
     { k: 'laterShack', on: ['later'], p: 5, w: shackHere, t: 'Four Walls I Made', sub: c => c.extra.full ? 'Four months in a shack. Never found.' : 'A shack past the last fence. Never found.',
-      x: (c) => [`By ${whenNow(c)} the shack outside ${c.town} has a path worn to it. The door sticks in wet weather; you've learned to lift it as you push. There's a shelf now, made of a board ${warm(c) ? 'the farmer left by the fence' : 'from the FREE pile'}, with a row of carved spoons on it that got better from left to right.`,
+      x: (c) => [`By ${whenNow(c)} the shack outside ${c.town} has a path worn to it. The door sticks in wet weather; you've learned to lift it as you push. There's a shelf now, made of a board ${warm(c) ? 'the farmer left by the fence' : 'from the FREE pile'}, ${(c.g.skills || {}).carve ? ' with a row of carved spoons on it that got better from left to right' : ' with a jar of creek stones on it, for no reason, because you wanted a shelf with something on it'}.`,
         c.n ? `${c.pl} ${c.n === 1 ? 'is' : 'are'} still here. Some nights nobody talks at all. You just watch the fire ring go orange and then red and then grey, and it's enough.` : `Most nights it's just you and the fire. You thought that would be lonely. Sometimes it is. Mostly it's quiet in a way nothing in ${c.momN}'s house ever was.`,
         warm(c) >= 3 ? `The village has quietly decided you're theirs. Nobody says it. The diner keeps a plate back. The clerk keeps the outlet free. People have stopped asking where you're from, and started asking how the roof's holding up.` : `A few people in ${c.town} know there's a kid out past the fields. None of them have ever said a word to anyone.`,
         `Nobody ever finds ${c.name}. The shack stands for years after you leave it, when you're old enough to leave it on your own terms, and a hunter who finds it one November sits inside out of the wind and wonders who built something that careful, that small.`] },
