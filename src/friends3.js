@@ -41,7 +41,8 @@
   FR.invite2 = function (id) {
     const g = G(), k = FR.KIDS[id], f = FR.st(id), p = A.here(), rel = g.rel[id] || 0;
     SH.Phone.push(id, 'me', `i'm in ${p.name}. come meet me?`); SH.advance(10, { interrupt: false });
-    if (f.wouldRun && k.fam === 'strict' && Math.random() < 0.12) { SH.Phone.push(id, id, `my ${/^Mr/.test(k.parent) ? 'dad' : 'mom'} took my phone i'm on the ipad. i can't get out today. try tomorrow?? i'm sorry`); return SH.UI.afterAction(); }
+    f.inv = (f.inv || 0) + 1; if (f.inv >= 3) f.wouldRun = true; // third time you ask, they come
+    if (f.wouldRun && f.inv < 3 && k.fam === 'strict' && Math.random() < 0.12) { SH.Phone.push(id, id, `my ${/^Mr/.test(k.parent) ? 'dad' : 'mom'} took my phone i'm on the ipad. i can't get out today. try tomorrow?? i'm sorry`); return SH.UI.afterAction(); }
     const yes = f.wouldRun || Math.random() < (k.risk || 0.3) + (rel - 60) / 100 + (f.pull || 0) / 200;
     if (!yes) { SH.Phone.push(id, id, pick([`${p.name}?? that's so far. i can't. i'm sorry. please be safe`, 'i want to. i can\'t. please call someone. or come home. i\'ll bring food'])); g.heat = Math.min(100, (g.heat || 0) + 3); return SH.UI.afterAction(); }
     f.wouldRun = true; sendFor(id); SH.UI.afterAction();
@@ -93,8 +94,11 @@
           if (tr && !f.shared) { f.shared = true; say += '. and honestly... ' + tr.tell; }
           return R(say + '. so? yes?', { rel: 4 }, { narr: 'Jordan wants to come with you.' });
         }
+        // turn 43: after the garage offer, asking him to come with you just works
+        const askCome = f.offered && !f.wouldRun && f.asksCome !== 'no' && /\b(come with|with me|run ?away|runaway|pl(s|z|ease)|come on|c'?mon|you in|u in|join me)\b/.test(t) && !/\b(garage|your place|ur place|stay (at|with) (you|u))\b/.test(t);
+        if (askCome) f.asksCome = true;
         if (f.asksCome === true && !f.wouldRun) {
-          if (YES.test(t) || (an.len || t.split(' ').length) <= 9 && /\b(y+e+s+|yeah|yea|ya|yep|yup|ok|okay|sure|bet|deal|let'?s go|lets go|fine|please)\b/.test(t) && !/\b(no|nah|don'?t|not)\b/.test(t) || /\b(ok(ay)? come|you can come|u can come|come with me|let'?s do it|i'?d like that)\b/.test(t)) {
+          if (askCome || YES.test(t) || (an.len || t.split(' ').length) <= 9 && /\b(y+e+s+|yeah|yea|ya|yep|yup|ok|okay|sure|bet|deal|let'?s go|lets go|fine|please)\b/.test(t) && !/\b(no|nah|don'?t|not)\b/.test(t) || /\b(ok(ay)? come|you can come|u can come|come with me|let'?s do it|i'?d like that)\b/.test(t)) {
             f.wouldRun = true; f.rt = f.rt || { asks: 0 }; f.rt.dec = 'in'; c.mem.jflow = 'in';
             if (g.phase === 'run' && !g.away && (g.party || []).length < 2) { setTimeout(() => join('jordan', 'here'), 50); return R('ok. OK. give me ten minutes. i\'m grabbing my stuff. don\'t leave without me', { rel: 4 }, { end: true }); }
             if (g.phase === 'run' && g.away && !g.frComing && (g.party || []).length < 2) { setTimeout(() => sendFor('jordan'), 50); return R('ok. i\'m getting on the county bus. tell me exactly where u are', { rel: 4 }); }

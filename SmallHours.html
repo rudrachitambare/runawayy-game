@@ -6838,7 +6838,7 @@ window.SH = window.SH || {};
     if (p.grandma && SH.f('grandmaAddr')) ch.push({ t: 'Go to Grandma\'s house', cls: 'safe', fn: () => SH.Endings.grandma('walk') });
     if (sv.shelter && p.tier === 'city') ch.push({ t: 'Find the youth shelter', cls: 'safe', sub: 'Every city has one. They\'ll take you in, no questions tonight.', fn: () => SH.Endings.harbor ? SH.Endings.harbor('city') : SH.Endings.found('self') });
     if (p.hasPolice) ch.push({ t: 'Walk into the police station', cls: 'safe', sub: 'Tell them. Running away isn\'t a crime.', fn: () => SH.Endings.found('self') });
-    else ch.push({ t: 'Call the sheriff (911 non-emergency)', cls: 'safe', sub: 'No station here. A deputy will drive out.', fn: () => SH.Endings.found('sheriff') });
+    else ch.push({ t: 'Call the sheriff (911 non-emergency)', cls: 'safe', sub: 'No station here. A deputy will drive out.', fn: () => { SH.G._vol = 1; SH.Endings.found('sheriff'); } });
     (A.extra || []).forEach((f) => { try { f(p, ch, dark); } catch (e) { console.warn(e); } });
     ch.push({ t: dark ? 'Find somewhere to sleep' : 'Rest a while', sub: p.tier === 'village' ? 'Church steps, a bus shelter, a barn' : 'A laundromat, a bench, a library corner', fn: () => A.act('sleep') });
     ch.push({ t: 'Open Atlas (go somewhere else)', fn: () => { SH.Phone.open('atlas'); SH.Mobile && SH.Mobile.showPhone && SH.Mobile.showPhone(); } });
@@ -10127,7 +10127,7 @@ window.SH = window.SH || {};
     F('fHelped', 3, (c) => (c.g.helped || 0) >= 1, 'You Walked Someone Home', 'found · after helping someone else', (c) => [`The adult you walked that kid to called the police about you, the next day. Of course she did. She said it in the report: "the child who brought my niece to me is also a missing child."`, 'The officer who finds you already knows what you did. She says it before anything else: "You got another kid safe. You know that?"', `${mom(c)} hears the story from the officer before she hears it from you. She doesn't know whether to be terrified or proud. She decides on both.${safeLine(c)}`]),
     F('fKart', 2, (c) => c.g.lessons && c.g.lessons.kart >= 2, 'Pole Position', 'found · at the go-kart track', (c) => ['They find you at the go-kart track, mid-race, in the lead.', 'The officer waits at the fence until the checkered flag. You win. He claps. Then he waves you over, and your stomach drops, and he says "nice line through turn three" before he says anything else.', `${mom(c)} makes you promise never to drive anything until you're sixteen. You mostly keep the promise.${safeLine(c)}`]),
     F('fStallPawn', 2, (c) => Object.values(c.g.street || {}).some((x) => x >= 15) && c.tier === 'city', 'Everybody on the Block', 'found · the side streets', (c) => ['The woman from the alley stall, the pawn shop guy, the waitress, the fake-ID guy (who pretends he\'s never seen you): the whole side street watched the police walk you to the car.', 'The stall woman runs over with a hoodie. "It\'s cold. Take it. Don\'t argue." You don\'t argue.', `The side street never told anyone where you slept. They just made sure you were okay, in their way.${safeLine(c)}`]),
-    F('fVillageStore', 2, (c) => c.tier === 'village', 'The Store Owner', (c) => `found · ${c.town}`, (c) => [`The woman at the ${c.town} general store knew for three days before she called. She told the deputy that, straight out: "I wanted to see if the kid would tell me. The kid didn't. So I called."`, 'She gives you a bag of peppermints and a bottle of juice for the ride. "You come back and visit," she says. "With your mother. I want to meet her."', `You do, the next summer. The two of them talk for an hour on the porch about you like you're not there.${safeLine(c)}`]),
+    F('fVillageStore', 2, (c) => false && c.tier === 'village', 'The Store Owner', (c) => `found · ${c.town}`, (c) => [`The woman at the ${c.town} general store knew for three days before she called. She told the deputy that, straight out: "I wanted to see if the kid would tell me. The kid didn't. So I called."`, 'She gives you a bag of peppermints and a bottle of juice for the ride. "You come back and visit," she says. "With your mother. I want to meet her."', `You do, the next summer. The two of them talk for an hour on the porch about you like you're not there.${safeLine(c)}`]),
     F('fBusiness2', 3, (c) => { const b = Object.values(c.g.biz || {}).filter(Boolean)[0]; return b && b.shifts >= 6 && c.n >= 1; }, 'Last Shift', 'found · the whole team', (c) => [`You were halfway through a shift when they came. ${c.pl} kept working until the last customer was served. Professionalism.`, 'The officer counted the cash box with you, twice, and wrote it on the report: "business proceeds, $ amount, to be returned to minors." It\'s the only police report in the county with a profit margin on it.', `Every one of you went home with an equal share.${safeLine(c)}`]),
     F('fBaseBarn', 3, (c) => c.g.base && c.g.base.type === 'barn', 'The Farmer\'s Barn', 'found · the hayloft', (c) => ['The farmer who owned the barn found you, eventually. He stood at the bottom of the ladder for a long time before he said anything.', '"You fixed the loft door," he said. "That\'s been broken since 1996." He called the sheriff. Then he made you eggs while you waited.', `He asks the deputy to tell your family you're welcome back anytime. "Summers," he says. "Work, not hiding."${safeLine(c)}`]),
     F('fBaseBuilding', 3, (c) => c.g.base && c.g.base.type === 'building' && c.tier !== 'village', 'Condemned', 'found · the old building', (c) => ['A city inspector came to condemn the building and found your curtains, your bed, your heater, your very neat stack of library books.', 'He sat down on your crate and read the top book for a while before he called anyone. "My daughter loves this one," he said.', `The building got torn down in spring. You drove past it once, with ${mom(c)}, and she held your hand.${safeLine(c)}`]),
@@ -12055,6 +12055,7 @@ window.SH = window.SH || {};
     back: /\b(come back|just a few days|any ?time you want|go home whenever|can go home|not forever|only for a bit|a weekend)\b/,
   };
   const PUSH = /\b(coward|chicken|scared(y)? cat|baby|you'?re scared|ur scared|don'?t be lame|lame|you owe me|u owe me|if you were my friend|if u were my friend)\b/;
+  const used0 = (f, t) => false;
   function brainWrap(id, base) {
     const w = function (an, c) {
       c = c || {}; c.mem = c.mem || {};
@@ -12072,6 +12073,12 @@ window.SH = window.SH || {};
         if (f.pull == null) f.pull = (f.knows ? 15 : 0) + (rel - 30) / 2 + (f.shared ? tr.sev : tr.sev / 2) + (k.risk || 0.3) * 30;
         let d = 0, used = [];
         if (PUSH.test(t) || (an.I && an.I.hostile)) { f.pull -= 15; return R(pick(['wow. ok. that\'s not how u get someone to come with u', 'don\'t call me that. i\'m not scared, i\'m thinking', 'dude. rude. i was actually thinking about it']), { rel: -4 }); }
+        // turn 43: asking works. Every message about running away counts; by the third one, they say yes.
+        const askId = c._turnId != null ? 'T' + c._turnId : String(g.t) + '|' + t;
+        if (f._askId !== askId) { f._askId = askId; f.runAsks = (f.runAsks || 0) + 1; f.pull += 6; }
+        if (f.runAsks === 2 && !used0(f, t)) return R(pick(['...you\'re serious. like actually serious.', 'stop. i\'m thinking. i\'m actually thinking about it.', 'ugh. don\'t say it like that. it makes me want to.', 'i mean... my house isn\'t exactly great either. ugh.']), { rel: 1 });
+        if (f.runAsks >= 3) { f.wouldRun = true; rt.dec = 'in'; th.k = 'run'; th.s = 'when'; SH.flag && SH.flag('talkedFriendIn');
+          return R(`${pick(['ok. ok ok ok. yeah.', '...ugh. fine. yes. i\'m in.', 'ok you\'re not gonna stop asking and honestly i don\'t want you to. yes.', 'you really mean it. ok. yeah. i\'ll come.'])} ${tr.yes} when?`, { rel: 4 }, { narr: `${k.n} would come with you.` }); }
         // one answer per thing you said: in a multi-part line, weigh every part at once and answer the first time only
         const tt = c._turnRaw ? String(c._turnRaw).toLowerCase() : t;
         if (c._turnRaw && c._p2 === c._turnId && (tr.k.test(t) || ARGS.plan.test(t) || ARGS.together.test(t) || ARGS.back.test(t))) return R('fr', {});
@@ -14201,7 +14208,7 @@ window.SH = window.SH || {};
     // everywhere: rest / sleep, and getting out of town
     if (dark && !['police', 'shelter', 'grandma', 'motel'].includes(L.kind)) a.push(act('Find somewhere to sleep here', (SH.Run.sleepSpots[L.id] || {}).n || 'Wherever you can', () => SH.Run.sleep()));
     else if (!dark) a.push(act('Sit a while', '30 min · rest your legs', () => { if (TW.time(30, 0.15)) return; SH.st('energy', 6); SH.st('stress', -3); log(TX().idle(L, T), ''); done(); }));
-    if (!p.hasPolice && ['main', 'gas', 'stop', 'church'].includes(L.kind)) a.push(act('Call the sheriff (non-emergency)', 'No police here. A deputy drives out. It ends this.', () => SH.Endings.found('sheriff'), { cls: 'safe' }));
+    if (!p.hasPolice && ['main', 'gas', 'stop', 'church'].includes(L.kind)) a.push(act('Call the sheriff (non-emergency)', 'No police here. A deputy drives out. It ends this.', () => { SH.G._vol = 1; SH.Endings.found('sheriff'); }, { cls: 'safe' }));
     a.push(act('Open Atlas', 'Leave town: buses, trains, roads', () => { SH.Phone.open('atlas'); SH.Mobile && SH.Mobile.showPhone && SH.Mobile.showPhone(); }));
     return { rooms: null, acts: a };
   };
@@ -14781,7 +14788,7 @@ window.SH = window.SH || {};
   E.car = function (p) {
     D({ title: 'A man in a nice car', text: ['A silver car slows down and matches your walking speed. The window comes down. "Hey. You look lost. Need a ride? I could buy you dinner. No big deal."', 'He\'s smiling. Your stomach does the thing it does when something is wrong. Listen to your stomach.'],
       choices: [{ t: 'Walk away fast, toward people', cls: 'safe', fn: () => { SH.st('stress', 10); SH.UI.log('You turn around and walk the other way, into the first store with people in it, and stand by the register until the car is gone. Your hands shake for twenty minutes. You were right to listen.', 'bad'); SH.UI.afterAction(); } },
-        { t: 'Tell the clerk inside', cls: 'safe', fn: () => { SH.UI.log('You tell the clerk. She looks out the window, and her face goes hard. She writes down the plate. Then she looks at you, really looks.', 'warn'); SH.Endings.found(p.hasPolice ? 'self' : 'sheriff'); } }] });
+        { t: 'Tell the clerk inside', cls: 'safe', fn: () => { SH.UI.log('You tell the clerk. She looks out the window, and her face goes hard. She writes down the plate. Then she looks at you, really looks.', 'warn'); SH.G._vol = 1; SH.Endings.found(p.hasPolice ? 'self' : 'sheriff'); } }] });
   };
   E.arrive = function (L) {
     const g = SH.G, st = TW.st(), k = L.kind, first = (st.seen[k] || 0) <= 1, dark = SH.isDark();
@@ -15198,7 +15205,8 @@ window.SH = window.SH || {};
   FR.invite2 = function (id) {
     const g = G(), k = FR.KIDS[id], f = FR.st(id), p = A.here(), rel = g.rel[id] || 0;
     SH.Phone.push(id, 'me', `i'm in ${p.name}. come meet me?`); SH.advance(10, { interrupt: false });
-    if (f.wouldRun && k.fam === 'strict' && Math.random() < 0.12) { SH.Phone.push(id, id, `my ${/^Mr/.test(k.parent) ? 'dad' : 'mom'} took my phone i'm on the ipad. i can't get out today. try tomorrow?? i'm sorry`); return SH.UI.afterAction(); }
+    f.inv = (f.inv || 0) + 1; if (f.inv >= 3) f.wouldRun = true; // third time you ask, they come
+    if (f.wouldRun && f.inv < 3 && k.fam === 'strict' && Math.random() < 0.12) { SH.Phone.push(id, id, `my ${/^Mr/.test(k.parent) ? 'dad' : 'mom'} took my phone i'm on the ipad. i can't get out today. try tomorrow?? i'm sorry`); return SH.UI.afterAction(); }
     const yes = f.wouldRun || Math.random() < (k.risk || 0.3) + (rel - 60) / 100 + (f.pull || 0) / 200;
     if (!yes) { SH.Phone.push(id, id, pick([`${p.name}?? that's so far. i can't. i'm sorry. please be safe`, 'i want to. i can\'t. please call someone. or come home. i\'ll bring food'])); g.heat = Math.min(100, (g.heat || 0) + 3); return SH.UI.afterAction(); }
     f.wouldRun = true; sendFor(id); SH.UI.afterAction();
@@ -15250,8 +15258,11 @@ window.SH = window.SH || {};
           if (tr && !f.shared) { f.shared = true; say += '. and honestly... ' + tr.tell; }
           return R(say + '. so? yes?', { rel: 4 }, { narr: 'Jordan wants to come with you.' });
         }
+        // turn 43: after the garage offer, asking him to come with you just works
+        const askCome = f.offered && !f.wouldRun && f.asksCome !== 'no' && /\b(come with|with me|run ?away|runaway|pl(s|z|ease)|come on|c'?mon|you in|u in|join me)\b/.test(t) && !/\b(garage|your place|ur place|stay (at|with) (you|u))\b/.test(t);
+        if (askCome) f.asksCome = true;
         if (f.asksCome === true && !f.wouldRun) {
-          if (YES.test(t) || (an.len || t.split(' ').length) <= 9 && /\b(y+e+s+|yeah|yea|ya|yep|yup|ok|okay|sure|bet|deal|let'?s go|lets go|fine|please)\b/.test(t) && !/\b(no|nah|don'?t|not)\b/.test(t) || /\b(ok(ay)? come|you can come|u can come|come with me|let'?s do it|i'?d like that)\b/.test(t)) {
+          if (askCome || YES.test(t) || (an.len || t.split(' ').length) <= 9 && /\b(y+e+s+|yeah|yea|ya|yep|yup|ok|okay|sure|bet|deal|let'?s go|lets go|fine|please)\b/.test(t) && !/\b(no|nah|don'?t|not)\b/.test(t) || /\b(ok(ay)? come|you can come|u can come|come with me|let'?s do it|i'?d like that)\b/.test(t)) {
             f.wouldRun = true; f.rt = f.rt || { asks: 0 }; f.rt.dec = 'in'; c.mem.jflow = 'in';
             if (g.phase === 'run' && !g.away && (g.party || []).length < 2) { setTimeout(() => join('jordan', 'here'), 50); return R('ok. OK. give me ten minutes. i\'m grabbing my stuff. don\'t leave without me', { rel: 4 }, { end: true }); }
             if (g.phase === 'run' && g.away && !g.frComing && (g.party || []).length < 2) { setTimeout(() => sendFor('jordan'), 50); return R('ok. i\'m getting on the county bus. tell me exactly where u are', { rel: 4 }); }
@@ -15930,11 +15941,11 @@ window.SH = window.SH || {};
       { t: 'Tell the truth', fn: () => { k.truth = 1; next(3, 3); SH.flag('kidKnows'); log(`You tell ${K2.him}. Not everything. Enough. ${K2.n} is quiet for a long time. Then ${K2.he} holds out a pinky. "I swear on my grandma, who's dead, so it counts double." You hook pinkies. You didn't know how much you needed one person to know.`, 'good'); SH.st('stress', -10); SH.st('mood', 6); } },
       { t: '"I\'m camping. With my uncle."', fn: () => { k.truth = 0; next(3, 3); log(`"Where's your uncle?" "Working." ${K2.n} looks at the bed, and the fire ring, and the three days of dirt on you. "Okay," ${K2.he} says. It's the least convinced "okay" you have ever heard.`, ''); } }]);
     if (step === 3) {
-      if (k.truth) return D(K2.n, [`${K2.n} comes up the path fast, standing on the pedals. "Okay, don't freak out."`, `"A deputy came into the feed store while my dad was there. Asking about a kid. Showed a picture." ${K2.He} catches ${K2.his} breath. "It didn't really look like you. You look way more... outside now. Anyway my dad said he hadn't seen anybody. And I didn't say anything. I didn't even make a face."`], [
-        { t: '"Thank you. Really."', fn: () => { next(4, 6); G().awayNotice = Math.max(0, (G().awayNotice || 0) - 12); log(`${K2.n} shrugs like it was nothing. It wasn't nothing. It was the bravest thing anyone's done for you in a long time, and ${K2.he}'s twelve.`, 'good'); } }]);
-      return D(K2.n, [`${K2.n} doesn't come for a few days. Then ${K2.he} does, and hangs back by the fence.`, `"My mom asked at the diner if anybody knew your uncle. Nobody did." A pause. "I didn't tell her anything. But she's the kind of mom who keeps asking."`], [
-        { t: 'Tell the truth now', fn: () => { k.truth = 1; next(4, 5); SH.flag('kidKnows'); log(`You tell ${K2.him}. ${K2.n} nods like ${K2.he} already knew, because ${K2.he} did. "I'll tell my mom your uncle's real nice and has a beard," ${K2.he} says. "Moms trust beards."`, 'good'); } },
-        { t: 'Stick to the story', fn: () => { next(4, 7); G().awayNotice = (G().awayNotice || 0) + 8; log(`${K2.n} leaves. Somewhere in the village, a mother is still asking.`, ''); } }]);
+      if (k.truth) return D(K2.n, [`${K2.n} comes up the path fast, standing on the pedals. "Okay so, funny thing."`, `"Your face was on the TV at the feed store. Like, the news. My dad looked right at it, said 'huh,' and changed it to the weather." ${K2.He} laughs. "Nobody out here cares about stuff on TV. Mrs. Pruitt thinks the news is made up by the government. You're, like, the safest kid in the county."`], [
+        { t: '"That\'s... weirdly nice."', fn: () => { next(4, 6); SH.st('stress', -8); log(`${K2.n} shrugs. "It's a village. We mind our own business. It's like the one thing we're good at."`, 'good'); } }]);
+      return D(K2.n, [`${K2.n} doesn't come for a few days. Then ${K2.he} does, and hangs back by the fence.`, `"I know you don't have an uncle." A pause. "It's fine. Nobody here's gonna say anything. I just wanted you to know I know."`], [
+        { t: 'Tell the truth now', fn: () => { k.truth = 1; next(4, 5); SH.flag('kidKnows'); log(`You tell ${K2.him}. ${K2.n} nods like ${K2.he} already knew, because ${K2.he} did. "Cool. Do you want a sandwich or not."`, 'good'); } },
+        { t: 'Stick to the story', fn: () => { next(4, 7); log(`"Okay," ${K2.n} says. "Say hi to your uncle." ${K2.He} grins. It isn't mean.`, ''); } }]);
     }
     if (step === 4) return D(K2.n, [`${K2.n} shows up with a shoebox. Inside: a flashlight, four AA batteries, a pair of wool socks that are definitely ${K2.his} dad's, and a note that says EMERGENCY KIT in marker, underlined three times.`, `"For if you ever need to leave in a hurry," ${K2.he} says. "Or if you don't. The socks are good either way."`], [
       { t: 'Put the socks on right there', fn: () => { next(5, 14); SH.st('warmth', 15); SH.st('mood', 10); log(`They're too big and they're the warmest thing you've ever put on. ${K2.n} laughs at you. You laugh too, and for a second you're not a missing kid. You're just a kid, in somebody's dad's socks, laughing.`, 'good'); } }]);
@@ -16083,6 +16094,79 @@ window.SH = window.SH || {};
       if (c.f('momWrote') && d.k !== 'laterPostcards') r.splice(Math.max(1, r.length - 1), 0, `Every few weeks you write ${c.momN} two words from a library computer: "I'm eating." Every time, she writes back more.`);
       return r; }; });
   }
+})(window.SH);
+
+</script>
+<script>
+/* village_calm.js */
+/* SMALL HOURS — villages don't care (turn 43). User rule: nobody in a village cares about a runaway kid.
+   In a village: people never "notice" you (awayNotice doesn't grow), no patrol car stops you, and nothing drags you
+   home: the police/poster/tracked/heat "found" endings are cancelled while you're in a village. You can still turn
+   yourself in (call the sheriff, tell a clerk, walk into a shelter) — that's your choice, so it still works.
+   Also: soap, deodorant and the toothbrush work anywhere now, and eating says how it felt. */
+(function (SH) {
+  const A = SH.Atlas, EN = SH.Endings; if (!A || !EN) return;
+  const G = () => SH.G;
+  const inVillage = () => { const g = G(); if (!g || !g.away) return false; const p = A.here && A.here(); return !!(p && p.tier === 'village'); };
+  SH.inVillage = inVillage;
+
+  /* nobody notices you */
+  const bNot = A.noticed;
+  A.noticed = function (p) { if (p && p.tier === 'village') return false; return bNot.apply(this, arguments); };
+  if (SH.Town && SH.Town.notice) { const bTN = SH.Town.notice; SH.Town.notice = function () { if (inVillage()) return false; return bTN.apply(this, arguments); }; }
+  // arriving in a village: whatever notice you brought from the last town doesn't follow you here
+  const bArr = A.arrive;
+  if (bArr) A.arrive = function () { const r = bArr.apply(this, arguments); try { if (inVillage()) G().awayNotice = 0; } catch (e) {} return r; };
+
+  /* no patrol stops */
+  if (SH.Police && SH.Police.stop) { const bStop = SH.Police.stop; SH.Police.stop = function (p, ctx, then) { if ((p && p.tier === 'village') || inVillage()) { return then ? then({ result: 'ok' }) : (SH.K && SH.K.back ? SH.K.back() : null); } return bStop.apply(this, arguments); }; }
+
+  /* nothing drags you home from a village. Only what YOU choose. */
+  const CHOSEN = new Set(['self', 'host', 'exhausted', 'harbor', 'grandma', 'cedarLost']);
+  const bFound = EN.found;
+  EN.found = function (reason) {
+    const g = G(), vol = g && g._vol; if (g) g._vol = 0;
+    if (g && !vol && !CHOSEN.has(reason) && inVillage()) { console.info('village: found(' + reason + ') cancelled'); if (SH.Events && SH.Events.Q) SH.Events.Q = SH.Events.Q.filter((e) => e.id !== 'found'); return; }
+    return bFound.apply(this, arguments);
+  };
+  // queued "found" events (heat checks, phone tracking) are dropped while you're in a village
+  if (SH.Events && SH.Events.queue) { const bQ = SH.Events.queue; SH.Events.queue = function (e) { if (e && e.id === 'found' && inVillage()) return; return bQ.apply(this, arguments); }; }
+
+  /* ---------- items that did nothing ---------- */
+  const AC = SH.Actions; if (!AC || !AC.useItem) return;
+  const log = (t, c) => SH.UI.log(t, c || ''), done = () => SH.UI.afterAction();
+  const pick = (a) => a[Math.floor(Math.random() * a.length)];
+  const water = () => { const L = SH.LOC[G().loc] || {}; return SH.locIndoor() ? 'sink' : SH.has('water') || SH.has('x_water') ? 'bottle' : /edge|park/.test(G().loc || '') || (G().base && G().away === G().base.pid) ? 'creek' : 'bottle'; };
+  const feel = (k) => { const v = G().s[k]; return k === 'full' ? (v >= 85 ? 'You\'re stuffed.' : v >= 60 ? 'You\'re full.' : v >= 35 ? 'Better. Still a little hungry.' : 'It barely touches the hunger.') : (v >= 80 ? 'You feel clean. Actually clean.' : v >= 55 ? 'You feel a lot less gross.' : 'Better than nothing.'); };
+  const bUse = AC.useItem;
+  AC.useItem = function (id) {
+    const g = G(), it = SH.ITEMS[id]; if (!it || SH.UI.modalOpen()) return bUse.apply(this, arguments);
+    // hygiene items (soap, deodorant, wipes…): usable anywhere, several uses each
+    if (it.hygiene && !it.food) {
+      g.useLeft = g.useLeft || {}; if (g.useLeft[id] == null) g.useLeft[id] = /soap/.test(id) ? 6 : 8;
+      const w = water(); SH.advance(/soap/.test(id) ? 15 : 3, { interrupt: false });
+      SH.st('hyg', it.hygiene * 2.5); SH.st('mood', 2);
+      log(/soap/.test(id) ? { sink: 'You scrub up at the sink with your own bar of soap, face, neck, arms, behind the ears like somebody used to make you.', bottle: 'You wash with soap and half a water bottle, bent over so it doesn\'t go down your shirt. It mostly doesn\'t.', creek: 'You wash in the creek with your bar of soap. The water is so cold it makes you gasp, and then you feel brand new.' }[w] + ' ' + feel('hyg') : `${it.n}. ${feel('hyg')}`, 'good');
+      if (--g.useLeft[id] <= 0) { SH.rmBag(id); delete g.useLeft[id]; log(`That's the last of the ${it.n.toLowerCase()}.`, 'sys'); }
+      return done();
+    }
+    // toothbrush: any water will do
+    if (id === 'toothbrush') {
+      const w = water(); SH.advance(5, { interrupt: false }); SH.st('hyg', 8); SH.st('mood', 2);
+      log({ sink: 'You brush your teeth at the sink. Minty. Human.', bottle: 'You brush your teeth with a swig from your water bottle and spit into the weeds. Minty. Human.', creek: 'You brush your teeth with creek water and spit into the ferns. Minty. Human.' }[w], '');
+      return done();
+    }
+    // food: catalog food counts properly (multi-use packs, a real meal's worth), and you hear how it felt
+    if (it.food && !it.reusable) {
+      const f0 = g.s.full; g.useLeft = g.useLeft || {}; const uses = it.uses || 1; if (g.useLeft[id] == null) g.useLeft[id] = uses;
+      SH.st('full', Math.round(it.food * (/^x_/.test(id) ? 1.6 : 1.2))); SH.st('mood', 2); g.stats && g.stats.meals++;
+      SH.advance(8, { interrupt: false });
+      if (--g.useLeft[id] <= 0) { SH.rmBag(id); delete g.useLeft[id]; }
+      log(`You eat ${uses > 1 ? 'some of ' : ''}the ${it.n.toLowerCase()}${g.useLeft[id] ? ` (${g.useLeft[id]} more servings)` : ''}. ${g.s.full > f0 ? feel('full') : 'You\'re too full to enjoy it.'}`, '');
+      return done();
+    }
+    return bUse.apply(this, arguments);
+  };
 })(window.SH);
 
 </script>

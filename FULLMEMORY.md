@@ -446,3 +446,21 @@ File: `src/tales.js`, loaded after later.js.
   - shops.js `stock()`: KEEP = x_dye, x_glasses, x_cap, x_beanie are always stocked at general stores, pharmacies and supermarkets. Villages never drop KEEP items or health items.
   - village_life.js: every gas station (all tiers) has "Buy box hair dye $12" and "Buy clear-lens reading glasses $11" via `SH.Catalog.give`. They are hidden once owned or used.
   - The identity.js hints now name the right places.
+
+## 43. Villages don't care; friends say yes; items work (turn 43)
+- USER RULE: nobody in a village cares about a runaway kid. No police in villages.
+  - `src/village_calm.js` (loaded after tales.js):
+    - `A.noticed` and `TW.notice` do nothing when the tier is village; awayNotice resets to 0 on arriving in a village.
+    - `SH.Police.stop` is skipped.
+    - `EN.found(reason)` is cancelled in a village unless it is chosen (`G._vol` is set by the call-the-sheriff actions in town_play.js and atlas.js, and by "tell the clerk" in town_map.js) or the reason is in CHOSEN (self, host, exhausted, harbor, grandma, cedarLost).
+    - Queued `found` events are dropped in villages.
+    - `SH.inVillage()`.
+  - endx_more fVillageStore is disabled.
+  - tales.js: the kid's "deputy" scene was rewritten (dad changes the channel; nobody here cares).
+- Friends: every message about running away counts (`f.runAsks`). The 2nd gets a wavering line; the 3rd is a guaranteed yes (friends2.js).
+  - Jordan (friends3.js): after the garage offer, any "come with me / pls" message means yes.
+  - FR.invite2 texts: the 3rd invite is a guaranteed yes (`f.inv`).
+- Items (village_calm.js wraps `SH.Actions.useItem`):
+  - hygiene items (soap 6 uses, others 8, `G.useLeft`) work anywhere (sink, bottle or creek) at hygiene ×2.5;
+  - the toothbrush works anywhere (+8);
+  - food eats properly (catalog food ×1.6, multi-serving packs use `uses`) and says how full you feel (no numbers).

@@ -45,6 +45,7 @@
     back: /\b(come back|just a few days|any ?time you want|go home whenever|can go home|not forever|only for a bit|a weekend)\b/,
   };
   const PUSH = /\b(coward|chicken|scared(y)? cat|baby|you'?re scared|ur scared|don'?t be lame|lame|you owe me|u owe me|if you were my friend|if u were my friend)\b/;
+  const used0 = (f, t) => false;
   function brainWrap(id, base) {
     const w = function (an, c) {
       c = c || {}; c.mem = c.mem || {};
@@ -62,6 +63,12 @@
         if (f.pull == null) f.pull = (f.knows ? 15 : 0) + (rel - 30) / 2 + (f.shared ? tr.sev : tr.sev / 2) + (k.risk || 0.3) * 30;
         let d = 0, used = [];
         if (PUSH.test(t) || (an.I && an.I.hostile)) { f.pull -= 15; return R(pick(['wow. ok. that\'s not how u get someone to come with u', 'don\'t call me that. i\'m not scared, i\'m thinking', 'dude. rude. i was actually thinking about it']), { rel: -4 }); }
+        // turn 43: asking works. Every message about running away counts; by the third one, they say yes.
+        const askId = c._turnId != null ? 'T' + c._turnId : String(g.t) + '|' + t;
+        if (f._askId !== askId) { f._askId = askId; f.runAsks = (f.runAsks || 0) + 1; f.pull += 6; }
+        if (f.runAsks === 2 && !used0(f, t)) return R(pick(['...you\'re serious. like actually serious.', 'stop. i\'m thinking. i\'m actually thinking about it.', 'ugh. don\'t say it like that. it makes me want to.', 'i mean... my house isn\'t exactly great either. ugh.']), { rel: 1 });
+        if (f.runAsks >= 3) { f.wouldRun = true; rt.dec = 'in'; th.k = 'run'; th.s = 'when'; SH.flag && SH.flag('talkedFriendIn');
+          return R(`${pick(['ok. ok ok ok. yeah.', '...ugh. fine. yes. i\'m in.', 'ok you\'re not gonna stop asking and honestly i don\'t want you to. yes.', 'you really mean it. ok. yeah. i\'ll come.'])} ${tr.yes} when?`, { rel: 4 }, { narr: `${k.n} would come with you.` }); }
         // one answer per thing you said: in a multi-part line, weigh every part at once and answer the first time only
         const tt = c._turnRaw ? String(c._turnRaw).toLowerCase() : t;
         if (c._turnRaw && c._p2 === c._turnId && (tr.k.test(t) || ARGS.plan.test(t) || ARGS.together.test(t) || ARGS.back.test(t))) return R('fr', {});
