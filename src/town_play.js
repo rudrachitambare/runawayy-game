@@ -83,7 +83,6 @@
     // everywhere: rest / sleep, and getting out of town
     if (dark && !['police', 'shelter', 'grandma', 'motel'].includes(L.kind)) a.push(act('Find somewhere to sleep here', (SH.Run.sleepSpots[L.id] || {}).n || 'Wherever you can', () => SH.Run.sleep()));
     else if (!dark) a.push(act('Sit a while', '30 min · rest your legs', () => { if (TW.time(30, 0.15)) return; SH.st('energy', 6); SH.st('stress', -3); log(TX().idle(L, T), ''); done(); }));
-    if (!p.hasPolice && ['main', 'gas', 'stop', 'church'].includes(L.kind)) a.push(act('Call the sheriff (non-emergency)', 'No police here. A deputy drives out. It ends this.', () => { SH.G._vol = 1; SH.Endings.found('sheriff'); }, { cls: 'safe' }));
     a.push(act('Open Atlas', 'Leave town: buses, trains, roads', () => { SH.Phone.open('atlas'); SH.Mobile && SH.Mobile.showPhone && SH.Mobile.showPhone(); }));
     return { rooms: null, acts: a };
   };

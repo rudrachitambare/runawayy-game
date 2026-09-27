@@ -207,7 +207,6 @@
     if (p.grandma && SH.f('grandmaAddr')) ch.push({ t: 'Go to Grandma\'s house', cls: 'safe', fn: () => SH.Endings.grandma('walk') });
     if (sv.shelter && p.tier === 'city') ch.push({ t: 'Find the youth shelter', cls: 'safe', sub: 'Every city has one. They\'ll take you in, no questions tonight.', fn: () => SH.Endings.harbor ? SH.Endings.harbor('city') : SH.Endings.found('self') });
     if (p.hasPolice) ch.push({ t: 'Walk into the police station', cls: 'safe', sub: 'Tell them. Running away isn\'t a crime.', fn: () => SH.Endings.found('self') });
-    else ch.push({ t: 'Call the sheriff (911 non-emergency)', cls: 'safe', sub: 'No station here. A deputy will drive out.', fn: () => { SH.G._vol = 1; SH.Endings.found('sheriff'); } });
     (A.extra || []).forEach((f) => { try { f(p, ch, dark); } catch (e) { console.warn(e); } });
     ch.push({ t: dark ? 'Find somewhere to sleep' : 'Rest a while', sub: p.tier === 'village' ? 'Church steps, a bus shelter, a barn' : 'A laundromat, a bench, a library corner', fn: () => A.act('sleep') });
     ch.push({ t: 'Open Atlas (go somewhere else)', fn: () => { SH.Phone.open('atlas'); SH.Mobile && SH.Mobile.showPhone && SH.Mobile.showPhone(); } });
