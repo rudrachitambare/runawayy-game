@@ -464,3 +464,19 @@ File: `src/tales.js`, loaded after later.js.
   - hygiene items (soap 6 uses, others 8, `G.useLeft`) work anywhere (sink, bottle or creek) at hygiene ×2.5;
   - the toothbrush works anywhere (+8);
   - food eats properly (catalog food ×1.6, multi-serving packs use `uses`) and says how full you feel (no numbers).
+
+## #44 — Dial 911 instead of a sheriff button; nothing fakes an effect (turn 44)
+- User: no separate "Call the sheriff" button; to call the police you dial 100 or 911 on the phone.
+  Removed the button from town_play.js and atlas.js. New `src/dialer.js`: keypad on top of the Phone app's contacts (`P.dial(n)`).
+  911/100/112/999 → dispatcher dialog (works with no data or in airplane mode, needs battery). Run phase: "I ran away, come get me" /
+  "I'm not safe" → `G._vol=1` then `found('police')`, or `'sheriff'` where there's no station (villages allow it because it's chosen); "Hang up".
+  At home: "Tell them about Rick" (at night → EN.call911 ending; by day → logged, flag toldPolice) or "wrong number". 988 or 1-800-786-2929 → Lighthouse. Anything else → not in service.
+- User: find anything that says it does something but doesn't. Audits (tests/audit.drv.js, tests/audit_items.drv.js) found that catalog
+  item props were never read. New `src/gear.js`:
+  - warm clothes add insulation while they're in the bag (capped +55); sleeping bag and mat count when sleeping (bag, or owned at your base);
+  - rain jacket (and a tarp when sleeping) soften rain;
+  - band-aids and first-aid kit heal and treat blisters; cold medicine, pain reliever, inhaler2 and sunscreen work; toilet paper and pads are hygiene items;
+  - energy drink gives energy; bottled water is drunk, not eaten;
+  - camp stove cooks food from the bag (10 fuel uses); filter straw drinks from creeks outdoors;
+  - flashlight or lantern eases nights outside; tarp and paracord go on the shack pile at your base;
+  - wearables' toast now says what they're actually doing.

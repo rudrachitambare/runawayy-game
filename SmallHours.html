@@ -6838,7 +6838,6 @@ window.SH = window.SH || {};
     if (p.grandma && SH.f('grandmaAddr')) ch.push({ t: 'Go to Grandma\'s house', cls: 'safe', fn: () => SH.Endings.grandma('walk') });
     if (sv.shelter && p.tier === 'city') ch.push({ t: 'Find the youth shelter', cls: 'safe', sub: 'Every city has one. They\'ll take you in, no questions tonight.', fn: () => SH.Endings.harbor ? SH.Endings.harbor('city') : SH.Endings.found('self') });
     if (p.hasPolice) ch.push({ t: 'Walk into the police station', cls: 'safe', sub: 'Tell them. Running away isn\'t a crime.', fn: () => SH.Endings.found('self') });
-    else ch.push({ t: 'Call the sheriff (911 non-emergency)', cls: 'safe', sub: 'No station here. A deputy will drive out.', fn: () => { SH.G._vol = 1; SH.Endings.found('sheriff'); } });
     (A.extra || []).forEach((f) => { try { f(p, ch, dark); } catch (e) { console.warn(e); } });
     ch.push({ t: dark ? 'Find somewhere to sleep' : 'Rest a while', sub: p.tier === 'village' ? 'Church steps, a bus shelter, a barn' : 'A laundromat, a bench, a library corner', fn: () => A.act('sleep') });
     ch.push({ t: 'Open Atlas (go somewhere else)', fn: () => { SH.Phone.open('atlas'); SH.Mobile && SH.Mobile.showPhone && SH.Mobile.showPhone(); } });
@@ -14208,7 +14207,6 @@ window.SH = window.SH || {};
     // everywhere: rest / sleep, and getting out of town
     if (dark && !['police', 'shelter', 'grandma', 'motel'].includes(L.kind)) a.push(act('Find somewhere to sleep here', (SH.Run.sleepSpots[L.id] || {}).n || 'Wherever you can', () => SH.Run.sleep()));
     else if (!dark) a.push(act('Sit a while', '30 min · rest your legs', () => { if (TW.time(30, 0.15)) return; SH.st('energy', 6); SH.st('stress', -3); log(TX().idle(L, T), ''); done(); }));
-    if (!p.hasPolice && ['main', 'gas', 'stop', 'church'].includes(L.kind)) a.push(act('Call the sheriff (non-emergency)', 'No police here. A deputy drives out. It ends this.', () => { SH.G._vol = 1; SH.Endings.found('sheriff'); }, { cls: 'safe' }));
     a.push(act('Open Atlas', 'Leave town: buses, trains, roads', () => { SH.Phone.open('atlas'); SH.Mobile && SH.Mobile.showPhone && SH.Mobile.showPhone(); }));
     return { rooms: null, acts: a };
   };
@@ -16102,7 +16100,7 @@ window.SH = window.SH || {};
 /* SMALL HOURS — villages don't care (turn 43). User rule: nobody in a village cares about a runaway kid.
    In a village: people never "notice" you (awayNotice doesn't grow), no patrol car stops you, and nothing drags you
    home: the police/poster/tracked/heat "found" endings are cancelled while you're in a village. You can still turn
-   yourself in (call the sheriff, tell a clerk, walk into a shelter) — that's your choice, so it still works.
+   yourself in (dial 911/100 on the phone, tell a clerk, walk into a shelter) — that's your choice, so it still works.
    Also: soap, deodorant and the toothbrush work anywhere now, and eating says how it felt. */
 (function (SH) {
   const A = SH.Atlas, EN = SH.Endings; if (!A || !EN) return;
@@ -16166,6 +16164,224 @@ window.SH = window.SH || {};
       return done();
     }
     return bUse.apply(this, arguments);
+  };
+})(window.SH);
+
+</script>
+<script>
+/* gear.js */
+/* gear.js: shop items promised things ("warmth +8", "health", "camping") and then did nothing.
+   Now they do what their labels say:
+   - clothes with warmth keep you warmer while they're in your bag; sleeping bag / mat count when you sleep
+   - rain jacket / tarp take the sting out of rain like the umbrella does
+   - hiking boots already cut blisters (worldsys.js)
+   - band-aids / first-aid kit heal and treat blisters; cold medicine & pain reliever work if you somehow have them
+   - toilet paper, pads: real hygiene items with several uses
+   - energy drink: energy, not a meal; bottled water: you drink it
+   - camp stove: cook a hot meal from your food; water filter: drink from any creek
+   - lantern / flashlight: nights outside are less frightening
+   - tarp / paracord: go on your shack pile when you're at your own place */
+(function (SH) {
+  const G = () => SH.G;
+  const C = () => SH.Catalog;
+  const cat = (id) => (C() && C().ALL && C().ALL[id]) || null;
+  const ITEM = (id) => (SH.ITEMS && SH.ITEMS[id]) || {};
+  const has = (id) => SH.has(id);
+  const near = (id) => { const g = G(); return has(id) || ((g.owned || []).includes(id) && g.base && g.away === g.base.pid); };
+
+  /* ---------- warmth ---------- */
+  const bIns = SH.insulation;
+  SH.insulation = function (sleeping) {
+    let w = bIns ? bIns.apply(this, arguments) : 0, extra = 0;
+    const g = G(); if (!g) return w;
+    (g.bag || []).forEach((id) => { const c = cat(id); if (c && c.warm) extra += c.warm; });
+    if (sleeping) { ['x_sleepbag', 'x_mat'].forEach((id) => { if (near(id)) { const c = cat(id); extra += (c && c.sleepWarm) || 0; } }); }
+    return w + Math.min(extra, 55);
+  };
+  const bWarm = SH.warmTarget;
+  SH.warmTarget = function (sleeping) {
+    let v = bWarm.apply(this, arguments);
+    if (!SH.locIndoor() && SH.raining() && !has('umbrella')) {
+      if (has('x_rainjacket')) v += 16; else if (sleeping && near('x_tarp')) v += 14;
+    }
+    return Math.max(0, Math.min(90, v));
+  };
+
+  /* ---------- nights outside: a light helps ---------- */
+  const bAdv = SH.advance;
+  SH.advance = function (mins, opts) {
+    const r = bAdv.apply(this, arguments);
+    try {
+      const g = G(), h = SH.hour();
+      if (g && g.phase === 'run' && (h >= 21 || h < 6) && !SH.locIndoor() && (has('flashlight') || near('x_lantern'))) SH.st('stress', -0.05 * (mins || 10));
+    } catch (e) {}
+    return r;
+  };
+
+  /* ---------- using things ---------- */
+  const AC = SH.Actions; if (!AC || !AC.useItem) return;
+  const log = (t, c) => SH.UI.log(t, c || ''), done = () => SH.UI.afterAction();
+  const uses = (id, n) => { const g = G(); g.useLeft = g.useLeft || {}; if (g.useLeft[id] == null) g.useLeft[id] = n; return g.useLeft; };
+  const spend = (id) => { const u = G().useLeft; if (--u[id] <= 0) { SH.rmBag(id); delete u[id]; log(`That's the last of the ${ITEM(id).n.toLowerCase()}.`, 'sys'); } };
+  const hp = () => { const g = G(); return (g.hp = g.hp || { cold: 0, blist: 0, debt: 0 }); };
+  const outdoorsWater = () => { const g = G(); return !SH.locIndoor() && (/edge|park|creek|lake|river/.test(g.loc || '') || (g.away && (!SH.Actions.here || /forest|coast|lake|river|farm|hill|mount/.test(((SH.Actions.here() || {}).biome) || '')))); };
+  const food = () => (G().bag || []).filter((id) => { const it = ITEM(id); return it.food && !it.reusable && !/energy|water/.test(id); });
+
+  const bUse = AC.useItem;
+  AC.useItem = function (id) {
+    const g = G(), it = ITEM(id); if (!g || !it || SH.UI.modalOpen()) return bUse.apply(this, arguments);
+    const c = cat(id);
+    // drinks aren't meals
+    if (id === 'x_energy') { SH.rmBag(id); SH.st('energy', 22); SH.st('full', 3); SH.st('stress', 4); SH.advance(3, { interrupt: false }); log('You crack the energy drink. It tastes like a battery that went to college. Your heart speeds up and your eyes open wider.', ''); return done(); }
+    if (id === 'x_water6') { uses(id, 6); SH.st('full', 4); SH.st('health', 2); SH.advance(3, { interrupt: false }); log(`You drink a whole bottle of water in one go. ${g.useLeft[id] - 1 > 0 ? `${g.useLeft[id] - 1} left.` : ''}`, ''); spend(id); return done(); }
+    // health
+    if (id === 'x_bandaids' || id === 'x_firstaid') {
+      const n = id === 'x_firstaid' ? 6 : 5; uses(id, n); const h = hp(), b0 = h.blist || 0;
+      h.blist = Math.max(0, b0 - (id === 'x_firstaid' ? 50 : 35)); SH.st('health', c ? c.heal : 6); SH.advance(10, { interrupt: false });
+      log(b0 >= 20 ? (id === 'x_firstaid' ? 'You sit down, pull your socks off, and do it properly: antiseptic wipe, blister pads, gauze. Walking stops feeling like a punishment.' : 'You put band-aids over the worst blisters. Your shoes still hate you, but less.') : (id === 'x_firstaid' ? 'You clean up every scrape you\'ve collected. Antiseptic stings, then feels better.' : 'You put a band-aid on a scrape you didn\'t notice until now.'), 'good');
+      spend(id); return done();
+    }
+    if (id === 'x_coldmeds') { const h = hp(); if (!h.cold) return SH.UI.toast('You don\'t have a cold. Save it.'); uses(id, 6); h.cold = Math.max(0, h.cold - 25); SH.st('energy', 5); SH.advance(5, { interrupt: false }); log('You take the cold medicine. Twenty minutes later your head unclogs a little and the world stops being cotton.', 'good'); spend(id); return done(); }
+    if (id === 'x_painkiller') { uses(id, 8); const h = hp(); h.blist = Math.max(0, (h.blist || 0) - 10); SH.st('health', 4); SH.st('stress', -3); SH.advance(5, { interrupt: false }); log('You take one pill with a swallow of water. The ache in your feet and your back fades to background.', 'good'); spend(id); return done(); }
+    if (id === 'x_inhaler2') { SH.rmBag(id); g.puffs = (g.puffs || 0) + 200; if (!has('inhaler')) SH.addBag ? SH.addBag('inhaler') : g.bag.push('inhaler'); log('A new rescue inhaler. You put it where your hand can find it without looking.', 'good'); return done(); }
+    if (id === 'x_sunscreen') { uses(id, 10); SH.st('health', 1); SH.st('mood', 2); SH.advance(3, { interrupt: false }); log(SH.weatherDay && (SH.weatherDay(SH.day()).hi || 0) >= 75 ? 'You put sunscreen on your face and the back of your neck. You won\'t burn today.' : 'You rub in a little sunscreen. It smells like summer, even now.', ''); spend(id); return done(); }
+    // hygiene
+    if (id === 'x_tp') { uses(id, 8); SH.st('hyg', 6); SH.st('mood', 2); SH.advance(5, { interrupt: false }); log('Real toilet paper instead of gas-station napkins or leaves. Small dignity. Huge.', ''); spend(id); return done(); }
+    if (id === 'x_pads') { uses(id, 8); SH.st('hyg', 10); SH.st('mood', 3); SH.st('stress', -2); SH.advance(5, { interrupt: false }); log('Sorted. One less thing to worry about.', ''); spend(id); return done(); }
+    // camping
+    if (id === 'x_stove') {
+      const f = food(); if (!f.length) return SH.UI.toast('Nothing to cook. You need food in your bag.');
+      if (SH.locIndoor()) return SH.UI.toast('Not indoors. Somewhere outside.');
+      uses(id + '_fuel', 10); const fid = f[0], fi = ITEM(fid);
+      AC.useItem(fid); SH.st('full', 6); SH.st('mood', 5); G().s.warmth = Math.min(100, G().s.warmth + 12); SH.advance(15, { interrupt: false });
+      log(`You heat it on the camp stove${/ramen|cans|soup/.test(fid) ? ' until it steams' : ''}. Hot food, outside, with your hands around it. That's a whole different thing.`, 'good');
+      const u = G().useLeft; if (--u[id + '_fuel'] <= 0) { delete u[id + '_fuel']; SH.rmBag(id); log('The little gas can sputters out. The stove is useless without another, and nobody sells those to a kid.', 'sys'); }
+      return done();
+    }
+    if (id === 'x_filter') { if (!outdoorsWater()) return SH.UI.toast('No creek or pond here to drink from.'); SH.st('full', 4); SH.st('health', 2); SH.advance(5, { interrupt: false }); log('You lie on your stomach at the water and drink through the filter straw. Cold, a little earthy, totally fine.', ''); return done(); }
+    if ((id === 'x_tarp' || id === 'x_rope') && SH.Shack && g.base && g.away === g.base.pid) {
+      SH.rmBag(id); SH.Shack.add(id === 'x_tarp' ? 'tarp' : 'rope', id === 'x_tarp' ? 1 : 2);
+      log(id === 'x_tarp' ? 'You add the tarp to your pile. A roof, maybe, or a wall against the wind.' : 'You add the paracord to your pile. Stronger than baling twine.', ''); return done();
+    }
+    // wearable: say what it's actually doing
+    if (c && (c.warm || c.sleepWarm || c.rain || c.walk || c.disguise)) {
+      const bits = [];
+      if (c.warm) bits.push('keeping you warmer');
+      if (c.sleepWarm) bits.push('keeping you warm when you sleep');
+      if (c.rain && id !== 'x_tarp') bits.push('keeping the rain off');
+      if (id === 'x_tarp') bits.push('keeping the rain off you at night');
+      if (c.walk) bits.push('saving your feet');
+      let t = bits.length ? `${it.n}: ${bits.join(', ')} while it's with you.` : `${it.n}.`;
+      if (c.disguise) t += ' Put it to use in You & your group → Change your look.';
+      return SH.UI.toast(t);
+    }
+    if (id === 'x_lantern' || id === 'flashlight') return SH.UI.toast(`${it.n}: nights outside feel less scary while it's with you.`);
+    if (id === 'x_bugspray') { uses(id, 12); SH.st('mood', 2); SH.st('stress', -1); SH.advance(2, { interrupt: false }); log('You spray your ankles and neck. The mosquitoes reconsider.', ''); spend(id); return done(); }
+    return bUse.apply(this, arguments);
+  };
+})(window.SH);
+
+</script>
+<script>
+/* dialer.js */
+/* dialer.js: a real keypad in the Phone app.
+   There's no "call the sheriff" button anywhere; if you want the police you dial them, like a person would.
+   911 / 100 / 112 / 999 → emergency dispatch (works with no data, no wifi, even in airplane mode; needs battery).
+   988 → the Lighthouse crisis line. Anything else: not in service. */
+(function (SH) {
+  const P = SH.Phone; if (!P) return;
+  const G = () => SH.G;
+  const EMERG = ['911', '100', '112', '999'];
+  let num = '';
+  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+  const pad = () => {
+    const keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '*', '0', '#'];
+    return `<div id="dialpad" style="padding:6px 10px 10px;border-bottom:1px solid rgba(255,255,255,.08);margin-bottom:6px">
+      <div id="dialnum" style="height:34px;text-align:center;font-size:24px;letter-spacing:3px;font-variant-numeric:tabular-nums;color:#fff">${esc(num) || '<span style="color:#666;font-size:13px;letter-spacing:0">enter a number</span>'}</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:7px;max-width:230px;margin:4px auto 0">
+        ${keys.map((k) => `<button data-k="${k}" style="height:40px;border-radius:20px;border:none;background:rgba(255,255,255,.1);color:#fff;font-size:18px">${k}</button>`).join('')}
+        <span></span><button data-k="call" style="height:40px;border-radius:20px;border:none;background:#34c759;color:#fff;font-size:18px">✆</button><button data-k="del" style="height:40px;border-radius:20px;border:none;background:transparent;color:#aaa;font-size:18px">⌫</button>
+      </div></div>`;
+  };
+  const wire = () => {
+    const box = document.querySelector('#dialpad'); if (!box) return;
+    box.querySelectorAll('button[data-k]').forEach((b) => {
+      b.onclick = (e) => {
+        e.stopPropagation(); const k = b.dataset.k;
+        if (k === 'del') num = num.slice(0, -1);
+        else if (k === 'call') { const n = num; num = ''; if (n) P.dial(n); else SH.UI.toast('Type a number first.'); if (!n) return; P.render(); return; }
+        else if (num.length < 14) num += k;
+        SH.Audio && SH.Audio.click && SH.Audio.click();
+        const d = document.querySelector('#dialnum'); if (d) d.innerHTML = esc(num) || '<span style="color:#666;font-size:13px;letter-spacing:0">enter a number</span>';
+      };
+    });
+  };
+
+  // draw the keypad on top of the normal contacts list
+  const bRender = P.render;
+  P.render = function () {
+    const r = bRender.apply(this, arguments);
+    try {
+      const g = G(); const v = P.view || {};
+      if (g && v.app === 'calls' && g.phone.bat > 0 && !g.phone.confiscated && !document.querySelector('#dialpad')) {
+        const body = document.querySelector('#pbody .appbody'); if (body) { body.insertAdjacentHTML('afterbegin', pad()); wire(); }
+      }
+    } catch (e) { console.warn(e); }
+    return r;
+  };
+
+  const place = () => { const g = G(); return g.away && SH.Actions && SH.Actions.here ? SH.Actions.here() : null; };
+
+  // the emergency call itself
+  const emergency = (n) => {
+    const g = G(), p = place(), home = g.phase !== 'run';
+    SH.advance(2, { interrupt: false });
+    if (home) {
+      const late = SH.hour() >= 21 || SH.hour() < 5;
+      return SH.UI.dialog({ title: n, cls: 'safe', text: [`It rings once. "${n === '911' ? '911' : n === '100' ? 'Police' : 'Emergency services'}, what's your emergency?"`, 'The voice is calm and quick. Behind it, other phones are ringing.'],
+        choices: [
+          { t: 'Tell them about Rick', cls: 'safe', sub: late ? 'Right now. Tonight.' : 'All of it.', fn: () => {
+            if (late && SH.Endings.call911) return SH.Endings.call911();
+            SH.flag && SH.flag('toldPolice');
+            SH.UI.log('You tell the dispatcher about Rick. The yelling, the wall, the way the house goes quiet when his truck pulls in. She doesn\'t rush you. "Okay. Nobody is hurt right now? Then I\'m going to put this in, and I\'m giving you a number that\'s just for kids. Call it, or call us back the second anything happens. Anything."', 'good');
+            SH.advance(15, { interrupt: false }); SH.UI.afterAction();
+          } },
+          { t: '…Sorry. Wrong number.', sub: 'Hang up.', fn: () => { SH.UI.log('"Okay, hon. If you need us, call back." You hang up. Your heart is going like you ran here.', 'sys'); SH.UI.afterAction(); } },
+        ] });
+    }
+    const hasPolice = !g.away || (p && p.hasPolice);
+    const where = !g.away ? 'Harlow' : (p && p.name) || 'here';
+    return SH.UI.dialog({ title: n, cls: 'safe', text: [`It rings once. "${n === '911' ? '911' : n === '100' ? 'Police' : 'Emergency services'}, what's your emergency?"`],
+      choices: [
+        { t: 'I ran away from home. Can someone come get me?', cls: 'safe', sub: 'This ends the run.', fn: () => {
+          SH.UI.log(`"I ran away. I'm in ${where}. I want to go home." You say it before you can stop yourself. The dispatcher asks your name, and where exactly, and whether you're safe right now. "Stay right there, sweetheart. Someone's ${hasPolice ? 'on the way' : 'driving out from the county. It might take a while'}. Stay on the line with me if you want."`, 'sys');
+          g._vol = 1; SH.advance(hasPolice ? 15 : 40, { interrupt: false });
+          SH.Endings.found(hasPolice ? 'police' : 'sheriff');
+        } },
+        { t: 'I\'m not safe right now', cls: 'hot', sub: 'Someone is scaring you.', fn: () => {
+          SH.UI.log(`You whisper where you are. The dispatcher's voice changes: slower, closer. "Go somewhere with people and light. Stay on with me." ${hasPolice ? 'A cruiser' : 'A deputy'} is coming. It's not really a question anymore.`, 'bad');
+          g._vol = 1; SH.advance(hasPolice ? 10 : 35, { interrupt: false });
+          SH.Endings.found(hasPolice ? 'police' : 'sheriff');
+        } },
+        { t: 'Hang up', sub: 'Before they can ask your name.', fn: () => {
+          SH.UI.log('You hang up. The phone is warm in your hand. They have your number now, probably. Probably they have a lot of numbers.', 'sys');
+          SH.UI.afterAction();
+        } },
+      ] });
+  };
+
+  P.dial = function (n) {
+    const g = G(); if (!g) return;
+    n = String(n).replace(/[^0-9*#]/g, '');
+    if (g.phone.confiscated) return SH.UI.toast('You don\'t have your phone.');
+    if (g.phone.bat <= 0) return SH.UI.toast('Your phone is dead.');
+    if (EMERG.includes(n)) return emergency(n);
+    if (n === '988') { if (P.callOut) return P.callOut('lighthouse'); }
+    if (g.phone.airplane) return SH.UI.toast('Airplane mode is on. Only emergency calls go through.');
+    if (n === '18007862929' || n === '1800786') return P.callOut && P.callOut('lighthouse');
+    SH.advance(1, { interrupt: false });
+    SH.UI.toast(n.length < 7 ? 'Call failed. That\'s not a full number.' : 'The number you have dialed is not in service.');
   };
 })(window.SH);
 

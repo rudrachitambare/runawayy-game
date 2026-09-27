@@ -1,7 +1,7 @@
 /* SMALL HOURS — villages don't care (turn 43). User rule: nobody in a village cares about a runaway kid.
    In a village: people never "notice" you (awayNotice doesn't grow), no patrol car stops you, and nothing drags you
    home: the police/poster/tracked/heat "found" endings are cancelled while you're in a village. You can still turn
-   yourself in (call the sheriff, tell a clerk, walk into a shelter) — that's your choice, so it still works.
+   yourself in (dial 911/100 on the phone, tell a clerk, walk into a shelter) — that's your choice, so it still works.
    Also: soap, deodorant and the toothbrush work anywhere now, and eating says how it felt. */
 (function (SH) {
   const A = SH.Atlas, EN = SH.Endings; if (!A || !EN) return;
