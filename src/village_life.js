@@ -258,6 +258,7 @@
         'You patch the gaps in the walls with leaves and mud. You\'re getting good at this.',
         'Grey and quiet. A good day to not be anybody in particular.',
       ].filter(Boolean)));
+      if (SH.Tale && SH.Tale.pending()) why = 'Something came up.';
       if (g.s.health < 35) why = 'You\'re feeling sick. Quiet days aren\'t helping.';
       if (g.money < 3.5 && !nearMeal()) why = 'You\'re out of money and out of food.';
     }
@@ -280,5 +281,6 @@
       K.D('Quiet days', ['Nothing much happens: you eat, wash, carve, go to town once, sleep. About $10 a day for food, less if your pile has some. If anything goes wrong, you stop.'], [3, 7, 14].map((n) => ({ t: n === 3 ? 'Three days' : n === 7 ? 'A week' : 'Two weeks', sub: `~$${(n * 10).toFixed(0)} without pile food`, fn: () => quiet(p, n) })).concat([{ t: 'Back', fn: K.back }]));
     } });
   });
+  V.quietOn = () => !!QD;
   V.quiet = quiet; V.crop = crop; V.sky = sky; V.advice = advice;
 })(window.SH);
