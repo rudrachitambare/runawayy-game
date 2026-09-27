@@ -198,7 +198,7 @@
       if (filler) {
         const pq = c.pq;
         if (pq && pq.kind === 'how') { const good = an.sent > 0 || an.has('yes') || an.I.happy || an.I.proud || /\b(good|great|aced|passed|won|fine|okay)\b/.test(an.t); const bad = an.sent < 0 || /\b(bad|failed|terrible|lost|awful|bombed)\b/.test(an.t); s = say(id, bad && !good ? 'bad' : 'good', {}, c); fx = { rel: 2, mood: bad ? 0 : 2 }; }
-        else if (pq && (an.has('yes') || an.has('no') || an.I.idk || an.I.agree || (an.short && pq.kind === 'open'))) {
+        else if (pq && (an.has('yes') || an.has('no') || an.I.idk || an.I.agree || (an.short && pq.kind === 'open' && !an.q && !/^(what|where|when|why|how|who|can|could|do|does|did|is|are|will|would)\b/.test(an.t)))) {
           const y = an.has('yes') || an.I.agree, n = an.has('no');
           if (pq.kind === 'ok') s = say(id, y ? 'yesOk' : n ? 'noOk' : 'idk', {}, c);
           else if (pq.kind === 'offer') s = say(id, y ? 'yesOffer' : n ? 'noOffer' : 'idk', {}, c);

@@ -59,8 +59,8 @@
     G.discoverAt = discoveredNow ? G.t : R.calcDiscover();
     if (reason === 'bigNight') G.discoverAt = Math.min(G.discoverAt, G.t + 9 * 60);
     if (SH.f('leftNote')) G.discoverAt = Math.min(G.discoverAt, G.t + 8 * 60);
-    SH.UI.log('— You leave. —', 'day');
-    SH.UI.log(reason === 'bigNight' ? 'Out the window, onto the porch roof, down the drainpipe you\'ve imagined climbing a hundred times. Your hands are shaking. The cold hits you like a slap. Behind you, a light is still on.' : 'The door clicks shut behind you. The street is exactly the same as always, which feels impossible.', 'bad');
+    SH.UI.log(reason === 'leftTown' ? '— You leave Harlow. —' : '— You leave. —', 'day');
+    SH.UI.log(reason === 'leftTown' ? 'You didn\'t pack a speech or say goodbye. You just didn\'t turn around. The water tower gets smaller behind you, and somewhere back there, a house hasn\'t noticed yet. It will. This counts. You\'re gone.' : reason === 'bigNight' ? 'Out the window, onto the porch roof, down the drainpipe you\'ve imagined climbing a hundred times. Your hands are shaking. The cold hits you like a slap. Behind you, a light is still on.' : 'The door clicks shut behind you. The street is exactly the same as always, which feels impossible.', 'bad');
     SH.UI.log('You are twelve years old, and you are out. Open the map to go somewhere. Ask PIP for a plan. Watch your warmth, food, battery — and who\'s looking for you.', 'sys');
     SH.UI.afterAction();
   };

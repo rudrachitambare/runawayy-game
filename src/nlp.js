@@ -5,7 +5,10 @@
     idk: "i don't know", pls: 'please', plz: 'please', rn: 'right now', tho: 'though', ya: 'you', thx: 'thanks', ty: 'thanks',
     ok: 'okay', k: 'okay', kk: 'okay', wanna: 'want to', gonna: 'going to', bc: 'because', cuz: 'because', coz: 'because',
     ppl: 'people', wat: 'what', wut: 'what', ima: "i'm going to", w: 'with', abt: 'about', tmrw: 'tomorrow', nite: 'night',
-    whats: "what's", thats: "that's", youre: "you're", hes: "he's", shes: "she's", isnt: "isn't", doesnt: "doesn't", its: "it's" };
+    whats: "what's", thats: "that's", youre: "you're", hes: "he's", shes: "she's", isnt: "isn't", doesnt: "doesn't", its: "it's",
+    wheres: "where's", whens: "when's", hows: "how's", whos: "who's", theres: "there's", heres: "here's", lemme: 'let me', gimme: 'give me', gotta: 'got to', kinda: 'kind of', sorta: 'sort of',
+    shouldnt: "shouldn't", wouldnt: "wouldn't", couldnt: "couldn't", wasnt: "wasn't", werent: "weren't", havent: "haven't", hasnt: "hasn't", arent: "aren't", aint: "isn't",
+    rly: 'really', sry: 'sorry', srsly: 'seriously', ngl: 'not going to lie', tbh: 'to be honest', y: 'why', b4: 'before', '2day': 'today', '2nite': 'tonight', tonite: 'tonight', bout: 'about', cya: 'see you', wyd: 'what are you doing', hbu: 'how about you', wbu: 'what about you' };
 
   const P = {
     greet: /\b(hi|hey+|hello|yo|sup|hiya|howdy|good (morning|evening|afternoon))\b/,

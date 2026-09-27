@@ -67,7 +67,7 @@
     return T.people.filter((q) => q.kind === L.kind && (q.staff || q.kind !== 'main' ? open : !SH.isDark()) && !(q.kind === 'park' && (h < 7 || h > 19)) && !(q.kind === 'stop' && (h < 6 || h > 21)));
   };
   function talkTo(q, L) {
-    return act(`Talk to ${q.n}`, q.role, () => SH.Talk.open(q.id, { turnsMax: 9, local: q, place: A.here(), spot: L, first: SH.TownTalk ? SH.TownTalk.opener(q, L) : 'Hi.', onEnd: (c) => { if (c.result === 'help') return SH.Endings.found(A.here().hasPolice ? 'self' : 'sheriff'); if (c.result === 'call') { G().awayNotice = 100; TW.notice(0); return; } done(); } }));
+    return act(`Talk to ${q.n}`, q.role, () => SH.Talk.open(q.id, { turnsMax: /busy/.test(q.mood) ? 8 : 16, local: q, place: A.here(), spot: L, first: SH.TownTalk ? SH.TownTalk.opener(q, L) : 'Hi.', onEnd: (c) => { if (c.result === 'help') return SH.Endings.found(A.here().hasPolice ? 'self' : 'sheriff'); if (c.result === 'call') { G().awayNotice = 100; TW.notice(0); return; } done(); } }));
   }
 
   /* ---------- the action list for a town spot ---------- */

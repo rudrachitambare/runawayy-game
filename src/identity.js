@@ -12,7 +12,7 @@
   const nChanges = () => Object.values(look()).filter(Boolean).length;
   function cover(p) {
     const c = cov()[p.id];
-    K.D(`Your story in ${p.name}`, c ? [`Here, you're "${c.name}". ${STORIES.find((s) => s[0] === c.story)[1]}.`, 'Stick to it. People remember.'] : ['People in small places ask. It\'s better to have an answer ready than to make one up with someone staring at you.'],
+    K.D(`Your story in ${p.name}`, c ? [`Here, you're "${c.name || 'nobody yet'}". ${(STORIES.find((s) => s[0] === c.story) || [0, c.storyText ? 'You told people: "' + c.storyText + '"' : 'You haven\'t told anyone why you\'re here'])[1]}.`, 'Stick to it. People remember.'] : ['People in small places ask. It\'s better to have an answer ready than to make one up with someone staring at you.'],
       (c ? [] : STORIES.map(([k, t]) => ({ t: `"${t}."`, fn: () => K.ask('Your name here', ['And what\'s your name? (Pick one you\'ll remember.)'], 'Jordan', (nm) => { cov()[p.id] = { name: nm.split(/\s+/)[0].replace(/[^A-Za-z'-]/g, '').slice(0, 14) || 'Jordan', story: k, told: [] }; SH.UI.toast(`In ${p.name}, you're ${cov()[p.id].name}.`); setTimeout(K.back, 30); }) }))).concat([{ t: 'Back', fn: K.back }]));
   }
   /* locals remember the name and story you gave */

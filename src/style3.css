@@ -207,3 +207,4 @@ body.mapfull #pbody .wtabs{margin-bottom:0}
   #title::-webkit-scrollbar{display:none}
 }
 @media (min-width:761px){#toScene{display:none}}
+#mapWrap:not(.hidden){z-index:7} /* above the scene room/place chips (#roomnav z6), which used to cover the map Close button */
