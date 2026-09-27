@@ -38,7 +38,7 @@
   FR.trouble = trouble;
   const THR = (id) => 60 + (FR.KIDS[id].fam === 'strict' ? 10 : 0);
   const RUN = /\b(run(ning)? away|runaway|take off|leave (home|town|here)|get out of (here|this town|town)|just leave|disappear|come with|with me|you in|u in|join me|you coming|u coming)\b/;
-  const ASKTHEM = /\b(you ok|u ok|are you okay|r u ok|how('s| is) (your|ur) (home|house|family|dad|mom|brother)|what'?s wrong|what about you|what about u|how about you|hbu|wbu|is everything ok|anything going on|how are things (at home|with you)|do you (ever )?have problems|your (parents|family)|ur (parents|family)|is it bad at (yours|your house|ur house))\b/;
+  const ASKTHEM = /\b(you ok(ay)?|u ok(ay)?|are you ok(ay)?|r u ok(ay)?|(everything|things|it) ok(ay)? (at|with) (your|ur) (house|home|place|family|parents)|(is|are) (your|ur) (parents|family|mom|dad|house|home) ok(ay)?|how are things at (your|ur)|how('s| is) (your|ur) (home|house|family|dad|mom|brother)|what'?s wrong|what about you|what about u|how about you|hbu|wbu|is everything ok(ay)?|anything going on|how are things (at home|with you)|do you (ever )?have problems|your (parents|family)|ur (parents|family)|is it bad at (yours|your house|ur house))\b/;
   const ARGS = {
     plan: /\b(plan|grandma|aunt|uncle|money|saved|ticket|bus|train|shelter|safe place|i know a place|motel|we'?d sleep|place to sleep|i have \$?\d+|got \$?\d+|food)\b/,
     together: /\b(together|not alone|look out for|need you|best friend|two is safer|stick together|i'?ll protect|i won'?t leave you|won'?t let anything happen|i got you|we got this)\b/,
@@ -52,7 +52,8 @@
       const dec00 = f.rt && f.rt.dec, R = (say, fx, x) => Object.assign({ say, fx: fx || {} }, x || {});
       if (!tr || (an.has && an.has('selfharm'))) return base.apply(this, arguments);
       // they tell you about their own trouble
-      if (!f.shared && (ASKTHEM.test(t) || (f.knows && th.k === 'home' && an.q && /\b(you|u)\b/.test(t))) && rel >= 10) { f.shared = true; c.mem.fr2 = 'shared'; return R(tr.tell, { rel: 3 }, { narr: `${k.n} has never told anyone that. You can tell.` }); }
+      if (f._shT === g.t && ASKTHEM.test(t)) return R('fr', {});
+      if (!f.shared && (ASKTHEM.test(t) || (f.knows && th.k === 'home' && an.q && /\b(you|u)\b/.test(t))) && rel >= 10) { f.shared = true; f._shT = g.t; c.mem.fr2 = 'shared'; return R(tr.tell, { rel: 3 }, { narr: `${k.n} has never told anyone that. You can tell.` }); }
       if (f.shared && ASKTHEM.test(t)) return R(pick(['same stuff. it\'s whatever', 'still the same. thanks for asking tho. nobody asks']), { rel: 1 });
       // persuading: only while the running-away talk is on, and they haven't said yes yet
       const onRun = th.k === 'run' || RUN.test(t) || rt.asks > 0;
@@ -61,11 +62,15 @@
         if (f.pull == null) f.pull = (f.knows ? 15 : 0) + (rel - 30) / 2 + (f.shared ? tr.sev : tr.sev / 2) + (k.risk || 0.3) * 30;
         let d = 0, used = [];
         if (PUSH.test(t) || (an.I && an.I.hostile)) { f.pull -= 15; return R(pick(['wow. ok. that\'s not how u get someone to come with u', 'don\'t call me that. i\'m not scared, i\'m thinking', 'dude. rude. i was actually thinking about it']), { rel: -4 }); }
-        if (f.shared && tr.k.test(t) && !f.args.trouble) { d += 25; used.push('trouble'); }
-        if (ARGS.plan.test(t) && !f.args.plan) { d += 15 + ((g.money || 0) >= 30 || (g.tickets && Object.keys(g.tickets).length) || SH.f('grandmaAddr') ? 10 : 0); used.push('plan'); }
-        if (ARGS.together.test(t) && !f.args.together) { d += 12; used.push('together'); }
-        if (ARGS.back.test(t) && !f.args.back) { d += 8; used.push('back'); }
+        // one answer per thing you said: in a multi-part line, weigh every part at once and answer the first time only
+        const tt = c._turnRaw ? String(c._turnRaw).toLowerCase() : t;
+        if (c._turnRaw && c._p2 === c._turnId && (tr.k.test(t) || ARGS.plan.test(t) || ARGS.together.test(t) || ARGS.back.test(t))) return R('fr', {});
+        if (f.shared && tr.k.test(tt) && !f.args.trouble) { d += 25; used.push('trouble'); }
+        if (ARGS.plan.test(tt) && !f.args.plan) { d += 15 + ((g.money || 0) >= 30 || (g.tickets && Object.keys(g.tickets).length) || SH.f('grandmaAddr') ? 10 : 0); used.push('plan'); }
+        if (ARGS.together.test(tt) && !f.args.together) { d += 12; used.push('together'); }
+        if (ARGS.back.test(tt) && !f.args.back) { d += 8; used.push('back'); }
         if (used.length) {
+          if (c._turnRaw) c._p2 = c._turnId;
           used.forEach((u) => { f.args[u] = 1; }); f.pull += d; th.k = 'run';
           if (f.pull >= THR(id)) { f.wouldRun = true; rt.dec = 'in'; th.s = 'when'; SH.flag && SH.flag('talkedFriendIn'); return R(`${tr.yes} when?`, { rel: 4 }, { narr: `${k.n} would come with you. You talked ${k.g === 'he' ? 'him' : k.g === 'she' ? 'her' : 'them'} into it. You're not sure if that makes it better or worse.` }); }
           // close, but something's still bugging them: tell you what

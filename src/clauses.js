@@ -12,7 +12,7 @@
   const ABBR = /\b(ms|mr|mrs|dr|st|mt|ft|jr|sr|vs|etc)\./gi;
   const START = /^(i|i'm|im|i'd|i'll|i've|can|could|would|will|do|does|did|is|are|am|was|what|what's|whats|where|when|why|how|who|you|u|your|ur|my|we|he|she|they|it's|its|there|have|has|should|please|also|and|thanks|thank|no|yes|yeah|nah|ok|okay|sorry|maybe|let|let's|lets|tell|give|need|want|wanna|gotta)\b/i;
   const words = (s) => (s.match(/[a-z0-9']+/gi) || []).length;
-  const FILLER = /^(fr|lol|lmao+|ok+|okay|go on|wait what|bro same|same|hm+|mhm|\.{2,}|yeah|ya|huh|what\??|and\??|sure|cool|nice|k)\W*$/i;
+  const FILLER = /^(fr|lol|lmao+|ok+|okay|go on|wait what|bro same|same|hm+|mhm|\.{2,}|yeah|ya|huh|what\??|and\??|sure|cool|nice|k|idk|dunno|not sure|good question|hm+\. good question|hmm+\.? interesting|mm+|right|i see|uh huh|go on\.?|tell me more|is that so|is that right|oh yeah|really|huh\. ok|oh)\W*$/i;
   const GREETONLY = /^(hi+|hey+|hello|yo+|sup|so|um+|uh+|ok+|okay|well|listen|look|dude|bro|man|like|anyway)\W*$/i;
   function split(raw) {
     let s = String(raw || '').replace(ABBR, (m) => m.slice(0, -1) + '\u2024');
@@ -50,13 +50,18 @@
     const keep = []; const seen = new Set();
     rs.forEach((r) => { if (!r || typeof r.say !== 'string') return; const n = norm(r.say); if (!n || seen.has(n)) return; seen.add(n); keep.push(r); });
     const real = keep.filter((r) => !FILLER.test(r.say.trim()));
-    const use = (real.length ? real : keep.slice(0, 1)).slice(0, 3);
+    const use = (real.length ? real : keep.slice(0, 1)).slice(0, 3).map((r) => Object.assign({}, r));
+    // one question per turn: earlier parts lose their trailing question if a later part asks one
+    const QS = /(?<=^|[.!?]\s)[^.!?]*\?\s*$/;
+    for (let i = 0; i < use.length - 1; i++) if (/\?/.test(use.slice(i + 1).map((r) => r.say).join(' '))) { const cut = use[i].say.replace(QS, '').trim(); if (cut.length >= 8) use[i].say = cut; }
     if (!use.length) return null;
     const out = { say: '', fx: {} };
     use.forEach((r, i) => {
       let s = r.say.trim();
-      if (i > 0) { if (!/[.!?…)"'\u{1F300}-\u{1FAFF}]$/u.test(out.say)) out.say += teen(id) ? '.' : '.'; out.say += ' '; if (!teen(id)) s = s.charAt(0).toUpperCase() + s.slice(1); }
-      out.say += s;
+      const skip = i > 0 && out.say.length + s.length > 420 && out.say.length > 160;   // don't make them monologue
+      if (skip) s = '';
+      else if (i > 0) { if (!/[.!?…)"'\u{1F300}-\u{1FAFF}]$/u.test(out.say)) out.say += teen(id) ? '.' : '.'; out.say += ' '; if (!teen(id)) s = s.charAt(0).toUpperCase() + s.slice(1); }
+      if (s) out.say += s;
       Object.entries(r.fx || {}).forEach(([k, v]) => { if (typeof v === 'number') out.fx[k] = Math.max(-12, Math.min(12, (out.fx[k] || 0) + v)); else out.fx[k] = v; });
       Object.keys(r).forEach((k) => {
         if (k === 'say' || k === 'fx') return;
@@ -73,13 +78,16 @@
     if (cache.has(fn)) return cache.get(fn);
     const w = function (an, c) {
       if (depth || !an || !c) return fn.apply(this, arguments);
-      const raw = an.raw || an.t || '';
+      let raw = an.raw || an.t || '';
+      // "hi, can i get a hot chocolate?" — past the first line, the greeting shouldn't swallow the request
+      const gm = !an.carried && raw.match(/^\s*(hi+|hey+|hello|yo+|sup|hiya|heya|howdy|good (morning|afternoon|evening)|excuse me|um+|uh+|so)\b[\s,!.]*(?:there[\s,!.]+)?/i);
+      if (gm && words(raw.slice(gm[0].length)) >= 3 && (c.turn || 0) > 0) raw = raw.slice(gm[0].length);
       const cl = an.carried ? [raw] : split(raw);
-      if (cl.length < 2) return fn.apply(this, arguments);
-      depth++;
+      if (cl.length < 2) { if (raw !== (an.raw || an.t || '')) { depth++; try { const a2 = NLP.analyze(raw); return fn.call(this, a2, c); } catch (e) { return fn.apply(this, arguments); } finally { depth--; } } return fn.apply(this, arguments); }
+      depth++; c._turnRaw = raw; c._turnId = (c._turnId || 0) + 1;
       try {
         // clauses about the same thing ("i need somewhere to sleep" + "can i stay at yours?") are one thought
-        const fam = (a) => { const f = new Set(); if (!a || !a.has) return f; Object.entries(FAM).forEach(([k, L]) => { if (L.some((x) => a.has(x))) f.add(k); }); return f; };
+        const fam = (a) => { const f = new Set(); if (!a || !a.has) return f; if (/\b(run(ning)? away|ran away|runaway|come with|with me|leave (home|town)|you in|u in|take off)\b/.test(a.t || '')) f.add('shelter'); if (/\b(how are things|you ok(ay)?|u ok(ay)?|are you ok(ay)?|how are you|how r u|everything ok(ay)?)\b/.test(a.t || '')) f.add('askthem'); Object.entries(FAM).forEach(([k, L]) => { if (L.some((x) => a.has(x))) f.add(k); }); return f; };
         const groups = [];
         cl.forEach((x) => { let a = null; try { a = NLP.analyze(x); } catch (e) {} const fs = fam(a); const g0 = fs.size && groups.find((g) => [...fs].some((k) => g.f.has(k))); if (g0) { g0.t += (/[.!?]$/.test(g0.t) ? ' ' : ', ') + x; fs.forEach((k) => g0.f.add(k)); } else groups.push({ t: x, f: fs }); });
         if (groups.length < 2) return fn.apply(this, arguments);
@@ -96,7 +104,7 @@
         }
         const m = merge(rs, id);
         return m || fn.apply(this, arguments);
-      } finally { depth--; }
+      } finally { depth--; c._turnRaw = null; }
     };
     Object.keys(fn).forEach((x) => { w[x] = fn[x]; });
     cache.set(fn, w); return w;

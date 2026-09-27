@@ -169,6 +169,19 @@
       if (c.mem.n >= 2 && !c.mem.offered) { c.mem.offered = 1; return R('Hey, you need a ride somewhere? Or a place to crash? I\'ve got a spare room. No big deal. I help kids out all the time.'); }
       if (/\b(no|nope|leave me|go away|stop)\b/.test(t)) return R('Whoa, okay, okay. Just trying to be nice.', { end: true });
     }
+    // ordering from whoever works the counter ("can i get a hot chocolate?")
+    const MENU = [[/hot chocolate|cocoa/, 'hot chocolate', 2.5, 10, 1], [/coffee/, 'coffee', 1.75, 2, 1], [/pancakes?|short stack/, 'short stack', 5, 38, 0], [/pie/, 'slice of pie', 3.5, 18, 0], [/toast/, 'toast', 2, 10, 0], [/eggs?|breakfast/, 'eggs and toast', 5.5, 35, 0], [/burger|cheeseburger/, 'burger', 6.5, 40, 0], [/fries/, 'fries', 3, 18, 0], [/soup|chili/, 'soup', 4, 28, 1], [/grilled cheese/, 'grilled cheese', 4.5, 30, 0], [/muffin/, 'muffin', 2.25, 14, 0], [/donut|doughnut/, 'donut', 1.5, 10, 0], [/hot ?dog/, 'hot dog', 2, 20, 0], [/sandwich/, 'sandwich', 4.5, 28, 0], [/juice|soda|pop|milk/, 'drink', 1.75, 4, 0], [/\bwater\b/, 'water', 0, 0, 0]];
+    const ORDER = /\b(can i (get|have)|could i (get|have)|may i (have|get)|i'?ll (have|take|get)|i want|i'?d like|id like|gimme|give me)\b|^(a|one|some|two|just a|uh+ a|um+ a)\b|\b(please|pls)\W*$/;
+    if (q.staff && /diner|gas|cafe|laundromat/.test(q.kind || '') && ORDER.test(t)) {
+      const it = MENU.find(([re]) => re.test(t));
+      if (it && !(q.kind === 'laundromat' && it[1] !== 'drink' && it[1] !== 'water')) {
+        const [, name, price, full, warm] = it;
+        if (!price) return R(pick(['Sure, hon. Here.', 'Water\'s free. Here you go.']) , { fx: {} });
+        if ((g.money || 0) >= price && TW.pay(price, name)) { SH.st('full', full); if (warm) SH.st('warmth', 10); SH.advance(10, { interrupt: false }); return R(pick([`One ${name}, coming up. That's $${price.toFixed(2)}.`, `${name[0].toUpperCase() + name.slice(1)}. $${price.toFixed(2)}, hon.`, `Sure thing. $${price.toFixed(2)}.`]), { narr: warm ? 'It\'s hot enough to hurt. You hold it with both hands anyway.' : 'You eat it slower than you want to, to make it last.' }); }
+        if (!m.freebie && !is(q, /busy|suspicious|no-nonsense/)) { m.freebie = 1; SH.st('full', Math.round(full * 0.8)); if (warm) SH.st('warmth', 10); m.sus += 0.5; return R(`That's $${price.toFixed(2)}... You're short, huh. ...Here. Don't tell my manager.`, { narr: 'You say thank you twice. It doesn\'t feel like enough.' }); }
+        return R(`That's $${price.toFixed(2)}, hon. Come back when you've got it.`);
+      }
+    }
     // telling the truth to a grown-up
     if (an.has('disclose') || an.has('scared') || (an.has('run') && c.mem.n > 1)) {
       if (/pastor|librar|teacher/.test(q.role) && !m.told.resource) { m.told.resource = 1; if (!SH.has('safeline')) SH.addBag('safeline', true); const sh = loc('shelter'); if (sh) { sh.hidden = false; SH.Map && (SH.Map.cache = null); }

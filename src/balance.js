@@ -13,7 +13,7 @@
 (function (SH) {
   const K = SH.K, A = SH.Atlas; if (!K || !A) return;
   const G = () => SH.G;
-  const BAL = SH.BAL = { fade: { village: 12, small: 8, town: 7, city: 6 }, coverX: 1.5, roomX: 1.4, hotX: 0.5, memFade: 8, fam: { village: [[6, 0.4], [2, 0.6]], small: [[7, 0.5], [3, 0.7]], town: [[10, 0.65], [4, 0.8]], city: [[10, 0.7], [4, 0.85]] }, jobMin: 7, jobSpread: 12 };
+  const BAL = SH.BAL = { fade: { village: 20, small: 18, town: 16, city: 14 }, coverX: 1.5, roomX: 1.4, hotX: 0.7, memFade: 8, fam: { village: [[3, 0.3], [2, 0.45], [1, 0.65]], small: [[3, 0.35], [2, 0.5], [1, 0.7]], town: [[4, 0.45], [2, 0.6], [1, 0.8]], city: [[4, 0.55], [2, 0.7], [1, 0.85]] }, jobMin: 7, jobSpread: 12 };
   const store = () => { const g = G(); return (g.noticeAt = g.noticeAt || {}); };
   /* arrive: save where you left, restore where you're going */
   const bArrive = A.arrive;

@@ -17,9 +17,9 @@
   function join(id, how) {
     const g = G(), k = FR.KIDS[id], f = FR.st(id); if ((g.party || []).includes(id) || g.ended) return;
     g.party = (g.party || []).concat(id); f.home = 0; f.joinedAt = g.t; f.wouldRun = true; SH.flag('ranWithFriend'); g.heat = Math.min(100, (g.heat || 0) + 5);
-    const [he, him, his] = pr(id);
+    const [he, him, his] = pr(id), v = (a, b) => (k.g === 'they' ? b : a);
     const text = how === 'bus'
-      ? [`The county bus sighs to a stop and ${k.n} is the only one who gets off, backpack on both shoulders, looking around like the town might bite. Then ${he} sees you and does a stupid little wave, and something in your chest unknots.`, `"that bus smelled like feet the ENTIRE time," ${he} says. "ok. where are we sleeping."`]
+      ? [`The county bus sighs to a stop and ${k.n} is the only one who gets off, backpack on both shoulders, looking around like the town might bite. Then ${he} ${v('sees', 'see')} you and ${v('does', 'do')} a stupid little wave, and something in your chest unknots.`, `"that bus smelled like feet the ENTIRE time," ${he} ${v('says', 'say')}. "ok. where are we sleeping."`]
       : [`${k.n} comes out the side door with ${his} backpack half-zipped and ${id === 'jordan' ? 'his skateboard under his arm' : 'a hoodie on over pajamas'}. "i left a note that says i'm at a sleepover. that buys us like a day."`, 'It\'s better with two. It is. It\'s also twice the people looking, and you both know whose idea this was.'];
     const show = () => SH.UI.dialog({ title: 'Two backpacks', who: id, text, choices: [{ t: 'Okay. Let\'s go.', fn: () => {} }] });
     const wait = () => (SH.UI.modalOpen() ? setTimeout(wait, 400) : show());
