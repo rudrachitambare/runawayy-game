@@ -1,7 +1,7 @@
 /* SMALL HOURS — villages don't care (turn 43). User rule: nobody in a village cares about a runaway kid.
    In a village: people never "notice" you (awayNotice doesn't grow), no patrol car stops you, and nothing drags you
-   home: the police/poster/tracked/heat "found" endings are cancelled while you're in a village. You can still turn
-   yourself in (dial 911/100 on the phone, tell a clerk, walk into a shelter) — that's your choice, so it still works.
+   home: the police/poster/tracked/heat "found" endings are cancelled while you're in a village. Turn 44: not even a
+   deputy you call yourself comes out here (dialing 911 in a village gets you nowhere).
    Also: soap, deodorant and the toothbrush work anywhere now, and eating says how it felt. */
 (function (SH) {
   const A = SH.Atlas, EN = SH.Endings; if (!A || !EN) return;
@@ -21,11 +21,19 @@
   if (SH.Police && SH.Police.stop) { const bStop = SH.Police.stop; SH.Police.stop = function (p, ctx, then) { if ((p && p.tier === 'village') || inVillage()) { return then ? then({ result: 'ok' }) : (SH.K && SH.K.back ? SH.K.back() : null); } return bStop.apply(this, arguments); }; }
 
   /* nothing drags you home from a village. Only what YOU choose. */
-  const CHOSEN = new Set(['self', 'host', 'exhausted', 'harbor', 'grandma', 'cedarLost']);
+  // turn 44: no police or deputy ever comes to a village, not even if you call them yourself.
+  // Only endings that don't involve police can happen there.
+  const CHOSEN = new Set(['harbor', 'grandma', 'cedarLost']);
   const bFound = EN.found;
   EN.found = function (reason) {
-    const g = G(), vol = g && g._vol; if (g) g._vol = 0;
-    if (g && !vol && !CHOSEN.has(reason) && inVillage()) { console.info('village: found(' + reason + ') cancelled'); if (SH.Events && SH.Events.Q) SH.Events.Q = SH.Events.Q.filter((e) => e.id !== 'found'); return; }
+    const g = G(); if (g) g._vol = 0;
+    if (g && reason === 'exhausted' && inVillage()) {
+      if (SH.Events && SH.Events.Q) SH.Events.Q = SH.Events.Q.filter((e) => e.id !== 'longRun');
+      SH.UI.log('You don\'t really remember sitting down. Somebody\'s grandmother finds you on her porch step, clicks her tongue, and brings out soup and a blanket without asking a single question. She doesn\'t ask your name. She doesn\'t call anyone. Nobody out here ever does.', 'good');
+      SH.st('full', 40); SH.st('energy', 30); SH.st('health', 15); SH.st('warmth', 20);
+      return;
+    }
+    if (g && !CHOSEN.has(reason) && inVillage()) { console.info('village: found(' + reason + ') cancelled'); if (SH.Events && SH.Events.Q) SH.Events.Q = SH.Events.Q.filter((e) => e.id !== 'found'); return; }
     return bFound.apply(this, arguments);
   };
   // queued "found" events (heat checks, phone tracking) are dropped while you're in a village

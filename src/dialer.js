@@ -64,6 +64,11 @@
           { t: '…Sorry. Wrong number.', sub: 'Hang up.', fn: () => { SH.UI.log('"Okay, hon. If you need us, call back." You hang up. Your heart is going like you ran here.', 'sys'); SH.UI.afterAction(); } },
         ] });
     }
+    // villages: nobody comes. Not police, not a deputy. The call just goes nowhere.
+    if (SH.inVillage && SH.inVillage()) {
+      return SH.UI.dialog({ title: n, cls: 'safe', text: [`It rings for a long time. Then: "County dispatch." You tell her where you are, and there's a pause, and typing.`, `"${(p && p.name) || 'Out there'}? Okay, hon. I've got it down. I'll pass it along." She doesn't say anyone's coming, because nobody is. Out here, nobody ever comes.`],
+        choices: [{ t: 'Hang up', fn: () => { SH.UI.log('You hang up. Nobody calls back. If you ever want to go home, you\'ll have to get yourself to a bigger town first.', 'sys'); SH.UI.afterAction(); } }] });
+    }
     const hasPolice = !g.away || (p && p.hasPolice);
     const where = !g.away ? 'Harlow' : (p && p.name) || 'here';
     return SH.UI.dialog({ title: n, cls: 'safe', text: [`It rings once. "${n === '911' ? '911' : n === '100' ? 'Police' : 'Emergency services'}, what's your emergency?"`],
