@@ -1032,7 +1032,7 @@ window.SH = window.SH || {};
     sandwich: { n: 'PB&J sandwich', w: 0.35, i: '🥪', d: '+25 fullness. Squished.', food: 25 },
     apple: { n: 'Apple', w: 0.3, i: '🍎', d: '+10 fullness.', food: 10 },
     hotdog: { n: 'QuikMart hot dog', w: 0.3, i: '🌭', d: '+22 fullness. Questionable.', food: 22 },
-    inhaler: { n: 'Inhaler', w: 0.1, i: '🫁', d: 'Albuterol. For asthma attacks. Cold air and stress trigger them.' },
+    inhaler: { n: 'Old inhaler', w: 0.1, i: '🫁', d: 'Not needed anymore.' }, // turn 51: asthma removed; kept only so very old saves never crash (saves.js strips it)
     flashlight: { n: 'Flashlight', w: 0.4, i: '🔦', d: 'Makes dark places slightly less terrible.' },
     clothes: { n: 'Change of clothes', w: 1, i: '👖', d: 'Use for +25 hygiene (once).', hyg: 25 },
     toothbrush: { n: 'Toothbrush', w: 0.1, i: '🪥', d: 'Use at any sink for +6 hygiene.' },
@@ -1185,8 +1185,8 @@ window.SH = window.SH || {};
       missingAt: null, discoveredAt: null, reported: false,
       rel: { mom: 45, rick: -15, lily: 72, jordan: 62, grandma: 50, okafor: 15, dex: 5, wren: 0, dolores: 0, patel: 30, tyler: -40 },
       bag: ['phone', 'key', 'buspass', 'hoodie'],
-      stash: ['charger', 'coat', 'blanket', 'water', 'flashlight', 'clothes', 'toothbrush', 'sketchbook', 'umbrella', 'inhaler', 'game1', 'game2', 'console'],
-      puffs: 30, pbCharge: 0,
+      stash: ['charger', 'coat', 'blanket', 'water', 'flashlight', 'clothes', 'toothbrush', 'sketchbook', 'umbrella', 'game1', 'game2', 'console'],
+      pbCharge: 0,
       phone: { bat: 71, share: true, airplane: false, low: false, cracked: false, confiscated: false },
       flags: { hasBike: true, knowsGrandmaNum: true },
       threads: {}, unread: {}, feed: [], journal: [], tags: [], log: [],
@@ -1300,10 +1300,6 @@ window.SH = window.SH || {};
 
   SH.hourly = function (opts) {
     const G = SH.G;
-    // asthma
-    let p = 0.004; if (!SH.locIndoor() && SH.tempF() < 45) p += 0.05; if (G.s.stress > 80) p += 0.03; if ((opts.exert || 0) > 3) p += 0.03;
-    if (G.s.warmth < 30) p += 0.05;
-    if (!opts.sleep && U.chance(p)) SH.Events.queue({ id: 'asthma', run: () => SH.Events.asthma() });
     // phone ambient
     SH.Phone && SH.Phone.hourly();
     // home suspicion natural decay
@@ -1714,7 +1710,6 @@ window.SH = window.SH || {};
       if (G.money < 10 && (SH.wd() === 1 || SH.wd() === 3)) out.push('Mrs. Patel pays $8 to walk Newton on Tuesdays and Thursdays after 4. Newton is 14 and walks like a loaf of bread. Easy money.');
       if (SH.f('runUnlocked')) {
         const miss = [];
-        if (!SH.has('inhaler')) miss.push('your INHALER (you have asthma, genius)');
         if (!SH.has('coat')) miss.push('a coat (it hits ' + SH.weatherDay(SH.day() + 1).lo + '°F at night)');
         if (!SH.has('charger') && !SH.has('powerbank')) miss.push('a way to charge me');
         if (SH.foodInBag().length < 2) miss.push('food');
@@ -3245,13 +3240,6 @@ window.SH = window.SH || {};
     SH.Phone.push(who, who, who === 'mom' ? 'School just called. You\'re not in class?? Where are you. Call me NOW.' : 'SCHOOL CALLED. WHERE ARE YOU.');
     SH.rel(who, -4); SH.st('stress', 6);
   };
-  E.asthma = function () {
-    const G = SH.G;
-    if (SH.has('inhaler') && G.puffs > 0) { G.puffs -= 2; SH.st('health', -3); SH.st('stress', 5); SH.UI.log(`Your chest tightens like a fist. Wheezing. You fumble for your inhaler — two puffs — and the band slowly loosens. (${G.puffs} puffs left)`, 'warn'); return; }
-    SH.st('health', -22); SH.st('stress', 20); SH.tag('asthmaNoInhaler');
-    D({ title: 'Can\'t Breathe', text: ['It starts as a tickle and becomes a vise. Every breath is through a straw. Your inhaler is ' + (G.phase === 'run' ? 'in the bathroom cabinet at home.' : 'not with you.'), 'You sit down hard, counting like the doctor taught you. In for four. Out for six. The edges of the world go gray.', G.phase === 'run' && !SH.locIndoor() ? 'It passes. Barely. You realize, very clearly, that you could die out here over something this stupid.' : 'It passes. Barely.'],
-      choices: [{ t: 'Keep breathing', fn: () => {} }] });
-  };
   E.passOut = function () {
     const G = SH.G; SH.UI.log('Your body decides for you. You fall asleep wherever you are.', 'bad');
     if (G.phase === 'run') SH.Run.sleep(true); else { SH.advance(360, { sleep: true, quality: 0.6, interrupt: false }); }
@@ -3824,7 +3812,6 @@ window.SH = window.SH || {};
     const G = SH.G, h = SH.hour();
     const items = G.bag.filter((i) => !['phone', 'key', 'buspass'].includes(i)).map((i) => SH.ITEMS[i].i + ' ' + SH.ITEMS[i].n);
     const warn = [];
-    if (!SH.has('inhaler')) warn.push('You don\'t have your inhaler.');
     if (!SH.has('coat')) warn.push('No coat. Tonight\'s low: ' + SH.weatherDay(SH.day() + 1).lo + '°F.');
     if (SH.foodInBag().length === 0) warn.push('No food.');
     if (!SH.has('charger') && !SH.has('powerbank')) warn.push('No way to charge your phone.');
@@ -4449,7 +4436,6 @@ window.SH = window.SH || {};
     if (r === 'bathroom') {
       a.push(act('Shower', '15 min', () => { doTime(15); G.s.hyg = 100; SH.st('mood', 3); log('The hot water runs out after six minutes. It always does.', 'sys'); done(); }));
       a.push(act('Look in the mirror', '', () => { const s = G.s; log(`${s.energy < 30 ? 'Purple under your eyes. ' : ''}${s.hyg < 35 ? 'Your hair is a crime scene. ' : ''}${SH.f('bruise') ? 'Four fingerprint bruises on your arm, going yellow at the edges. ' : ''}${s.mood < 30 ? 'You don\'t recognize the face. It looks like someone who stopped expecting things.' : 'Just you. Twelve. Tired. Still here.'}`, 'sys'); done(); }));
-      if (SH.inStash('inhaler') && !SH.has('inhaler')) a.push(act('Take your inhaler', `It\'s in the cabinet. ${G.puffs} puffs.`, () => { SH.rmStash('inhaler'); SH.addBag('inhaler', true); log('Inhaler in your pocket. Just in case.', 'sys'); done(); }));
     }
     a.push(act('Wait', '1 hour', () => { doTime(60, { interrupt: true }); done(); }));
     return out;
@@ -4535,7 +4521,7 @@ window.SH = window.SH || {};
         <div class="mtext" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;font-family:system-ui;font-size:13px">
           <div><h4 style="margin:0 0 6px;color:var(--muted)">IN YOUR ROOM</h4><div class="inv">${G.stash.map((id, i) => row(id, 'stash', i)).join('') || '<small>Empty</small>'}</div></div>
           <div><h4 style="margin:0 0 6px;color:var(--muted)">BACKPACK</h4><div class="inv">${G.bag.map((id, i) => row(id, 'bag', i)).join('')}</div></div></div>
-        <div class="hint">Click to move items. Think: coat, inhaler, charger, food, money, something with Grandma's address. A bulging backpack might get noticed.</div>
+        <div class="hint">Click to move items. Think: coat, charger, food, money, something with Grandma's address. A bulging backpack might get noticed.</div>
         <div class="mchoices"><button class="btn primary" id="packDone">Done</button></div></div>`;
       md.querySelectorAll('.invi').forEach((el) => el.onclick = () => {
         const i = +el.dataset.i;
@@ -4560,7 +4546,6 @@ window.SH = window.SH || {};
     if (id === 'card') { SH.flag('okaforCard'); log('Ms. Okafor\'s card. Her cell is on the back. You could call her from the Phone app.', 'sys'); return done(); }
     if (id === 'powerbank') { if (G.pbCharge <= 0) return SH.UI.toast('Power bank is empty.'); const give = Math.min(100 - G.phone.bat, G.pbCharge); G.phone.bat += give; G.pbCharge -= give; log('Phone charging off the power bank.', 'sys'); SH.advance(15, { interrupt: false }); return done(); }
     if (id === 'sketchbook') { SH.advance(30, { interrupt: false }); SH.st('stress', -6); SH.st('mood', 3); log('You draw until your hands stop shaking.', 'good'); return done(); }
-    if (id === 'inhaler') return SH.UI.toast(`${G.puffs} puffs left. Used automatically during an attack.`);
     if (id === 'ticket') return SH.UI.toast('Greyline to Cedar Falls. 7:10 AM · 1:40 PM · 7:20 PM. Go to the bus depot.');
     SH.UI.toast(it.d);
   };
@@ -5440,7 +5425,7 @@ window.SH = window.SH || {};
       ${G.phase === 'run' || !SH.locIndoor() ? bar('🌡 Warmth', s.warmth, good) : ''}</div>
       ${UI.today()}${meter}
       <div class="sect"><h4>Cash · $${G.money.toFixed(2)} ${G.phase === 'home' ? `<span style="text-transform:none;letter-spacing:0">(+$${G.shoebox} shoebox)</span>` : ''}</h4>
-      <div style="font-size:12px;color:var(--muted)">📱 ${Math.round(G.phone.bat)}%${G.phone.share ? ' · 📍 sharing on' : ''}${SH.has('inhaler') ? ' · 🫁 ' + G.puffs + ' puffs' : ' · 🫁 no inhaler!'} · grades ${UI.gradeWord(G.grades)}</div></div>
+      <div style="font-size:12px;color:var(--muted)">📱 ${Math.round(G.phone.bat)}%${G.phone.share ? ' · 📍 sharing on' : ''} · grades ${UI.gradeWord(G.grades)}</div></div>
       <div class="sect"><h4>Backpack · ${SH.bagWeight().toFixed(1)}/${SH.BAG_CAP} kg</h4><div class="inv">${G.bag.map((id, i) => `<div class="invi" data-id="${id}" title="${esc(SH.ITEMS[id].d)}"><span>${SH.ITEMS[id].i} ${SH.ITEMS[id].n}</span><small>use</small></div>`).join('')}</div></div>
       <div class="sect"><h4>People</h4>${relIds.map((id) => `<div class="relrow"><span>${SH.NPCS_META[id].n}</span><small class="relw">${SH.relWord ? esc(SH.relWord(id)) : hearts(G.rel[id] || 0)}</small></div>`).join('')}</div>`;
     $('#left').querySelectorAll('.invi').forEach((el) => (el.onclick = () => SH.Actions.useItem(el.dataset.id)));
@@ -5500,7 +5485,7 @@ window.SH = window.SH || {};
     UI.dialog({ title: 'How to play', text: [
       'You are 12. Home is falling apart. You have about three weeks before things get worse, and a choice to make: stay, tell someone, or run.',
       'TIME moves when you act. Every action costs minutes or hours. Mom\'s shifts, Rick\'s drinking, school, stores and buses all run on a real schedule.',
-      'NEEDS: Fullness, Energy, Hygiene, Mood, Stress, Health, and Warmth outside. Cold nights and stress can trigger asthma, so carry your inhaler.',
+      'NEEDS: Fullness, Energy, Hygiene, Mood, Stress, Health, and Warmth outside. Cold nights outside wear your health down, so pack warm.',
       'CONVERSATIONS have no menus. Type whatever you want to say. People react to tone, honesty, what you reveal, and whether they\'re sober. Press ◉ PIP for suggested replies.',
       'THE PHONE: text anyone, call them, post on Chirp (careful), check the weather, play Skyforge, and ask PIP, your sarcastic assistant. PIP reads your situation. Try "what should I do?"',
       'THE MAP [M]: click a place to see travel times. Walk, bike, or take the city bus. If you run, red zones show where people are searching.',
@@ -6254,7 +6239,7 @@ window.SH = window.SH || {};
     embarrassed: /\b(embarrass\w*|cringe|humiliat\w*|awkward|so dumb of me)\b/,
     guilty: /\b(my fault|guilty|i ruin|ruined everything|i'm the problem|i'm a burden|burden|everyone would be better)\b/,
     unfair: /\b(unfair|not fair|jealous|why does (she|he|lily) get|always my fault)\b/,
-    sick: /\b(sick|stomach ?ache|headache|throw up|threw up|nauseous|fever|coughing|asthma|inhaler|wheez\w*)\b/,
+    sick: /\b(sick|stomach ?ache|headache|throw up|threw up|nauseous|fever|coughing)\b/,
     games: /\b(skyforge|video games?|gaming|console|xbox|switch|playstation|minecraft|fortnite|roblox|ice wyrm)\b/,
     art: /\b(draw(ing|s)?|art|sketch\w*|paint(ing)?|comic|doodle)\b/,
     skate: /\b(skate\w*|skateboard|kickflip|ollie|the bowl)\b/,
@@ -7066,7 +7051,7 @@ window.SH = window.SH || {};
     ['pads', 'Period pads', '🩹', 6, 0.2, 'hygiene', {}], ['tp', 'Toilet paper (4)', '🧻', 5, 0.6, 'hygiene', {}],
     ['bandaids', 'Band-aids', '🩹', 4, 0.05, 'health', { heal: 4 }], ['firstaid', 'First-aid kit', '⛑️', 18, 0.5, 'health', { heal: 12 }],
     ['sunscreen', 'Sunscreen', '🧴', 8, 0.2, 'health', {}], ['painkiller', 'Pain reliever', '💊', 7, 0.05, 'health', { restricted: 'medicine' }],
-    ['coldmeds', 'Cold medicine', '💊', 9, 0.1, 'health', { restricted: 'medicine' }], ['inhaler2', 'Rescue inhaler', '🫁', 60, 0.1, 'health', { restricted: 'prescription' }],
+    ['coldmeds', 'Cold medicine', '💊', 9, 0.1, 'health', { restricted: 'medicine' }],
     // camping & shelter
     ['sleepbag', 'Sleeping bag', '🛌', 35, 2.5, 'camping', { sleepWarm: 40 }], ['tent1', 'Small tent (1–2)', '⛺', 45, 3, 'camping', { shelter: 1, big: true }],
     ['tent4', 'Big tent (4–6)', '🏕️', 120, 7, 'camping', { shelter: 2, big: true }], ['tarp', 'Tarp', '🟦', 12, 1, 'camping', { rain: true }],
@@ -7437,7 +7422,7 @@ window.SH = window.SH || {};
     const g = G(), c = g.crew; if (!c || c.bal < amt) return SH.UI.toast('Not that much in the pot.');
     if (Bk.access()) return SH.UI.toast(Bk.access());
     if (amt <= 15) { c.bal -= amt; SH.money(amt); c.log.unshift({ t: g.t, who: 'me', d: 'took out (' + why + ')', a: -amt }); P.render(); return; }
-    const good = /food|room|motel|bus|ticket|medicine|inhaler|charger|tent|sleeping|rent|shelter|goal|scooter|bike/.test(why.toLowerCase()) || (c.goal && why.toLowerCase().includes(c.goal.name.toLowerCase()));
+    const good = /food|room|motel|bus|ticket|medicine|charger|tent|sleeping|rent|shelter|goal|scooter|bike/.test(why.toLowerCase()) || (c.goal && why.toLowerCase().includes(c.goal.name.toLowerCase()));
     const yes = c.members.filter((id) => Bk.att(id) + (good ? 30 : -10) + Math.random() * 30 > 55);
     const pass = yes.length * 2 >= c.members.length;
     c.log.unshift({ t: g.t, who: 'vote', d: `vote: take ${$2(amt)} for "${why}": ${yes.length}/${c.members.length} yes`, a: 0 });
@@ -7463,7 +7448,7 @@ window.SH = window.SH || {};
 
   /* ---------- pawn counter (mall) ---------- */
   const VAL = { console: 60, game1: 12, game2: 12, watch: 0, sketchbook: 1, hoodie: 3, coat: 8, charger: 4, flashlight: 3, umbrella: 2, blanket: 3 };
-  Bk.pawnable = () => G().bag.filter((id) => SH.ITEMS[id] && !SH.ITEMS[id].fixed && !['key', 'buspass', 'inhaler', 'phone'].includes(id) && (VAL[id] || SH.ITEMS[id].price));
+  Bk.pawnable = () => G().bag.filter((id) => SH.ITEMS[id] && !SH.ITEMS[id].fixed && !['key', 'buspass', 'phone'].includes(id) && (VAL[id] || SH.ITEMS[id].price));
 
   /* ---------- PocketPal app ---------- */
   Bk.tab = 'acct';
@@ -12271,12 +12256,12 @@ window.SH = window.SH || {};
       return `<div class="need ${crit ? 'crit' : ''}" title="${n}"><span class="ni">${i}</span><div class="nb"><div class="nl"><span>${n}</span><em>${UI.statWord(i + ' ' + n, v)}${tr ? `<i class="tr ${(tr > 0) === !!good ? 'up' : 'dn'}">${tr > 0 ? '▲' : '▼'}</i>` : ''}</em></div><div class="trk"><div class="fil" style="width:${v}%;background:${colr(v, good)}"></div></div></div></div>`; }).join('')
       + (G.phase === 'run' || !SH.locIndoor() ? (() => { const v = s.warmth; return `<div class="need ${v <= 15 ? 'crit' : ''}"><span class="ni">🌡</span><div class="nb"><div class="nl"><span>Warmth</span><em>${UI.statWord('🌡 Warmth', v)}</em></div><div class="trk"><div class="fil" style="width:${v}%;background:${colr(v, 1)}"></div></div></div></div>`; })() : '');
     const meter = G.phase === 'run' ? `<div class="card status run"><h4>${ic('eye')} Out there</h4><p>${UI.heatLine(G)}</p></div>` : `<div class="card status"><h4>${ic('eye')} At home</h4><p>${UI.suspLine(G.susp)}</p></div>`;
-    const tiles = [[ic('cash'), '$' + G.money.toFixed(2), 'on you'], G.phase === 'home' ? ['📦', '$' + G.shoebox, 'shoebox'] : null, [ic('bat'), G.phone.confiscated ? '—' : Math.round(G.phone.bat) + '%', G.phone.share ? 'sharing location' : 'phone'], ['🫁', SH.has('inhaler') ? G.puffs + ' puffs' : 'none!', 'inhaler'], ['📚', UI.gradeWord(G.grades), 'grades']].filter(Boolean);
+    const tiles = [[ic('cash'), '$' + G.money.toFixed(2), 'on you'], G.phase === 'home' ? ['📦', '$' + G.shoebox, 'shoebox'] : null, [ic('bat'), G.phone.confiscated ? '—' : Math.round(G.phone.bat) + '%', G.phone.share ? 'sharing location' : 'phone'], ['📚', UI.gradeWord(G.grades), 'grades']].filter(Boolean);
     const w = SH.bagWeight(), cap = SH.BAG_CAP;
     $('#left').innerHTML = `<div class="card me"><div class="mept">${PT.svg('sam', { mood: PT.moodOf('sam') })}</div><div class="mei"><h3>${esc(G.name)}</h3><small>12 · 7th grade${G.story && G.story.trait && SH.Story && SH.Story.TRAITS[G.story.trait] ? ' · ' + esc(SH.Story.TRAITS[G.story.trait].n.replace(/^The /, '')) : ''}</small><p>${headline(G)}</p></div></div>
       <div class="card needs">${needs}</div>
       ${UI.today()}${meter}
-      <div class="tiles">${tiles.map(([i, v, l], n) => `<div class="tile ${l === 'inhaler' && v === 'none!' ? 'warn' : ''} ${n >= 3 ? (tiles.length === 4 ? 'w6' : 'w3') : ''}"><span class="ti">${i}</span><b>${v}</b><small>${l}</small></div>`).join('')}</div>
+      <div class="tiles">${tiles.map(([i, v, l], n) => `<div class="tile ${n >= 3 ? (tiles.length === 4 ? 'w6' : 'w3') : ''}"><span class="ti">${i}</span><b>${v}</b><small>${l}</small></div>`).join('')}</div>
       <div class="card"><h4>${ic('bag')} Backpack <span class="hsub">${w.toFixed(1)} / ${cap} kg</span></h4><div class="wbar"><i style="width:${Math.min(100, w / cap * 100)}%;${w / cap > 0.85 ? 'background:var(--warn)' : ''}"></i></div>
         <div class="inv2">${G.bag.map((id) => `<button class="item" data-id="${id}" title="${esc(SH.ITEMS[id].d)}"><span>${SH.ITEMS[id].i}</span><small>${esc(SH.ITEMS[id].n)}</small></button>`).join('') || '<p class="muted">Empty.</p>'}</div></div>
       <div class="card"><h4>${ic('people')} People</h4>${relIds.map((id) => `<button class="prow" data-p="${id}">${PT.svg(id, { mood: PT.moodOf(id) })}<span class="pn">${esc(SH.NPCS_META[id].n)}</span><small>${esc(SH.relWord ? SH.relWord(id) : '')}</small></button>`).join('')}</div>`;
@@ -12484,7 +12469,7 @@ window.SH = window.SH || {};
     kitchen: [['door', /run away|leave for good/i], ['mom', /\bmom\b|dana/i], ['fridge', /eat|fridge|snack|food|breakfast|lunch|cereal|sandwich|pantry|leftover|juice|milk/i], ['stove', /cook|dinner|mac|noodle|stove|make|bake/i],
       ['sink', /dish|wash|clean|chore|trash|sweep|wipe/i], ['calendar', /calendar|note|schedule|bill/i], ['table', /table|sit/i], ['window', /window/i]],
     living: [['door', /run away|leave for good|front door|slip out/i], ['rick', /rick/i], ['tv', /\btv\b|watch|cartoon|show/i], ['photos', /photo|picture|frame|album/i], ['cabinet', /cabinet|junk|mail|drawer|keys?\b/i], ['couch', /couch|sofa|sit|lily|nap/i], ['window', /window/i]],
-    bathroom: [['tub', /shower|bath/i], ['sink', /mirror|brush|teeth|wash|face|clean|hygiene|medicine|inhaler/i]],
+    bathroom: [['tub', /shower|bath/i], ['sink', /mirror|brush|teeth|wash|face|clean|hygiene|medicine/i]],
   };
   const TALK = /^(Talk to|Hang out with|Sit with|Find|Ask|Visit|Knock on|Say hi to|Approach|Check on)\s+/i;
   const BIG = (b) => /\b(hot|safe)\b/.test(b.className) || !!b.closest('.ag.leave');
@@ -12718,6 +12703,7 @@ window.SH = window.SH || {};
   // bring any save (old or new) up to the current shape
   SH.migrate = function (G) {
     if (!G) return G;
+    { const gone = (a) => (Array.isArray(a) ? a.filter((i) => i !== 'inhaler' && i !== 'x_inhaler2') : a); G.bag = gone(G.bag); G.stash = gone(G.stash); G.owned = gone(G.owned); if (G.stored) Object.keys(G.stored).forEach((k) => { G.stored[k] = gone(G.stored[k]); }); delete G.puffs; } // turn 51: asthma removed
     G.world = G.world || {}; const W = G.world;
     W.ev = W.ev || {}; W.log = W.log || []; W.discovered = W.discovered || {}; W.seen = W.seen || {}; W.props = W.props || {};
     G.mem = G.mem || {}; G.convos = G.convos || {}; G.rumors = G.rumors || {}; G.notifs = G.notifs || []; G.gallery = G.gallery || [];
@@ -16359,7 +16345,6 @@ window.SH = window.SH || {};
     }
     if (id === 'x_coldmeds') { const h = hp(); if (!h.cold) return SH.UI.toast('You don\'t have a cold. Save it.'); uses(id, 6); h.cold = Math.max(0, h.cold - 25); SH.st('energy', 5); SH.advance(5, { interrupt: false }); log('You take the cold medicine. Twenty minutes later your head unclogs a little and the world stops being cotton.', 'good'); spend(id); return done(); }
     if (id === 'x_painkiller') { uses(id, 8); const h = hp(); h.blist = Math.max(0, (h.blist || 0) - 10); SH.st('health', 4); SH.st('stress', -3); SH.advance(5, { interrupt: false }); log('You take one pill with a swallow of water. The ache in your feet and your back fades to background.', 'good'); spend(id); return done(); }
-    if (id === 'x_inhaler2') { SH.rmBag(id); g.puffs = (g.puffs || 0) + 200; if (!has('inhaler')) SH.addBag ? SH.addBag('inhaler') : g.bag.push('inhaler'); log('A new rescue inhaler. You put it where your hand can find it without looking.', 'good'); return done(); }
     if (id === 'x_sunscreen') { uses(id, 10); SH.st('health', 1); SH.st('mood', 2); SH.advance(3, { interrupt: false }); log(SH.weatherDay && (SH.weatherDay(SH.day()).hi || 0) >= 75 ? 'You put sunscreen on your face and the back of your neck. You won\'t burn today.' : 'You rub in a little sunscreen. It smells like summer, even now.', ''); spend(id); return done(); }
     // hygiene
     if (id === 'x_tp') { uses(id, 8); SH.st('hyg', 6); SH.st('mood', 2); SH.advance(5, { interrupt: false }); log('Real toilet paper instead of gas-station napkins or leaves. Small dignity. Huge.', ''); spend(id); return done(); }

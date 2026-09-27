@@ -14,7 +14,7 @@ Vanilla JS + canvas (no React). Entertainment, **not** a guide for real runaways
 - **Data-driven events** (conditions/effects), no "GOOD +5" numbers — you read the world's reactions.
 - **Walkable stage UI** with hotspots, desktop + mobile layouts, hidden scrollbars.
 - **Random town layout** of Harlow (home, school, store, library, park, police, mall, hospital, diner, laundromat, underpass, bus, trainyard, station, Birch Street, hidden Harbor House).
-- **Needs:** fullness, energy, hygiene, mood, stress, health; money; grades; inhaler.
+- **Needs:** fullness, energy, hygiene, mood, stress, health; money; grades. (Asthma/inhaler removed in turn 51.)
 - **Jobs & hustles** before running; railway option; rewind to the moment you left home (AI memory resets correctly).
 
 ### Free-text conversation AI
