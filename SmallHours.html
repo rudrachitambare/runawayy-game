@@ -16219,7 +16219,9 @@ window.SH = window.SH || {};
     let w = bIns ? bIns.apply(this, arguments) : 0, extra = 0;
     const g = G(); if (!g) return w;
     (g.bag || []).forEach((id) => { const c = cat(id); if (c && c.warm) extra += c.warm; });
-    if (sleeping) { ['x_sleepbag', 'x_mat'].forEach((id) => { if (near(id)) { const c = cat(id); extra += (c && c.sleepWarm) || 0; } }); }
+    if (sleeping) { const seen = new Set([...(g.bag || []), ...(g.owned || [])]); seen.forEach((id) => { const c = cat(id); if (c && c.sleepWarm && near(id)) extra += c.sleepWarm; }); }
+    // space heater: only where there's power (your base with a power upgrade, or a room)
+    if (near('x_heater') && (g.room || (SH.Bases && SH.Bases.fx && SH.Bases.fx('power')))) extra += 20;
     return w + Math.min(extra, 55);
   };
   const bWarm = SH.warmTarget;
@@ -16287,11 +16289,29 @@ window.SH = window.SH || {};
       SH.rmBag(id); SH.Shack.add(id === 'x_tarp' ? 'tarp' : 'rope', id === 'x_tarp' ? 1 : 2);
       log(id === 'x_tarp' ? 'You add the tarp to your pile. A roof, maybe, or a wall against the wind.' : 'You add the paracord to your pile. Stronger than baling twine.', ''); return done();
     }
+    // power: power banks, crank radio, solar charger
+    if (c && (c.charge || c.solar)) {
+      if (g.phone.bat >= 100) return SH.UI.toast('Your phone is already full.');
+      if (c.solar) { if (SH.locIndoor() || SH.isDark() || SH.raining()) return SH.UI.toast('The solar charger needs daylight and open sky.'); const b0 = g.phone.bat; SH.advance(60, { interrupt: false }); g.phone.bat = Math.min(100, g.phone.bat + (SH.cond() === 'clear' ? 35 : 15)); log(`You unfold the solar charger in the sun and wait. Battery ${Math.round(b0)}% → ${Math.round(g.phone.bat)}%.`, ''); return done(); }
+      if (id === 'x_radio') { const b0 = g.phone.bat; SH.advance(30, { interrupt: false }); SH.st('energy', -3); g.phone.bat = Math.min(100, g.phone.bat + 12); log(`You crank the radio handle until your arm burns. Battery ${Math.round(b0)}% → ${Math.round(g.phone.bat)}%. A station out of nowhere plays an old country song.`, ''); return done(); }
+      g.bankLeft = g.bankLeft || {}; if (g.bankLeft[id] == null) g.bankLeft[id] = c.charge * 100;
+      if (g.bankLeft[id] <= 0) return SH.UI.toast(`${it.n} is empty. Charge it somewhere with an outlet.`);
+      const give = Math.min(100 - g.phone.bat, g.bankLeft[id]); g.phone.bat += give; g.bankLeft[id] -= give; SH.advance(20, { interrupt: false });
+      log(`Phone charging off the ${it.n.replace(/^Power bank/, 'power bank')}. About ${Math.round(g.bankLeft[id])}% of a full charge left in it.`, 'sys'); return done();
+    }
+    // things to do: once a day each, they actually help
+    const FUN = { x_earbuds: ['You put your earbuds in and play the same three songs on repeat. For a while nobody can get at you.', 30], x_speaker: ['You play music quietly off the little speaker. It makes wherever you are feel a bit more like yours.', 30], x_console2: ['You play until the battery icon goes red. You beat a level you\'ve been stuck on since summer.', 60], x_book: ['You read three chapters. For an hour you\'re somebody else, somewhere else.', 60], x_cards: ['You play solitaire on the ground. You lose. You play again.', 30], x_ball: ['You find a hoop and shoot around until your arms are tired and your head is quiet.', 45], x_plush: ['You hold it. Nobody\'s looking. It helps more than it should.', 5], x_notebook: ['You write down everything that happened today. Seeing it on paper makes it smaller.', 30], x_markers: ['You draw on anything flat. It\'s bad. It\'s yours.', 30] };
+    if (FUN[id]) {
+      g.funDay = g.funDay || {}; const k = id + ':' + SH.day();
+      if (g.funDay[k]) return SH.UI.toast('You already did that today. It doesn\'t hit the same twice.');
+      g.funDay[k] = 1; const [line, mins] = FUN[id]; SH.advance(mins, { interrupt: false }); SH.st('mood', ((c && c.mood) || 2) * 2 + 2); SH.st('stress', -6); log(line, 'good'); return done();
+    }
     // wearable: say what it's actually doing
     if (c && (c.warm || c.sleepWarm || c.rain || c.walk || c.disguise)) {
       const bits = [];
       if (c.warm) bits.push('keeping you warmer');
-      if (c.sleepWarm) bits.push('keeping you warm when you sleep');
+      if (c.sleepWarm) bits.push(c.big ? 'keeping you warm when you sleep at your own place' : 'keeping you warm when you sleep');
+      if (id === 'x_heater') { bits.length = 0; bits.push('keeping you warm, but only where there\'s power (a room, or your base with a power setup)'); }
       if (c.rain && id !== 'x_tarp') bits.push('keeping the rain off');
       if (id === 'x_tarp') bits.push('keeping the rain off you at night');
       if (c.walk) bits.push('saving your feet');

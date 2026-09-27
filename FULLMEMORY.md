@@ -496,3 +496,11 @@ File: `src/tales.js`, loaded after later.js.
 - User lost a toothbrush and $33: that was the run.js sleep-outside robbery (40% roll took 2 items and 60% of cash). Replaced with a scare where a stranger
   shuffles off and nothing is taken. "Older kids": Keep walking no longer loses an item, and "Give them your snacks" is now "Offer them a snack" (one item, by choice, they soften).
 - Kept (by choice or warned): Rick's drunk "I'm saving it" at home takes $20 (hustle.js:24, abuse story); the marketplace scam only happens if you pay after a warning.
+
+## #47 — Item audit correction + logic review (turn 47)
+- The turn-44 item audit was WRONG: the output was cut at 80 lines, so about 70 more catalog items did nothing. gear.js now:
+  - power banks give real charges (G.bankLeft); the crank radio adds +12% per 30 min; the solar charger works outdoors in daylight when it isn't raining;
+  - every sleepWarm item counts (pillow, blanket2, mattress when at your base); the space heater only helps with power (a room, or a base with fx power);
+  - fun items (earbuds, speaker, console2, book, cards, ball, plush, notebook, markers) give mood and stress relief, once a day each.
+- Still no use effect (reported to the user): tools, cable, fan, strip, phone2, tv, kettle, batteries, car parts, helmet, bike lights, gifts, home items.
+- Logic problems reported to the user, not fixed yet (see the chat for the list).
