@@ -11,13 +11,14 @@
   const mem = (q) => { const st = TW.st(); st.met[q.id] = st.met[q.id] || { n: 0, told: {}, sus: 0, fed: -1 }; return st.met[q.id]; };
   const is = (q, re) => re.test(q.mood);
 
+  const seen = (q) => { const p = SH.Atlas.here(); return !SH.Net || !SH.Net.knowsFace || SH.Net.knowsFace(p, q); };
   TT.opener = function (q, L) {
     const m = mem(q), g = G(), h = SH.hour(), rep = !!g.reported, T = TW.cur();
     m.n++;
     if (m.n > 1) return pick(m.told.name ? [`Hey, ${m.told.name}. Back again.`, `${m.told.name}! Still in town, huh?`, `Well, look who it is. ${m.told.name}, right?`] : ['Oh, hey. You again.', 'Back again, kiddo?', 'You\'re becoming a regular.']);
     const job = q.kind === 'diner' ? (h < 11 ? 'What can I get you, hon? Kitchen\'s doing breakfast till eleven.' : 'What can I get you?')   : q.kind === 'gas' ? pick(['Pump or inside?', 'Hot dogs are fresh. Well. They\'re hot.', 'Just holler if you need the bathroom key.']) : /librar/.test(q.role) ? 'Can I help you find something? Or just here for the outlets? That\'s allowed.' : /pastor/.test(q.role) ? 'Hello there. Door\'s always open. You\'re welcome to sit as long as you like.' : /laundr|keeps/.test(q.role) ? 'Dryer four eats quarters, just so you know.' : /foreman|farm|co-op/.test(q.role) ? 'Help you with something, kid? This isn\'t really a place to hang around.' : /bus|waiting/.test(q.role) ? 'You waiting on the 3:15 too? It\'s always late.' : '';
     if (is(q, /too friendly/)) return `Well hi there! I'm ${q.n}. You look like you could use a friend. ${job}`;
-    if (is(q, /suspicious/)) return rep && T.tier !== 'city' ? `...Do I know you from somewhere?` : `Can I help you with something?`;
+    if (is(q, /suspicious/)) return rep && T.tier !== 'city' && seen(q) ? `...Do I know you from somewhere?` : `Can I help you with something?`;
     if (is(q, /busy/)) return job || `Mm-hm?`;
     if (is(q, /lonely|talks too much|cheerful/)) return T.tier === 'village' || T.tier === 'small' ? `Well hey there! I'm ${q.n}. I don't think I know you, and I know everybody. ${job}` : `Well hey there! I'm ${q.n}. ${job || 'What can I do for you?'}`;
     if (is(q, /nosy/)) return `Hi, sweetie. Whose are you? ${job}`;
@@ -169,6 +170,12 @@
       if (c.mem.n >= 2 && !c.mem.offered) { c.mem.offered = 1; return R('Hey, you need a ride somewhere? Or a place to crash? I\'ve got a spare room. No big deal. I help kids out all the time.'); }
       if (/\b(no|nope|leave me|go away|stop)\b/.test(t)) return R('Whoa, okay, okay. Just trying to be nice.', { end: true });
     }
+    // villages: about 1 in 10 people is online, and those who are scroll past missing-kid posts
+    if (T.tier === 'village' && SH.Net && SH.Net.person && /\b(do|are|you) (you )?(have |use |on |got |even )?(the )?(internet|online|facebook|wi-?fi at home|a smartphone|social media|chirp)\b|\b(missing (kid|child|girl|boy|poster|person)s?|amber alert|the news|on the news|posts? about)\b/.test(t) && !c.mem[/missing|amber|news|posts? about/.test(t) ? 'missTalk' : 'netTalk']) {
+      const net = SH.Net.person(p, q), miss = /missing|amber|news|posts? about/.test(t); c.mem[miss ? 'missTalk' : 'netTalk'] = 1;
+      if (net === 'none') return R(miss ? pick(['Missing kid? Haven\'t heard a thing. I don\'t do the internet. The paper comes Thursdays and it\'s mostly cattle prices.', 'News? I get the weather off the radio. Anything else, I hear it at church or I don\'t hear it.']) : pick(['Internet? Honey, I have a landline and a radio. The radio gets two stations.', 'Never had it, never wanted it. My nephew keeps trying. The library\'s got a computer if you need one.', 'My grandson set me up with one of those phones. It\'s in a drawer somewhere.']));
+      return R(miss ? pick(['Oh, those posts? I scroll right past. Too sad, and they\'re never from around here.', 'My daughter shares those missing-kid things. I don\'t read them. I can\'t do anything about a kid three counties over.']) : pick(['I\'m on there for the weather and my church group. The rest of it\'s just people yelling.', 'For the auction listings, mostly. Signal\'s so slow out here the pictures load one line at a time.']));
+    }
     // ordering from whoever works the counter ("can i get a hot chocolate?")
     const MENU = [[/hot chocolate|cocoa/, 'hot chocolate', 2.5, 10, 1], [/coffee/, 'coffee', 1.75, 2, 1], [/pancakes?|short stack/, 'short stack', 5, 38, 0], [/pie/, 'slice of pie', 3.5, 18, 0], [/toast/, 'toast', 2, 10, 0], [/eggs?|breakfast/, 'eggs and toast', 5.5, 35, 0], [/burger|cheeseburger/, 'burger', 6.5, 40, 0], [/fries/, 'fries', 3, 18, 0], [/soup|chili/, 'soup', 4, 28, 1], [/grilled cheese/, 'grilled cheese', 4.5, 30, 0], [/muffin/, 'muffin', 2.25, 14, 0], [/donut|doughnut/, 'donut', 1.5, 10, 0], [/hot ?dog/, 'hot dog', 2, 20, 0], [/sandwich/, 'sandwich', 4.5, 28, 0], [/juice|soda|pop|milk/, 'drink', 1.75, 4, 0], [/\bwater\b/, 'water', 0, 0, 0]];
     const ORDER = /\b(can i (get|have)|could i (get|have)|may i (have|get)|i'?ll (have|take|get)|i want|i'?d like|id like|gimme|give me)\b|^(a|one|some|two|just a|uh+ a|um+ a)\b|\b(please|pls)\W*$/;
@@ -240,9 +247,10 @@
     if (an.has('compliment')) return R(pick(['Well, aren\'t you sweet.', 'Flattery gets you a free refill. That\'s all it gets you.']));
     if (an.has('weather')) return R(pick(['Supposed to get colder. You got a real coat?', 'Rain tonight, they say. They\'re usually right about rain.']));
     // they notice: rarely in a city, often in a village, faster once your face is out there
-    const lim = (small ? 5 : 7) - (rep ? 2 : 0) - Math.floor(m.sus);
-    if (c.mem.n >= lim && /nosy|no-nonsense|suspicious/.test(q.mood) && T.tier !== 'city' && !m.warned) { m.warned = SH.day(); return R(rep ? pick(['...Hang on. Turn your head a little. Do I know you from somewhere?', 'You look awful familiar, you know that? Where do I know you from?']) : pick(['Kid, can I ask you something? Is everything okay at home?', 'Where are your folks, really? And don\'t say the motel.'])); }
-    if (c.mem.n >= lim && /nosy|no-nonsense|suspicious/.test(q.mood) && T.tier !== 'city' && m.warned) { c.result = 'call'; return R(rep ? 'I know where I\'ve seen you. The Facebook thing. The missing kid. ...Sweetheart, I\'m calling somebody. It\'s for your own good. You stay right there.' : 'Kid, I\'m going to be straight with you. You\'re alone, it\'s a school day, and you look like you slept outside. I\'m calling somebody. It\'s for your own good.', { end: true }); }
+    const repq = rep && seen(q);
+    const lim = (small ? 5 : 7) - (repq ? 2 : 0) - Math.floor(m.sus);
+    if (c.mem.n >= lim && /nosy|no-nonsense|suspicious/.test(q.mood) && T.tier !== 'city' && !m.warned) { m.warned = SH.day(); return R(repq ? pick(['...Hang on. Turn your head a little. Do I know you from somewhere?', 'You look awful familiar, you know that? Where do I know you from?']) : pick(['Kid, can I ask you something? Is everything okay at home?', 'Where are your folks, really? And don\'t say the motel.'])); }
+    if (c.mem.n >= lim && /nosy|no-nonsense|suspicious/.test(q.mood) && T.tier !== 'city' && m.warned) { c.result = 'call'; return R(repq ? 'I know where I\'ve seen you. The Facebook thing. The missing kid. ...Sweetheart, I\'m calling somebody. It\'s for your own good. You stay right there.' : 'Kid, I\'m going to be straight with you. You\'re alone, it\'s a school day, and you look like you slept outside. I\'m calling somebody. It\'s for your own good.', { end: true }); }
     if (!m.told.name && c.mem.n === 2 && small) return R('I didn\'t catch your name.');
     if (an.q || /^(what|where|when|how|who|why|is|are|do|does|can|could)\b/.test(t)) return R(SH.TownText.pk('dunno' + q.id, ['Couldn\'t tell you, hon.', 'Beats me. The library would know.', 'Hm. No idea, sorry.', 'You\'re asking the wrong person. Ask me about pie.']));
     return R(smalltalk(q, T, p));

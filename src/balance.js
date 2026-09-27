@@ -36,7 +36,7 @@
     let d = BAL.fade[p.tier] || 5;
     if ((g.cover || {})[p.id]) d *= BAL.coverX;
     if ((g.room && g.room.pid === p.id && g.room.until > g.t) || (g.base && g.base.pid === p.id)) d *= BAL.roomX;
-    if ((g.heat || 0) >= 60) d *= BAL.hotX;
+    if ((g.heat || 0) >= 60 && p.tier !== 'village') d *= BAL.hotX;   // the search is online; villages mostly aren't
     g.awayNotice = Math.max(0, Math.round((g.awayNotice - d) * 10) / 10);
   }));
   /* familiar face */

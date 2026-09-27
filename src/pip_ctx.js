@@ -43,7 +43,7 @@
 
   /* ---------- rides ---------- */
   const pts = (jr) => T ? T.ptxt(T.point(jr.legs[0].rt.stops[jr.legs[0].i], jr.legs[0].rt)) : 'the stop';
-  const ops = (jr) => jr.legs.map((l) => l.rt.op.icon + ' ' + l.rt.op.n).join(' → ');
+  const ops = (jr) => { const a = []; jr.legs.forEach((l) => { const n = l.rt.op.icon + ' ' + l.rt.op.n, last = a[a.length - 1]; if (last && last.n === n) last.k++; else a.push({ n, k: 1 }); }); return a.map((x) => x.n + (x.k === 2 ? ' (one change)' : x.k > 2 ? ` (${x.k - 1} changes)` : '')).join(' → '); };
   const strict = (jr) => T && jr.legs.some((l) => T.checks(l.rt.op));
   function best(to, t, pref) {
     const js = R.journeys(here(), to, t, 6); if (!js.length) return null;

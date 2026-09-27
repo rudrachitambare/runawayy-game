@@ -33,9 +33,10 @@
   };
   PL.tw_gas = function (x, E, id) {
     const nm = L(id).name, cx = E.W * 0.36; R(x, E.shade('#d8d8dc'), cx - 150, E.gy - 110, 300, 10); R(x, E.shade('#b83b3b'), cx - 150, E.gy - 102, 300, 5); [-90, 20].forEach((d) => { R(x, E.shade('#8a8f99'), cx + d, E.gy - 100, 8, 100); rr(x, cx + d - 12, E.gy - 48, 32, 48, 4); x.fillStyle = E.shade('#e8e8ee'); x.fill(); R(x, E.shade('#b83b3b'), cx + d - 12, E.gy - 48, 32, 8); });
-    if (E.night) glow(x, cx, E.gy - 90, 160, 'rgba(255,245,220,A)', 0.2);
-    facade(x, E, { cx: E.W * 0.74, w: 220, h: 76, col: '#c9c2b0', roof: 'flat', seed: 21, lit: true, open: true, wins: { rows: 1, cols: 3, w: 46, h: 36, px: 18, py: 26, gx: 20, gy: 0 }, door: { w: 34, h: 44, col: '#3a4454', glass: 1, dx: -80 }, sign: { t: up(nm), font: 'bold 13px system-ui', c: '#ff6b5a', day: '#b83b3b', dy: 16, neon: 1 } });
-    R(x, E.shade('#5a6070'), E.W * 0.95, E.gy - 150, 5, 150); R(x, E.shade('#1d2230'), E.W * 0.95 - 30, E.gy - 190, 64, 44); x.font = 'bold 13px system-ui'; x.fillStyle = E.night ? '#ffd66b' : '#e6d6a6'; x.fillText('3.29⁹', E.W * 0.95 - 22, E.gy - 162);
+    const gOpen = !SH.isOpen || SH.isOpen(id);
+    if (E.night && gOpen) glow(x, cx, E.gy - 90, 160, 'rgba(255,245,220,A)', 0.2);
+    facade(x, E, { cx: E.W * 0.74, w: 220, h: 76, col: '#c9c2b0', roof: 'flat', seed: 21, lit: gOpen, open: gOpen, wins: { rows: 1, cols: 3, w: 46, h: 36, px: 18, py: 26, gx: 20, gy: 0 }, door: { w: 34, h: 44, col: '#3a4454', glass: 1, dx: -80 }, sign: { t: up(nm), font: 'bold 13px system-ui', c: '#ff6b5a', day: '#b83b3b', dy: 16, neon: 1 } });
+    R(x, E.shade('#5a6070'), E.W * 0.95, E.gy - 150, 5, 150); R(x, E.shade('#1d2230'), E.W * 0.95 - 30, E.gy - 190, 64, 44); x.font = 'bold 13px system-ui'; x.fillStyle = E.night && gOpen ? '#ffd66b' : '#e6d6a6'; x.fillText('3.29⁹', E.W * 0.95 - 22, E.gy - 162);
     R(x, E.shade('#e8eef4'), E.W * 0.74 + 120, E.gy - 40, 30, 40); x.font = 'bold 7px system-ui'; x.fillStyle = '#2b6fd6'; x.fillText('ICE', E.W * 0.74 + 128, E.gy - 26); car(x, E, cx - 40, '#6b8e5a', true);
   };
   PL.tw_diner = function (x, E, id) {

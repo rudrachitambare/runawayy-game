@@ -517,3 +517,6 @@ Every town you reach has its own map, streets, open/closed places, people with n
 - Say several things in one message and people answer all of it (the important parts first), without monologuing.
 - You can order food and drinks by asking the person at the counter.
 - Careful players can stay in a town for days without being found; careless ones still get noticed.
+
+## REQUEST #38 BUILT: villages are offline
+- About 1 in 10 villagers is online at all, and the ones who are don't follow missing-kid posts. Being "on the internet" barely matters in a village; being a strange kid alone on a school day still does.

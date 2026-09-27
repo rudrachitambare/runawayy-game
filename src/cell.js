@@ -20,8 +20,9 @@
     const c = p.tier === 'city' ? { gen: '5G', base: 4 } : p.tier === 'town' ? { gen: r < 0.8 ? 'LTE' : '5G', base: 4 } : p.tier === 'small' ? { gen: r < 0.75 ? 'LTE' : '3G', base: 2 + Math.round(r2 * 2) } : { gen: r < 0.35 ? 'LTE' : r < 0.8 ? '3G' : 'E', base: 1 + Math.round(r2 * 2) };
     c.spot = p.tier === 'village' || p.tier === 'small' ? ['the hill by the water tower', 'the church steps', 'the top of the grain elevator road', 'the far end of the gas station lot', 'the old railroad bridge'][Math.floor(r2 * 5)] : null;
     // villagers online: most aren't; of those who are, some don't care about missing kids
-    c.online = p.tier === 'village' ? 0.12 + r * 0.25 : p.tier === 'small' ? 0.55 + r * 0.2 : 0.92;
-    c.care = p.tier === 'village' ? 0.35 + r2 * 0.3 : p.tier === 'small' ? 0.6 : 0.75;
+    // villages: about 1 in 10 people is online at all, and the ones who are don't follow missing-kid posts (turn 38)
+    c.online = p.tier === 'village' ? 0.08 + r * 0.04 : p.tier === 'small' ? 0.55 + r * 0.2 : 0.92;
+    c.care = p.tier === 'village' ? 0 : p.tier === 'small' ? 0.6 : 0.75;
     return (p._cell = c);
   };
   NT.person = function (p, who) { const c = NT.cell(p), a = q('net' + p.id + who.n), b = q('care' + p.id + who.n); return a > c.online ? 'none' : b > c.care ? 'online' : 'cares'; };
@@ -105,7 +106,9 @@
   }
 
   /* ---------- the poster matters less where nobody's online (or nobody cares) ---------- */
-  NT.posterMult = (p) => { if (!p || (p.tier !== 'village' && p.tier !== 'small')) return 1.6; const c = NT.cell(p); return Math.min(1.6, 0.8 + 2 * c.online * c.care); };
+  NT.posterMult = (p) => { if (p && p.tier === 'village') return 0.8; if (!p || p.tier !== 'small') return 1.6; const c = NT.cell(p); return Math.min(1.6, 0.8 + 2 * c.online * c.care); };
+  /* does this particular person know your face from the news? villages: nobody (no internet, or online but doesn't care) */
+  NT.knowsFace = (p, who) => { if (!p) return true; if (p.tier === 'village') return false; if (p.tier === 'small' && who && who.n) return NT.person(p, who) === 'cares'; return true; };
   const bLocal = SH.Brain && SH.Brain.local;
   if (bLocal) SH.Brain.local = function (an, c) {
     const w = (c.opts && c.opts.local) || null, p = (c.opts && c.opts.place) || null, g = G();

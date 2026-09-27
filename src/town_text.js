@@ -28,7 +28,7 @@
       : at === 'edge' ? `You walk into ${p.name} the long way, past the ${tier === 'village' ? 'grain elevator' : tier === 'city' ? 'first overpass' : 'water tower'} and the sign that says WELCOME TO ${p.name.toUpperCase()}${p.motto ? `: ${p.motto.toUpperCase()}` : ''}.`
       : at === 'gas' ? `The ride drops you in the lot at ${L.name} and pulls out before you've got both straps on.`
       : tier === 'city' ? `The bus hisses into ${L.name}. Bay 14. Fluorescent light, pigeons inside the building somehow, a voice announcing departures to nobody.`
-      : tier === 'village' ? `The bus lets you off at the shelter and keeps going. Its taillights are the last moving thing you can see.`
+      : tier === 'village' ? (c.dark ? `The bus lets you off at the shelter and keeps going. Its taillights are the last moving thing you can see.` : `The bus lets you off at the shelter and keeps going. Its dust hangs in the air a long time after it's gone. A dog somewhere decides you're worth one bark.`)
       : /depot|terminal/i.test(L.name) ? `The bus pulls into ${L.name} and exhales. A man with a clipboard, a vending machine, a bench bolted to the floor. You get off like you do this all the time.` : `The bus stops on ${T.street} long enough for you to get off. The doors fold shut behind you.`;
     const first = {
       village: [`${p.name} is one street and a sky. ${p.pop < 600 ? `Population ${p.pop}, and from the way a woman on a porch is watching you, she knows every one of them.` : 'A grain elevator, a church, a gas station, and a lot of porches.'}`, `A dog trots out to inspect you, decides you're fine, trots back. The whole village seems to have the same opinion, for now.`],
@@ -40,7 +40,7 @@
       : c.rain ? 'It\'s raining the fine, sideways kind of rain that gets into your collar.'
       : c.morning ? 'The town is just waking up: a delivery truck, a jogger, the smell of someone\'s bacon.'
       : c.evening ? 'The light is going gold and then gray. Porch lights come on one at a time.' : '';
-    const worry = c.rep && (tier === 'village' || tier === 'small') ? ' Your face is on the internet now. In a town this size, somebody has seen it.' : '';
+    const worry = c.rep && tier === 'small' ? ' Your face is on the internet now. In a town this size, somebody has seen it.' : c.rep && tier === 'village' ? ' Your face is on the internet now. Out here, hardly anybody is. The few who are scroll past.' : '';
     return `${how} ${first[0]} ${first[1] || ''} ${mood}${worry}`.replace(/\s+/g, ' ').trim();
   };
 
@@ -75,7 +75,7 @@
     const c = ctx(), g = c.g, r = Math.random();
     if (r < (p.danger || 0.03) * 1.3 && !c.morning) return SH.TownEvents ? SH.TownEvents.car(p) : null;
     if (r < 0.14 && !g.flags['found$' + p.id]) { g.flags['found$' + p.id] = 1; const amt = [1, 5, 1, 10, 5][Math.floor(Math.random() * 5)]; SH.money(amt); return log(`Something green in the gutter by the ${T.tier === 'city' ? 'bus shelter' : 'post office'}. A ${amt}-dollar bill, damp and real. You look around. Nobody. It's yours.`, 'good'); }
-    if (c.rep && r < 0.3) return log(TX.pk('poster', [
+    if (c.rep && r < (T.tier === 'village' ? 0.06 : 0.3)) return log(TX.pk('poster', [
       `On a telephone pole: a MISSING poster. Your school picture. Your name spelled right. Somebody printed this and drove it here and stapled it, four staples, one in each corner. You keep walking with your hood up and your heart going like a rabbit's.`,
       `The window of the ${T.tier === 'city' ? 'corner store' : 'hardware store'} has a flyer taped inside: HAVE YOU SEEN. You have. Every morning in the mirror. You turn and look at a display of snow shovels very hard until your face goes normal.`,
     ]), 'bad');
@@ -100,9 +100,11 @@
       'Hand-lettered: THE BLESSING BOX by the fire station is restocked on Mondays. Food, socks, toothbrushes. Take what you need.',
     ];
     const lines = [TX.pk('board' + p.id, notes), TX.pk('board2' + p.id, notes)];
-    if (c.rep) lines.push('And, newest, pinned over everything else: your face. MISSING. The date you left. A number to call. The paper is still crisp. Somebody put it up today.');
-    log(`The notice board outside the post office. ${lines.join(' ')}`, c.rep ? 'bad' : '');
-    if (c.rep) SH.st('stress', 8);
+    if (c.rep && T.tier === 'village' && c.days < 4) lines.push('No poster with your face. Out here news travels by church and diner, and nobody at either has said your name.');
+    else if (c.rep) lines.push('And, newest, pinned over everything else: your face. MISSING. The date you left. A number to call. The paper is still crisp. Somebody put it up today.');
+    const onBoard = c.rep && !(T.tier === 'village' && c.days < 4);
+    log(`The notice board outside the post office. ${lines.join(' ')}`, onBoard ? 'bad' : '');
+    if (onBoard) SH.st('stress', 8);
   };
   TX.post = (T, p) => TX.pk('post' + p.id, [
     `The post office lobby is one room with brass mailboxes and a radiator that clanks. A poster about duck stamps. A poster about mail fraud. ${ctx().rep ? 'A poster with your face on it.' : 'No poster with your face on it. Yet.'}`,

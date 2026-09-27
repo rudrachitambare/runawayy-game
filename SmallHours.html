@@ -8979,8 +8979,9 @@ window.SH = window.SH || {};
     const c = p.tier === 'city' ? { gen: '5G', base: 4 } : p.tier === 'town' ? { gen: r < 0.8 ? 'LTE' : '5G', base: 4 } : p.tier === 'small' ? { gen: r < 0.75 ? 'LTE' : '3G', base: 2 + Math.round(r2 * 2) } : { gen: r < 0.35 ? 'LTE' : r < 0.8 ? '3G' : 'E', base: 1 + Math.round(r2 * 2) };
     c.spot = p.tier === 'village' || p.tier === 'small' ? ['the hill by the water tower', 'the church steps', 'the top of the grain elevator road', 'the far end of the gas station lot', 'the old railroad bridge'][Math.floor(r2 * 5)] : null;
     // villagers online: most aren't; of those who are, some don't care about missing kids
-    c.online = p.tier === 'village' ? 0.12 + r * 0.25 : p.tier === 'small' ? 0.55 + r * 0.2 : 0.92;
-    c.care = p.tier === 'village' ? 0.35 + r2 * 0.3 : p.tier === 'small' ? 0.6 : 0.75;
+    // villages: about 1 in 10 people is online at all, and the ones who are don't follow missing-kid posts (turn 38)
+    c.online = p.tier === 'village' ? 0.08 + r * 0.04 : p.tier === 'small' ? 0.55 + r * 0.2 : 0.92;
+    c.care = p.tier === 'village' ? 0 : p.tier === 'small' ? 0.6 : 0.75;
     return (p._cell = c);
   };
   NT.person = function (p, who) { const c = NT.cell(p), a = q('net' + p.id + who.n), b = q('care' + p.id + who.n); return a > c.online ? 'none' : b > c.care ? 'online' : 'cares'; };
@@ -9064,7 +9065,9 @@ window.SH = window.SH || {};
   }
 
   /* ---------- the poster matters less where nobody's online (or nobody cares) ---------- */
-  NT.posterMult = (p) => { if (!p || (p.tier !== 'village' && p.tier !== 'small')) return 1.6; const c = NT.cell(p); return Math.min(1.6, 0.8 + 2 * c.online * c.care); };
+  NT.posterMult = (p) => { if (p && p.tier === 'village') return 0.8; if (!p || p.tier !== 'small') return 1.6; const c = NT.cell(p); return Math.min(1.6, 0.8 + 2 * c.online * c.care); };
+  /* does this particular person know your face from the news? villages: nobody (no internet, or online but doesn't care) */
+  NT.knowsFace = (p, who) => { if (!p) return true; if (p.tier === 'village') return false; if (p.tier === 'small' && who && who.n) return NT.person(p, who) === 'cares'; return true; };
   const bLocal = SH.Brain && SH.Brain.local;
   if (bLocal) SH.Brain.local = function (an, c) {
     const w = (c.opts && c.opts.local) || null, p = (c.opts && c.opts.place) || null, g = G();
@@ -10203,7 +10206,7 @@ window.SH = window.SH || {};
     let d = BAL.fade[p.tier] || 5;
     if ((g.cover || {})[p.id]) d *= BAL.coverX;
     if ((g.room && g.room.pid === p.id && g.room.until > g.t) || (g.base && g.base.pid === p.id)) d *= BAL.roomX;
-    if ((g.heat || 0) >= 60) d *= BAL.hotX;
+    if ((g.heat || 0) >= 60 && p.tier !== 'village') d *= BAL.hotX;   // the search is online; villages mostly aren't
     g.awayNotice = Math.max(0, Math.round((g.awayNotice - d) * 10) / 10);
   }));
   /* familiar face */
@@ -13720,7 +13723,7 @@ window.SH = window.SH || {};
 
   /* ---------- rides ---------- */
   const pts = (jr) => T ? T.ptxt(T.point(jr.legs[0].rt.stops[jr.legs[0].i], jr.legs[0].rt)) : 'the stop';
-  const ops = (jr) => jr.legs.map((l) => l.rt.op.icon + ' ' + l.rt.op.n).join(' → ');
+  const ops = (jr) => { const a = []; jr.legs.forEach((l) => { const n = l.rt.op.icon + ' ' + l.rt.op.n, last = a[a.length - 1]; if (last && last.n === n) last.k++; else a.push({ n, k: 1 }); }); return a.map((x) => x.n + (x.k === 2 ? ' (one change)' : x.k > 2 ? ` (${x.k - 1} changes)` : '')).join(' → '); };
   const strict = (jr) => T && jr.legs.some((l) => T.checks(l.rt.op));
   function best(to, t, pref) {
     const js = R.journeys(here(), to, t, 6); if (!js.length) return null;
@@ -13993,7 +13996,7 @@ window.SH = window.SH || {};
       : at === 'edge' ? `You walk into ${p.name} the long way, past the ${tier === 'village' ? 'grain elevator' : tier === 'city' ? 'first overpass' : 'water tower'} and the sign that says WELCOME TO ${p.name.toUpperCase()}${p.motto ? `: ${p.motto.toUpperCase()}` : ''}.`
       : at === 'gas' ? `The ride drops you in the lot at ${L.name} and pulls out before you've got both straps on.`
       : tier === 'city' ? `The bus hisses into ${L.name}. Bay 14. Fluorescent light, pigeons inside the building somehow, a voice announcing departures to nobody.`
-      : tier === 'village' ? `The bus lets you off at the shelter and keeps going. Its taillights are the last moving thing you can see.`
+      : tier === 'village' ? (c.dark ? `The bus lets you off at the shelter and keeps going. Its taillights are the last moving thing you can see.` : `The bus lets you off at the shelter and keeps going. Its dust hangs in the air a long time after it's gone. A dog somewhere decides you're worth one bark.`)
       : /depot|terminal/i.test(L.name) ? `The bus pulls into ${L.name} and exhales. A man with a clipboard, a vending machine, a bench bolted to the floor. You get off like you do this all the time.` : `The bus stops on ${T.street} long enough for you to get off. The doors fold shut behind you.`;
     const first = {
       village: [`${p.name} is one street and a sky. ${p.pop < 600 ? `Population ${p.pop}, and from the way a woman on a porch is watching you, she knows every one of them.` : 'A grain elevator, a church, a gas station, and a lot of porches.'}`, `A dog trots out to inspect you, decides you're fine, trots back. The whole village seems to have the same opinion, for now.`],
@@ -14005,7 +14008,7 @@ window.SH = window.SH || {};
       : c.rain ? 'It\'s raining the fine, sideways kind of rain that gets into your collar.'
       : c.morning ? 'The town is just waking up: a delivery truck, a jogger, the smell of someone\'s bacon.'
       : c.evening ? 'The light is going gold and then gray. Porch lights come on one at a time.' : '';
-    const worry = c.rep && (tier === 'village' || tier === 'small') ? ' Your face is on the internet now. In a town this size, somebody has seen it.' : '';
+    const worry = c.rep && tier === 'small' ? ' Your face is on the internet now. In a town this size, somebody has seen it.' : c.rep && tier === 'village' ? ' Your face is on the internet now. Out here, hardly anybody is. The few who are scroll past.' : '';
     return `${how} ${first[0]} ${first[1] || ''} ${mood}${worry}`.replace(/\s+/g, ' ').trim();
   };
 
@@ -14040,7 +14043,7 @@ window.SH = window.SH || {};
     const c = ctx(), g = c.g, r = Math.random();
     if (r < (p.danger || 0.03) * 1.3 && !c.morning) return SH.TownEvents ? SH.TownEvents.car(p) : null;
     if (r < 0.14 && !g.flags['found$' + p.id]) { g.flags['found$' + p.id] = 1; const amt = [1, 5, 1, 10, 5][Math.floor(Math.random() * 5)]; SH.money(amt); return log(`Something green in the gutter by the ${T.tier === 'city' ? 'bus shelter' : 'post office'}. A ${amt}-dollar bill, damp and real. You look around. Nobody. It's yours.`, 'good'); }
-    if (c.rep && r < 0.3) return log(TX.pk('poster', [
+    if (c.rep && r < (T.tier === 'village' ? 0.06 : 0.3)) return log(TX.pk('poster', [
       `On a telephone pole: a MISSING poster. Your school picture. Your name spelled right. Somebody printed this and drove it here and stapled it, four staples, one in each corner. You keep walking with your hood up and your heart going like a rabbit's.`,
       `The window of the ${T.tier === 'city' ? 'corner store' : 'hardware store'} has a flyer taped inside: HAVE YOU SEEN. You have. Every morning in the mirror. You turn and look at a display of snow shovels very hard until your face goes normal.`,
     ]), 'bad');
@@ -14065,9 +14068,11 @@ window.SH = window.SH || {};
       'Hand-lettered: THE BLESSING BOX by the fire station is restocked on Mondays. Food, socks, toothbrushes. Take what you need.',
     ];
     const lines = [TX.pk('board' + p.id, notes), TX.pk('board2' + p.id, notes)];
-    if (c.rep) lines.push('And, newest, pinned over everything else: your face. MISSING. The date you left. A number to call. The paper is still crisp. Somebody put it up today.');
-    log(`The notice board outside the post office. ${lines.join(' ')}`, c.rep ? 'bad' : '');
-    if (c.rep) SH.st('stress', 8);
+    if (c.rep && T.tier === 'village' && c.days < 4) lines.push('No poster with your face. Out here news travels by church and diner, and nobody at either has said your name.');
+    else if (c.rep) lines.push('And, newest, pinned over everything else: your face. MISSING. The date you left. A number to call. The paper is still crisp. Somebody put it up today.');
+    const onBoard = c.rep && !(T.tier === 'village' && c.days < 4);
+    log(`The notice board outside the post office. ${lines.join(' ')}`, onBoard ? 'bad' : '');
+    if (onBoard) SH.st('stress', 8);
   };
   TX.post = (T, p) => TX.pk('post' + p.id, [
     `The post office lobby is one room with brass mailboxes and a radiator that clanks. A poster about duck stamps. A poster about mail fraud. ${ctx().rep ? 'A poster with your face on it.' : 'No poster with your face on it. Yet.'}`,
@@ -14406,13 +14411,14 @@ window.SH = window.SH || {};
   const mem = (q) => { const st = TW.st(); st.met[q.id] = st.met[q.id] || { n: 0, told: {}, sus: 0, fed: -1 }; return st.met[q.id]; };
   const is = (q, re) => re.test(q.mood);
 
+  const seen = (q) => { const p = SH.Atlas.here(); return !SH.Net || !SH.Net.knowsFace || SH.Net.knowsFace(p, q); };
   TT.opener = function (q, L) {
     const m = mem(q), g = G(), h = SH.hour(), rep = !!g.reported, T = TW.cur();
     m.n++;
     if (m.n > 1) return pick(m.told.name ? [`Hey, ${m.told.name}. Back again.`, `${m.told.name}! Still in town, huh?`, `Well, look who it is. ${m.told.name}, right?`] : ['Oh, hey. You again.', 'Back again, kiddo?', 'You\'re becoming a regular.']);
     const job = q.kind === 'diner' ? (h < 11 ? 'What can I get you, hon? Kitchen\'s doing breakfast till eleven.' : 'What can I get you?')   : q.kind === 'gas' ? pick(['Pump or inside?', 'Hot dogs are fresh. Well. They\'re hot.', 'Just holler if you need the bathroom key.']) : /librar/.test(q.role) ? 'Can I help you find something? Or just here for the outlets? That\'s allowed.' : /pastor/.test(q.role) ? 'Hello there. Door\'s always open. You\'re welcome to sit as long as you like.' : /laundr|keeps/.test(q.role) ? 'Dryer four eats quarters, just so you know.' : /foreman|farm|co-op/.test(q.role) ? 'Help you with something, kid? This isn\'t really a place to hang around.' : /bus|waiting/.test(q.role) ? 'You waiting on the 3:15 too? It\'s always late.' : '';
     if (is(q, /too friendly/)) return `Well hi there! I'm ${q.n}. You look like you could use a friend. ${job}`;
-    if (is(q, /suspicious/)) return rep && T.tier !== 'city' ? `...Do I know you from somewhere?` : `Can I help you with something?`;
+    if (is(q, /suspicious/)) return rep && T.tier !== 'city' && seen(q) ? `...Do I know you from somewhere?` : `Can I help you with something?`;
     if (is(q, /busy/)) return job || `Mm-hm?`;
     if (is(q, /lonely|talks too much|cheerful/)) return T.tier === 'village' || T.tier === 'small' ? `Well hey there! I'm ${q.n}. I don't think I know you, and I know everybody. ${job}` : `Well hey there! I'm ${q.n}. ${job || 'What can I do for you?'}`;
     if (is(q, /nosy/)) return `Hi, sweetie. Whose are you? ${job}`;
@@ -14564,6 +14570,12 @@ window.SH = window.SH || {};
       if (c.mem.n >= 2 && !c.mem.offered) { c.mem.offered = 1; return R('Hey, you need a ride somewhere? Or a place to crash? I\'ve got a spare room. No big deal. I help kids out all the time.'); }
       if (/\b(no|nope|leave me|go away|stop)\b/.test(t)) return R('Whoa, okay, okay. Just trying to be nice.', { end: true });
     }
+    // villages: about 1 in 10 people is online, and those who are scroll past missing-kid posts
+    if (T.tier === 'village' && SH.Net && SH.Net.person && /\b(do|are|you) (you )?(have |use |on |got |even )?(the )?(internet|online|facebook|wi-?fi at home|a smartphone|social media|chirp)\b|\b(missing (kid|child|girl|boy|poster|person)s?|amber alert|the news|on the news|posts? about)\b/.test(t) && !c.mem[/missing|amber|news|posts? about/.test(t) ? 'missTalk' : 'netTalk']) {
+      const net = SH.Net.person(p, q), miss = /missing|amber|news|posts? about/.test(t); c.mem[miss ? 'missTalk' : 'netTalk'] = 1;
+      if (net === 'none') return R(miss ? pick(['Missing kid? Haven\'t heard a thing. I don\'t do the internet. The paper comes Thursdays and it\'s mostly cattle prices.', 'News? I get the weather off the radio. Anything else, I hear it at church or I don\'t hear it.']) : pick(['Internet? Honey, I have a landline and a radio. The radio gets two stations.', 'Never had it, never wanted it. My nephew keeps trying. The library\'s got a computer if you need one.', 'My grandson set me up with one of those phones. It\'s in a drawer somewhere.']));
+      return R(miss ? pick(['Oh, those posts? I scroll right past. Too sad, and they\'re never from around here.', 'My daughter shares those missing-kid things. I don\'t read them. I can\'t do anything about a kid three counties over.']) : pick(['I\'m on there for the weather and my church group. The rest of it\'s just people yelling.', 'For the auction listings, mostly. Signal\'s so slow out here the pictures load one line at a time.']));
+    }
     // ordering from whoever works the counter ("can i get a hot chocolate?")
     const MENU = [[/hot chocolate|cocoa/, 'hot chocolate', 2.5, 10, 1], [/coffee/, 'coffee', 1.75, 2, 1], [/pancakes?|short stack/, 'short stack', 5, 38, 0], [/pie/, 'slice of pie', 3.5, 18, 0], [/toast/, 'toast', 2, 10, 0], [/eggs?|breakfast/, 'eggs and toast', 5.5, 35, 0], [/burger|cheeseburger/, 'burger', 6.5, 40, 0], [/fries/, 'fries', 3, 18, 0], [/soup|chili/, 'soup', 4, 28, 1], [/grilled cheese/, 'grilled cheese', 4.5, 30, 0], [/muffin/, 'muffin', 2.25, 14, 0], [/donut|doughnut/, 'donut', 1.5, 10, 0], [/hot ?dog/, 'hot dog', 2, 20, 0], [/sandwich/, 'sandwich', 4.5, 28, 0], [/juice|soda|pop|milk/, 'drink', 1.75, 4, 0], [/\bwater\b/, 'water', 0, 0, 0]];
     const ORDER = /\b(can i (get|have)|could i (get|have)|may i (have|get)|i'?ll (have|take|get)|i want|i'?d like|id like|gimme|give me)\b|^(a|one|some|two|just a|uh+ a|um+ a)\b|\b(please|pls)\W*$/;
@@ -14635,9 +14647,10 @@ window.SH = window.SH || {};
     if (an.has('compliment')) return R(pick(['Well, aren\'t you sweet.', 'Flattery gets you a free refill. That\'s all it gets you.']));
     if (an.has('weather')) return R(pick(['Supposed to get colder. You got a real coat?', 'Rain tonight, they say. They\'re usually right about rain.']));
     // they notice: rarely in a city, often in a village, faster once your face is out there
-    const lim = (small ? 5 : 7) - (rep ? 2 : 0) - Math.floor(m.sus);
-    if (c.mem.n >= lim && /nosy|no-nonsense|suspicious/.test(q.mood) && T.tier !== 'city' && !m.warned) { m.warned = SH.day(); return R(rep ? pick(['...Hang on. Turn your head a little. Do I know you from somewhere?', 'You look awful familiar, you know that? Where do I know you from?']) : pick(['Kid, can I ask you something? Is everything okay at home?', 'Where are your folks, really? And don\'t say the motel.'])); }
-    if (c.mem.n >= lim && /nosy|no-nonsense|suspicious/.test(q.mood) && T.tier !== 'city' && m.warned) { c.result = 'call'; return R(rep ? 'I know where I\'ve seen you. The Facebook thing. The missing kid. ...Sweetheart, I\'m calling somebody. It\'s for your own good. You stay right there.' : 'Kid, I\'m going to be straight with you. You\'re alone, it\'s a school day, and you look like you slept outside. I\'m calling somebody. It\'s for your own good.', { end: true }); }
+    const repq = rep && seen(q);
+    const lim = (small ? 5 : 7) - (repq ? 2 : 0) - Math.floor(m.sus);
+    if (c.mem.n >= lim && /nosy|no-nonsense|suspicious/.test(q.mood) && T.tier !== 'city' && !m.warned) { m.warned = SH.day(); return R(repq ? pick(['...Hang on. Turn your head a little. Do I know you from somewhere?', 'You look awful familiar, you know that? Where do I know you from?']) : pick(['Kid, can I ask you something? Is everything okay at home?', 'Where are your folks, really? And don\'t say the motel.'])); }
+    if (c.mem.n >= lim && /nosy|no-nonsense|suspicious/.test(q.mood) && T.tier !== 'city' && m.warned) { c.result = 'call'; return R(repq ? 'I know where I\'ve seen you. The Facebook thing. The missing kid. ...Sweetheart, I\'m calling somebody. It\'s for your own good. You stay right there.' : 'Kid, I\'m going to be straight with you. You\'re alone, it\'s a school day, and you look like you slept outside. I\'m calling somebody. It\'s for your own good.', { end: true }); }
     if (!m.told.name && c.mem.n === 2 && small) return R('I didn\'t catch your name.');
     if (an.q || /^(what|where|when|how|who|why|is|are|do|does|can|could)\b/.test(t)) return R(SH.TownText.pk('dunno' + q.id, ['Couldn\'t tell you, hon.', 'Beats me. The library would know.', 'Hm. No idea, sorry.', 'You\'re asking the wrong person. Ask me about pie.']));
     return R(smalltalk(q, T, p));
@@ -14813,9 +14826,10 @@ window.SH = window.SH || {};
   };
   PL.tw_gas = function (x, E, id) {
     const nm = L(id).name, cx = E.W * 0.36; R(x, E.shade('#d8d8dc'), cx - 150, E.gy - 110, 300, 10); R(x, E.shade('#b83b3b'), cx - 150, E.gy - 102, 300, 5); [-90, 20].forEach((d) => { R(x, E.shade('#8a8f99'), cx + d, E.gy - 100, 8, 100); rr(x, cx + d - 12, E.gy - 48, 32, 48, 4); x.fillStyle = E.shade('#e8e8ee'); x.fill(); R(x, E.shade('#b83b3b'), cx + d - 12, E.gy - 48, 32, 8); });
-    if (E.night) glow(x, cx, E.gy - 90, 160, 'rgba(255,245,220,A)', 0.2);
-    facade(x, E, { cx: E.W * 0.74, w: 220, h: 76, col: '#c9c2b0', roof: 'flat', seed: 21, lit: true, open: true, wins: { rows: 1, cols: 3, w: 46, h: 36, px: 18, py: 26, gx: 20, gy: 0 }, door: { w: 34, h: 44, col: '#3a4454', glass: 1, dx: -80 }, sign: { t: up(nm), font: 'bold 13px system-ui', c: '#ff6b5a', day: '#b83b3b', dy: 16, neon: 1 } });
-    R(x, E.shade('#5a6070'), E.W * 0.95, E.gy - 150, 5, 150); R(x, E.shade('#1d2230'), E.W * 0.95 - 30, E.gy - 190, 64, 44); x.font = 'bold 13px system-ui'; x.fillStyle = E.night ? '#ffd66b' : '#e6d6a6'; x.fillText('3.29⁹', E.W * 0.95 - 22, E.gy - 162);
+    const gOpen = !SH.isOpen || SH.isOpen(id);
+    if (E.night && gOpen) glow(x, cx, E.gy - 90, 160, 'rgba(255,245,220,A)', 0.2);
+    facade(x, E, { cx: E.W * 0.74, w: 220, h: 76, col: '#c9c2b0', roof: 'flat', seed: 21, lit: gOpen, open: gOpen, wins: { rows: 1, cols: 3, w: 46, h: 36, px: 18, py: 26, gx: 20, gy: 0 }, door: { w: 34, h: 44, col: '#3a4454', glass: 1, dx: -80 }, sign: { t: up(nm), font: 'bold 13px system-ui', c: '#ff6b5a', day: '#b83b3b', dy: 16, neon: 1 } });
+    R(x, E.shade('#5a6070'), E.W * 0.95, E.gy - 150, 5, 150); R(x, E.shade('#1d2230'), E.W * 0.95 - 30, E.gy - 190, 64, 44); x.font = 'bold 13px system-ui'; x.fillStyle = E.night && gOpen ? '#ffd66b' : '#e6d6a6'; x.fillText('3.29⁹', E.W * 0.95 - 22, E.gy - 162);
     R(x, E.shade('#e8eef4'), E.W * 0.74 + 120, E.gy - 40, 30, 40); x.font = 'bold 7px system-ui'; x.fillStyle = '#2b6fd6'; x.fillText('ICE', E.W * 0.74 + 128, E.gy - 26); car(x, E, cx - 40, '#6b8e5a', true);
   };
   PL.tw_diner = function (x, E, id) {
