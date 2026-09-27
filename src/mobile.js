@@ -11,7 +11,7 @@
     if (t === 'map') { SH.UI.openMap(); setTimeout(() => SH.Map.fitMobile && SH.Map.fitMobile(), 80); } else if (SH.Map.open) SH.UI.closeMap();
     if (t === 'phone') SH.Phone.render();
     if (t === 'you') SH.UI.renderSide();
-    if (t === 'story') { const l = $('#log'); if (l) l.scrollTop = l.scrollHeight; }
+    if (t === 'story') { const l = $('#log'); if (l) l.scrollTop = 0; }
   };
   Mo.badge = function () {
     const b = $('#tabbar [data-t="phone"] .tb'); if (!b || !SH.G) return;

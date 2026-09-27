@@ -208,3 +208,8 @@ body.mapfull #pbody .wtabs{margin-bottom:0}
 }
 @media (min-width:761px){#toScene{display:none}}
 #mapWrap:not(.hidden){z-index:7} /* above the scene room/place chips (#roomnav z6), which used to cover the map Close button */
+/* turn 45: story log is newest-first; one block per action, newest block on top */
+#log .lb{margin:0 0 6px}
+#log .lb + .lb{border-top:1px solid rgba(255,255,255,.05);padding-top:12px}
+body.v3 #log,#log{mask-image:none!important;-webkit-mask-image:none!important}
+#toScene{display:none!important}

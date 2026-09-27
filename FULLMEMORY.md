@@ -484,3 +484,10 @@ File: `src/tales.js`, loaded after later.js.
   `_vol` no longer overrides it in villages. Dialing 911 in a village reaches county dispatch: "I'll pass it along", and nobody comes.
   found('exhausted') in a village: a villager feeds you instead (stats up, no ending). The car-creep "tell the clerk" in a village: she stares the car away, and nobody calls anyone.
   Also fixed: dialer and gear used the nonexistent SH.Actions.here; they now use SH.Atlas.here.
+
+## #45 — Story newest-first; the floating "⬆ Scene" button is gone (turn 45)
+- User: "reset scroll where it doesn't belong" and the story text should be newest first, older as you go down.
+- ui2.js UI.log/restoreLog: the #log DOM is now [day header][newest batch .lb][older .lb]… A batch holds all lines from one action (split by afterAction via newBatch),
+  and lines inside a batch stay in reading order. G.log entries carry a 4th field, the batch id (G.logB). Trimming removes the oldest (last) children.
+- mobscroll.js: the "⬆ Scene" pill is removed (sync deletes it; CSS hides #toScene). reveal() brings the newest batch into view at the top, not the bottom.
+  mobile.js story tab: scrollTop 0. style3.css: .lb divider; #log top-fade mask removed so the newest line isn't faded.

@@ -859,6 +859,11 @@ body.mapfull #pbody .wtabs{margin-bottom:0}
 }
 @media (min-width:761px){#toScene{display:none}}
 #mapWrap:not(.hidden){z-index:7} /* above the scene room/place chips (#roomnav z6), which used to cover the map Close button */
+/* turn 45: story log is newest-first; one block per action, newest block on top */
+#log .lb{margin:0 0 6px}
+#log .lb + .lb{border-top:1px solid rgba(255,255,255,.05);padding-top:12px}
+body.v3 #log,#log{mask-image:none!important;-webkit-mask-image:none!important}
+#toScene{display:none!important}
 
 </style>
 </head>
@@ -12259,22 +12264,36 @@ window.SH = window.SH || {};
 
   /* ---------- story log ---------- */
   const LIC = { good: '✦', bad: '▲', sys: '', warn: '!', day: '' };
-  let lastStamp = '', newBatch = false;
+  // Turn 45: newest first. The log is: [day header] [newest batch] [older batch] … [day header] [batches…].
+  // A "batch" is everything one action produced; inside a batch lines stay in reading order (top to bottom).
+  let lastStamp = '', newBatch = true, cur = null;
   function para(text, cls, t) {
     const p = document.createElement('div'); p.className = 'le ' + (cls || '');
     if (cls === 'day') { p.innerHTML = `<div class="chap">${text}</div>`; lastStamp = ''; return p; }
     const stamp = t != null ? SH.fmt12(t) : ''; const show = stamp && stamp !== lastStamp; lastStamp = stamp;
     p.innerHTML = `<span class="ts">${show ? stamp.replace(' ', '<br>') : ''}</span><span class="lt"></span>`; p.querySelector('.lt').textContent = text; return p;
   }
+  const put = (l, text, cls, t) => {
+    if (cls === 'day') { const p = para(text, cls, t); l.prepend(p); cur = null; return p; }
+    if (!cur || !cur.isConnected) {
+      cur = document.createElement('div'); cur.className = 'lb'; lastStamp = '';
+      const f = l.firstElementChild; if (f && f.classList.contains('day')) f.after(cur); else l.prepend(cur);
+    }
+    const p = para(text, cls, t); cur.appendChild(p); return p;
+  };
+  const trim = (l) => { let n = l.querySelectorAll('.le').length; while (n > 160 && l.lastElementChild) { n -= l.lastElementChild.classList.contains('lb') ? l.lastElementChild.children.length : 1; l.lastElementChild.remove(); } };
   UI.log = function (text, cls = '') {
     text = SH.nm(text); const G = SH.G, l = $('#log'); if (!l) return;
-    if (l.children.length > 160) for (let k = 0; k < 20; k++) l.firstElementChild && l.firstElementChild.remove();
-    G.log.push([text, cls, G.t]); if (G.log.length > 140) G.log.shift();
-    if (newBatch) { l.querySelectorAll('.le.fresh').forEach((e) => e.classList.remove('fresh')); newBatch = false; }
-    const p = para(text, cls, G.t); p.classList.add('fresh', 'in'); l.appendChild(p); l.scrollTop = l.scrollHeight;
+    if (newBatch) { l.querySelectorAll('.le.fresh').forEach((e) => e.classList.remove('fresh')); newBatch = false; cur = null; G.logB = (G.logB || 0) + 1; }
+    G.log.push([text, cls, G.t, G.logB || 0]); if (G.log.length > 140) G.log.shift();
+    const p = put(l, text, cls, G.t); p.classList.add('fresh', 'in'); trim(l); l.scrollTop = 0;
     if (cls === 'day' && !G._booting && !/Rewound|You leave/.test(text)) U2.dayCard(text);
   };
-  UI.restoreLog = function () { const l = $('#log'); l.innerHTML = ''; lastStamp = ''; SH.G.log.forEach(([t, c, tm]) => l.appendChild(para(t, c, tm))); l.scrollTop = l.scrollHeight; };
+  UI.restoreLog = function () {
+    const l = $('#log'); l.innerHTML = ''; lastStamp = ''; cur = null; let pb = null, pt = null;
+    SH.G.log.forEach(([t, c, tm, b]) => { const key = b != null ? b : tm; if (key !== pb) cur = null; pb = key; pt = tm; put(l, t, c, tm); });
+    cur = null; newBatch = true; l.scrollTop = 0;
+  };
   const baseAfter = UI.afterAction; UI.afterAction = function () { const r = baseAfter.apply(this, arguments); newBatch = true; return r; };
 
   /* ---------- day card + recap ---------- */
@@ -13036,7 +13055,7 @@ window.SH = window.SH || {};
     if (t === 'map') { SH.UI.openMap(); setTimeout(() => SH.Map.fitMobile && SH.Map.fitMobile(), 80); } else if (SH.Map.open) SH.UI.closeMap();
     if (t === 'phone') SH.Phone.render();
     if (t === 'you') SH.UI.renderSide();
-    if (t === 'story') { const l = $('#log'); if (l) l.scrollTop = l.scrollHeight; }
+    if (t === 'story') { const l = $('#log'); if (l) l.scrollTop = 0; }
   };
   Mo.badge = function () {
     const b = $('#tabbar [data-t="phone"] .tb'); if (!b || !SH.G) return;
@@ -13550,21 +13569,22 @@ window.SH = window.SH || {};
 /* SMALL HOURS — mobile Story tab scrolls as one page.
    On phones the scene + buttons used to eat ~2/3 of the screen and the story text lived in a ~200px box;
    swiping on the scene did nothing. Now #center is the scroll container (CSS in style3.css, max-width 760px):
-   the scene scrolls away, the text gets the whole screen, and a "⬆ Scene" pill brings it back.
-   New lines only pull the page down when they'd land below the screen, so the scene stays in view while there's room. */
+   the scene scrolls away and the text gets the whole screen. Turn 45: newest text is on top, right under the scene,
+   and the floating "⬆ Scene" pill is removed. */
 (function (SH) {
   const $ = (s) => document.querySelector(s);
   const on = () => SH.Mobile && SH.Mobile.is && SH.Mobile.is();
   const C = () => $('#center');
   // bring the newest line into view (only if it's below the fold); `force` = jump to the very end
+  // newest lines sit at the TOP of the story now (turn 45), right under the scene: bring them into view if you'd scrolled down
   const reveal = (force) => {
     if (!on()) return; const c = C(), l = $('#log'); if (!c || !l) return;
     requestAnimationFrame(() => {
-      if (force) { c.scrollTop = c.scrollHeight; return; }
-      const last = l.lastElementChild; if (!last) return;
-      const cr = c.getBoundingClientRect(), r = last.getBoundingClientRect();
-      const down = r.bottom - cr.bottom + 16, maxDown = r.top - cr.top - 8; // never push the new line's top off-screen
-      if (down > 0 && maxDown > 0) c.scrollTop += Math.min(down, maxDown);
+      const st = $('#stage'), first = l.querySelector('.lb') || l.firstElementChild; if (!first) return;
+      const cr = c.getBoundingClientRect(), r = first.getBoundingClientRect();
+      if (!force && r.top >= cr.top - 4 && r.top < cr.bottom - 60) return; // already visible
+      const sh = st ? st.offsetHeight : 0;
+      c.scrollTop = sh + 140 < c.clientHeight ? 0 : Math.max(0, c.scrollTop + r.top - cr.top - 8);
     });
   };
   const UI = SH.UI;
@@ -13580,11 +13600,8 @@ window.SH = window.SH || {};
     b.onclick = () => { const c = C(); c && c.scrollTo({ top: 0, behavior: 'smooth' }); };
     document.body.appendChild(b); return b;
   };
-  const sync = () => {
-    const c = C(), s = $('#stage'); if (!c || !s) return;
-    const show = on() && (!document.body.dataset.tab || document.body.dataset.tab === 'story') && c.scrollTop > s.offsetHeight * 0.6;
-    pill().classList.toggle('show', show);
-  };
+  // the floating "⬆ Scene" pill is gone (turn 45: it covered the story text); newest-first makes it unnecessary
+  const sync = () => { const b = $('#toScene'); if (b) b.remove(); };
   const bind = () => { const c = C(); if (!c || c._ms) return; c._ms = 1; c.addEventListener('scroll', sync, { passive: true }); window.addEventListener('resize', sync); sync(); };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bind); else bind();
   SH.MobScroll = { reveal, sync };

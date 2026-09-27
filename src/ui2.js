@@ -123,22 +123,36 @@
 
   /* ---------- story log ---------- */
   const LIC = { good: '✦', bad: '▲', sys: '', warn: '!', day: '' };
-  let lastStamp = '', newBatch = false;
+  // Turn 45: newest first. The log is: [day header] [newest batch] [older batch] … [day header] [batches…].
+  // A "batch" is everything one action produced; inside a batch lines stay in reading order (top to bottom).
+  let lastStamp = '', newBatch = true, cur = null;
   function para(text, cls, t) {
     const p = document.createElement('div'); p.className = 'le ' + (cls || '');
     if (cls === 'day') { p.innerHTML = `<div class="chap">${text}</div>`; lastStamp = ''; return p; }
     const stamp = t != null ? SH.fmt12(t) : ''; const show = stamp && stamp !== lastStamp; lastStamp = stamp;
     p.innerHTML = `<span class="ts">${show ? stamp.replace(' ', '<br>') : ''}</span><span class="lt"></span>`; p.querySelector('.lt').textContent = text; return p;
   }
+  const put = (l, text, cls, t) => {
+    if (cls === 'day') { const p = para(text, cls, t); l.prepend(p); cur = null; return p; }
+    if (!cur || !cur.isConnected) {
+      cur = document.createElement('div'); cur.className = 'lb'; lastStamp = '';
+      const f = l.firstElementChild; if (f && f.classList.contains('day')) f.after(cur); else l.prepend(cur);
+    }
+    const p = para(text, cls, t); cur.appendChild(p); return p;
+  };
+  const trim = (l) => { let n = l.querySelectorAll('.le').length; while (n > 160 && l.lastElementChild) { n -= l.lastElementChild.classList.contains('lb') ? l.lastElementChild.children.length : 1; l.lastElementChild.remove(); } };
   UI.log = function (text, cls = '') {
     text = SH.nm(text); const G = SH.G, l = $('#log'); if (!l) return;
-    if (l.children.length > 160) for (let k = 0; k < 20; k++) l.firstElementChild && l.firstElementChild.remove();
-    G.log.push([text, cls, G.t]); if (G.log.length > 140) G.log.shift();
-    if (newBatch) { l.querySelectorAll('.le.fresh').forEach((e) => e.classList.remove('fresh')); newBatch = false; }
-    const p = para(text, cls, G.t); p.classList.add('fresh', 'in'); l.appendChild(p); l.scrollTop = l.scrollHeight;
+    if (newBatch) { l.querySelectorAll('.le.fresh').forEach((e) => e.classList.remove('fresh')); newBatch = false; cur = null; G.logB = (G.logB || 0) + 1; }
+    G.log.push([text, cls, G.t, G.logB || 0]); if (G.log.length > 140) G.log.shift();
+    const p = put(l, text, cls, G.t); p.classList.add('fresh', 'in'); trim(l); l.scrollTop = 0;
     if (cls === 'day' && !G._booting && !/Rewound|You leave/.test(text)) U2.dayCard(text);
   };
-  UI.restoreLog = function () { const l = $('#log'); l.innerHTML = ''; lastStamp = ''; SH.G.log.forEach(([t, c, tm]) => l.appendChild(para(t, c, tm))); l.scrollTop = l.scrollHeight; };
+  UI.restoreLog = function () {
+    const l = $('#log'); l.innerHTML = ''; lastStamp = ''; cur = null; let pb = null, pt = null;
+    SH.G.log.forEach(([t, c, tm, b]) => { const key = b != null ? b : tm; if (key !== pb) cur = null; pb = key; pt = tm; put(l, t, c, tm); });
+    cur = null; newBatch = true; l.scrollTop = 0;
+  };
   const baseAfter = UI.afterAction; UI.afterAction = function () { const r = baseAfter.apply(this, arguments); newBatch = true; return r; };
 
   /* ---------- day card + recap ---------- */
