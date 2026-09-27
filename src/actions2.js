@@ -83,8 +83,16 @@
   };
 
   A.shoplift = function () {
-    const G = SH.G; SH.advance(5, { interrupt: false });
-    if (U.chance(0.35)) {
+    const G = SH.G;
+    // turn 48: clerks remember. Caught here once → not here again for a week. Each try at the same store on the same day is riskier.
+    const where = (G.away || 'harlow') + ':' + G.loc; G.lift = G.lift || {}; const L = (G.lift[where] = G.lift[where] || { n: 0, day: 0, caught: -99 });
+    if (SH.day() - L.caught < 7) { SH.UI.toast('The clerk hasn\'t taken his eyes off you since you walked in. Not here.'); return; }
+    if (L.day !== SH.day()) { L.day = SH.day(); L.n = 0; }
+    const risk = Math.min(0.9, 0.35 + L.n * 0.2); L.n++;
+    const loot = G.phase === 'run' ? U.pick(['granola', 'granola', 'chips', 'apple']) : 'granola';
+    SH.advance(5, { interrupt: false });
+    if (U.chance(risk)) {
+      L.caught = SH.day();
       if (G.phase === 'run') { // caught on the run: a scene, never a trip home (the story keeps going)
         SH.st('stress', 12);
         D({ title: 'Caught', text: ['A hand on your shoulder. The clerk. "Put it back, kid."', G.heat > 30 ? 'He squints at you like he\'s trying to place your face. Then a customer calls him over, and the moment passes.' : 'He looks at your backpack, then at you. "Just put it back."'],
@@ -95,7 +103,7 @@
       }
       SH.st('stress', 15); SH.susp(20, 'QuikMart called home');
       D({ title: 'Caught', text: ['A hand on your shoulder. The clerk, an older guy in a veteran\'s cap. "Put it back, kid." You put it back.', 'He looks at you for a long time. "You hungry?" You don\'t answer. He hands you the granola bar anyway. "Don\'t do that again. Next time I call somebody."'], choices: [{ t: 'Nod', fn: () => { SH.addBag('granola', true); } }] });
-    } else { SH.addBag('granola', true); SH.st('stress', 6); SH.st('mood', -3); SH.tag('stole'); log('It\'s in your sleeve before you can think. Your heart doesn\'t slow down for two blocks.', 'warn'); }
+    } else { SH.addBag(loot, true); SH.st('stress', 6); SH.st('mood', -3); SH.tag('stole'); log(`The ${SH.ITEMS[loot].n.toLowerCase()} is in your sleeve before you can think. Your heart doesn't slow down for two blocks.`, 'warn'); }
     done();
   };
 

@@ -81,7 +81,11 @@
     if (!G.discoveredAt && G.t >= G.discoverAt) R.discovered();
     if (G.discoveredAt) {
       if (!G.reported && G.t >= G.discoveredAt + 120) { G.reported = true; G.heat = Math.max(G.heat, 35); SH.Phone.addPost('dana.reyes', `MISSING: ${G.name} Reyes, 12, last seen ${SH.dateStr(G.missingAt)} in Harlow. Grey hoodie, black backpack. Please share. Please call if you see my baby. 💔`, G.t, { missing: true, shares: 12 }); SH.UI.log('Your mom has filed a missing report. Your school photo is on Chirp.', 'bad'); }
-      G.heat = Math.min(100, G.heat + (G.reported ? 2.6 : 1) * k);
+      // the search peaks, then fades (turn 48): hard for ~2 days, a plateau, then it cools off unless something stirs it up.
+      // A village cools fastest (nobody there is looking); the poster never fully goes away (floor 15 once reported).
+      { const days = (G.t - G.discoveredAt) / 1440, vil = SH.inVillage && SH.inVillage();
+        const rate = days < 2 ? (G.reported ? 2.6 : 1) : days < 4 ? 0.25 : -(vil ? 0.7 : 0.35);
+        G.heat = U.clamp(G.heat + rate * k, rate < 0 && G.reported ? Math.min(G.heat, 15) : 0, 100); }
       const mp = G.feed.find((p) => p.missing); if (mp) mp.shares = Math.round(mp.shares + 18 * k);
     }
     // pickups

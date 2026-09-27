@@ -101,7 +101,7 @@
     if (p.adult) { SH.UI.toast(C.refuse(p)); return false; }
     g.owned = g.owned || [];
     if (p.big) { g.owned.push(key); if (p.ride === 'bike' || p.ride === 'cargo') SH.flag('hasBike'); if (p.ride) SH.flag('hasRide_' + p.ride); return true; }
-    if (!SH.addBag(key)) { g.owned.push(key); SH.UI.toast(`${p.n}: backpack's full, so it goes with your other stuff.`); }
+    if (!SH.addBag(key)) { g.owned.push(key); SH.UI.toast(`${p.n}: backpack's full, so it stays here with your other big stuff. It won't come with you if you leave town.`); }
     return true;
   };
   C.fmt = (n) => '$' + n.toFixed(2);
