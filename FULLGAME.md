@@ -504,3 +504,9 @@ Tests: `tests/parts.js` (runs `tests/part2.js`…`part7.js`, fresh page each).
 
 ## REQUESTS #31–33 BUILT: away towns are real places
 Every town you reach has its own map, streets, open/closed places, people with names and jobs who remember what you told them, work, sleeping spots, a timetable, a notice board, a library computer, and endings that fit how you got there. See FULLMEMORY.md #31–33.
+
+## REQUESTS #34–36 BUILT: context, friends with their own reasons, leaving = running
+- People remember what you just asked, answer "why not?", and follow "what about tomorrow?" without repeating themselves word for word.
+- Walk, ride or bus out of Harlow and you've run away, button or not.
+- Every friend has trouble of their own they'll tell you about if you ask. Talk them into coming: their trouble, a real plan, sticking together, and "you can go home any time" all count; pushing them backfires. Once they say yes, texting "come with?" works.
+- L goes back/closes menus, conversations, maps and phone screens. Long option lists scroll.

@@ -858,6 +858,7 @@ body.mapfull #pbody .wtabs{margin-bottom:0}
   #title::-webkit-scrollbar{display:none}
 }
 @media (min-width:761px){#toScene{display:none}}
+#mapWrap:not(.hidden){z-index:7} /* above the scene room/place chips (#roomnav z6), which used to cover the map Close button */
 
 </style>
 </head>
@@ -1576,7 +1577,10 @@ window.SH = window.SH || {};
     idk: "i don't know", pls: 'please', plz: 'please', rn: 'right now', tho: 'though', ya: 'you', thx: 'thanks', ty: 'thanks',
     ok: 'okay', k: 'okay', kk: 'okay', wanna: 'want to', gonna: 'going to', bc: 'because', cuz: 'because', coz: 'because',
     ppl: 'people', wat: 'what', wut: 'what', ima: "i'm going to", w: 'with', abt: 'about', tmrw: 'tomorrow', nite: 'night',
-    whats: "what's", thats: "that's", youre: "you're", hes: "he's", shes: "she's", isnt: "isn't", doesnt: "doesn't", its: "it's" };
+    whats: "what's", thats: "that's", youre: "you're", hes: "he's", shes: "she's", isnt: "isn't", doesnt: "doesn't", its: "it's",
+    wheres: "where's", whens: "when's", hows: "how's", whos: "who's", theres: "there's", heres: "here's", lemme: 'let me', gimme: 'give me', gotta: 'got to', kinda: 'kind of', sorta: 'sort of',
+    shouldnt: "shouldn't", wouldnt: "wouldn't", couldnt: "couldn't", wasnt: "wasn't", werent: "weren't", havent: "haven't", hasnt: "hasn't", arent: "aren't", aint: "isn't",
+    rly: 'really', sry: 'sorry', srsly: 'seriously', ngl: 'not going to lie', tbh: 'to be honest', y: 'why', b4: 'before', '2day': 'today', '2nite': 'tonight', tonite: 'tonight', bout: 'about', cya: 'see you', wyd: 'what are you doing', hbu: 'how about you', wbu: 'what about you' };
 
   const P = {
     greet: /\b(hi|hey+|hello|yo|sup|hiya|howdy|good (morning|evening|afternoon))\b/,
@@ -3866,8 +3870,8 @@ window.SH = window.SH || {};
     G.discoverAt = discoveredNow ? G.t : R.calcDiscover();
     if (reason === 'bigNight') G.discoverAt = Math.min(G.discoverAt, G.t + 9 * 60);
     if (SH.f('leftNote')) G.discoverAt = Math.min(G.discoverAt, G.t + 8 * 60);
-    SH.UI.log('— You leave. —', 'day');
-    SH.UI.log(reason === 'bigNight' ? 'Out the window, onto the porch roof, down the drainpipe you\'ve imagined climbing a hundred times. Your hands are shaking. The cold hits you like a slap. Behind you, a light is still on.' : 'The door clicks shut behind you. The street is exactly the same as always, which feels impossible.', 'bad');
+    SH.UI.log(reason === 'leftTown' ? '— You leave Harlow. —' : '— You leave. —', 'day');
+    SH.UI.log(reason === 'leftTown' ? 'You didn\'t pack a speech or say goodbye. You just didn\'t turn around. The water tower gets smaller behind you, and somewhere back there, a house hasn\'t noticed yet. It will. This counts. You\'re gone.' : reason === 'bigNight' ? 'Out the window, onto the porch roof, down the drainpipe you\'ve imagined climbing a hundred times. Your hands are shaking. The cold hits you like a slap. Behind you, a light is still on.' : 'The door clicks shut behind you. The street is exactly the same as always, which feels impossible.', 'bad');
     SH.UI.log('You are twelve years old, and you are out. Open the map to go somewhere. Ask PIP for a plan. Watch your warmth, food, battery — and who\'s looking for you.', 'sys');
     SH.UI.afterAction();
   };
@@ -9566,7 +9570,7 @@ window.SH = window.SH || {};
   const nChanges = () => Object.values(look()).filter(Boolean).length;
   function cover(p) {
     const c = cov()[p.id];
-    K.D(`Your story in ${p.name}`, c ? [`Here, you're "${c.name}". ${STORIES.find((s) => s[0] === c.story)[1]}.`, 'Stick to it. People remember.'] : ['People in small places ask. It\'s better to have an answer ready than to make one up with someone staring at you.'],
+    K.D(`Your story in ${p.name}`, c ? [`Here, you're "${c.name || 'nobody yet'}". ${(STORIES.find((s) => s[0] === c.story) || [0, c.storyText ? 'You told people: "' + c.storyText + '"' : 'You haven\'t told anyone why you\'re here'])[1]}.`, 'Stick to it. People remember.'] : ['People in small places ask. It\'s better to have an answer ready than to make one up with someone staring at you.'],
       (c ? [] : STORIES.map(([k, t]) => ({ t: `"${t}."`, fn: () => K.ask('Your name here', ['And what\'s your name? (Pick one you\'ll remember.)'], 'Jordan', (nm) => { cov()[p.id] = { name: nm.split(/\s+/)[0].replace(/[^A-Za-z'-]/g, '').slice(0, 14) || 'Jordan', story: k, told: [] }; SH.UI.toast(`In ${p.name}, you're ${cov()[p.id].name}.`); setTimeout(K.back, 30); }) }))).concat([{ t: 'Back', fn: K.back }]));
   }
   /* locals remember the name and story you gave */
@@ -10756,7 +10760,7 @@ window.SH = window.SH || {};
       if (filler) {
         const pq = c.pq;
         if (pq && pq.kind === 'how') { const good = an.sent > 0 || an.has('yes') || an.I.happy || an.I.proud || /\b(good|great|aced|passed|won|fine|okay)\b/.test(an.t); const bad = an.sent < 0 || /\b(bad|failed|terrible|lost|awful|bombed)\b/.test(an.t); s = say(id, bad && !good ? 'bad' : 'good', {}, c); fx = { rel: 2, mood: bad ? 0 : 2 }; }
-        else if (pq && (an.has('yes') || an.has('no') || an.I.idk || an.I.agree || (an.short && pq.kind === 'open'))) {
+        else if (pq && (an.has('yes') || an.has('no') || an.I.idk || an.I.agree || (an.short && pq.kind === 'open' && !an.q && !/^(what|where|when|why|how|who|can|could|do|does|did|is|are|will|would)\b/.test(an.t)))) {
           const y = an.has('yes') || an.I.agree, n = an.has('no');
           if (pq.kind === 'ok') s = say(id, y ? 'yesOk' : n ? 'noOk' : 'idk', {}, c);
           else if (pq.kind === 'offer') s = say(id, y ? 'yesOffer' : n ? 'noOffer' : 'idk', {}, c);
@@ -11991,6 +11995,114 @@ window.SH = window.SH || {};
     if (/(you|u) ok\??|are (you|u) (okay|ok|alright)/.test(last)) return [['No. Things at home are really bad.', 'Not really. Can I tell you something?'], ['Define okay.', 'I\'m a solid four out of ten.'], ['I\'m fine.', 'Yeah, just tired.']];
     return [[f.knows ? `Things at home got worse, ${n}.` : 'Can I tell you something real?', 'Do you ever think about running away?', f.offer ? 'Can I come to yours tonight?' : 'Can I sleep over sometime?'], [`Teach me ${likes}. I'll be terrible.`, 'Rate my day out of ten. I\'ll wait.', 'Tyler\'s haircut still looks like a lampshade.'], [`What are you doing later?`, `How's ${likes} going?`, 'Nm. You?']];
   }
+})(window.SH);
+
+</script>
+<script>
+/* friends2.js */
+/* SMALL HOURS — friends have their own reasons, and you can actually talk them into it (turn 34).
+   Before: whether a friend would run with you was one dice roll, made the first time you asked and never changed, and
+   none of them had any trouble of their own — so there was no reason for them to come, and nothing you said mattered.
+   Now:
+   - Every friend has a trouble of their own (two possibilities each, picked per story seed): a move they don't want,
+     a dad who's never home, a failed test with a forged signature… Ask how they're doing (or tell them about yours) and
+     they'll tell you. It never shows up as a number.
+   - Talking them into it is a conversation. What moves them: their own trouble ("you said your dad's never home"),
+     a real plan (where you'd sleep, money, a ticket — checked against what you actually have), promising to stick
+     together, and that they can go home any time. Pushing, insulting or calling them scared pushes them away.
+     When they're close, they tell you what's still bothering them ("but where would we even sleep").
+   - Once they've said yes, "come with?" works (unless a strict parent took their phone — and they tell you that).
+   - Friends with worse trouble at home last longer on the road before they get homesick. */
+(function (SH) {
+  const FR = SH.Friends; if (!FR || !SH.Brain) return;
+  const G = () => SH.G, pick = (a) => a[Math.floor(Math.random() * a.length)];
+  const TR = FR.TROUBLE = {
+    nia: [{ sev: 20, k: /\b(detroit|move|moving|divorce|split(ting)?|your dad|ur dad)\b/, tell: 'honestly? my parents are splitting up. i\'m supposed to move to my dad\'s in detroit next month. i barely know him. nobody asked me', yes: 'ok. if it means not getting shipped to detroit... yeah. i\'m in.' },
+      { sev: 15, k: /\b(brother|nights|your mom works|ur mom works)\b/, tell: 'my mom works nights so my brother\'s "in charge". he\'s fine till his friends come over. then i just lock my door', yes: 'my brother wouldn\'t even notice till like thursday. ok. yeah. i\'ll come.' }],
+    marco: [{ sev: 20, k: /\b(truck|rent|money|burden|mouth to feed|your mom|ur mom)\b/, tell: 'the truck\'s not doing good. i heard my mom crying about rent. like, one less kid to feed would kinda help her, right? jk. mostly', yes: '...one less mouth, right? ok. ok i\'m in. don\'t tell my abuela.' },
+      { sev: 25, k: /\b(texas|uncle|sending you|send you|shipping you)\b/, tell: 'they\'re sending me to my uncle\'s in texas "for a while". nobody will say how long. i asked like five times', yes: 'better than texas. ok. i\'m coming. for real.' }],
+    priya: [{ sev: 25, k: /\b(test|grade|signature|forged|failed|fail|report card)\b/, tell: 'I failed the physics test. First time ever. I forged my mom\'s signature on it. The school emails parents on Friday. I think about that every second.', yes: 'Friday\'s going to happen either way. ...Okay. Okay. I\'ll come. I\'m bringing a first aid kit.' },
+      { sev: 20, k: /\b(tutor|tutoring|piano|kumon|schedule|free time|pressure|never let you)\b/, tell: 'My parents schedule every minute. Tutoring, piano, Kumon, robotics. I haven\'t had a free afternoon in two years. I timed it once.', yes: 'I\'ve never done one thing that wasn\'t on a schedule. ...Okay. I\'m in. I\'m making a packing list.' }],
+    eli: [{ sev: 30, k: /\b(your dad|ur dad|alone|fridge|nobody would notice|no one would notice|gone for|by yourself)\b/, tell: 'my dad\'s been gone three weeks. the fridge is ketchup and one egg. if i left nobody would notice till like next month', yes: 'nobody\'s even home to miss me. yeah. i\'ll come.' },
+      { sev: 25, k: /\b(move|moving|again|new school|starting over|fifth school)\b/, tell: 'we\'re moving again in two weeks. fifth school. i\'m so tired of being the new kid', yes: 'if i\'m gonna be somewhere new anyway... at least it\'d be with you. ok.' }],
+    theo: [{ sev: 20, k: /\b(your dad|ur dad|yell|yells|losing|lose|dinner|westfield)\b/, tell: 'after we lost to westfield my dad didn\'t let me eat dinner. like as a lesson. he yells in the car the whole way home', yes: 'i\'m not sitting in that car again. ok. i\'m in.' },
+      { sev: 15, k: /\b(math|cut|the team|grade)\b/, tell: 'if my math grade doesn\'t come up i\'m off the team. and basketball\'s literally the only thing i\'m good at', yes: 'if i\'m getting cut anyway... whatever. ok. i\'ll come.' }],
+    hazel: [{ sev: 25, k: /\b(house|notice|evict|lose the|quinn place|farm|pink)\b/, tell: 'there\'s a pink notice on our door. we might lose the quinn place. my dad won\'t talk about it, he just works more', yes: 'if we\'re losing the house anyway i\'d rather be somewhere with trees. i\'m in. obviously.' },
+      { sev: 20, k: /\b(your dad|ur dad|alone|doubles|by yourself|doesn'?t come home)\b/, tell: 'my dad works doubles so i basically raise myself. some nights he doesn\'t come home at all. it\'s fine. it\'s mostly fine', yes: 'i basically live alone already. at least this way i\'d have company. ok!' }],
+  };
+  const trouble = (id) => { const L = TR[id]; if (!L) return null; const s = ((G().story && G().story.seed) || 1) + id.length * 13; return L[s % L.length]; };
+  FR.trouble = trouble;
+  const THR = (id) => 60 + (FR.KIDS[id].fam === 'strict' ? 10 : 0);
+  const RUN = /\b(run(ning)? away|runaway|take off|leave (home|town|here)|get out of (here|this town|town)|just leave|disappear|come with|with me|you in|u in|join me|you coming|u coming)\b/;
+  const ASKTHEM = /\b(you ok|u ok|are you okay|r u ok|how('s| is) (your|ur) (home|house|family|dad|mom|brother)|what'?s wrong|what about you|what about u|how about you|hbu|wbu|is everything ok|anything going on|how are things (at home|with you)|do you (ever )?have problems|your (parents|family)|ur (parents|family)|is it bad at (yours|your house|ur house))\b/;
+  const ARGS = {
+    plan: /\b(plan|grandma|aunt|uncle|money|saved|ticket|bus|train|shelter|safe place|i know a place|motel|we'?d sleep|place to sleep|i have \$?\d+|got \$?\d+|food)\b/,
+    together: /\b(together|not alone|look out for|need you|best friend|two is safer|stick together|i'?ll protect|i won'?t leave you|won'?t let anything happen|i got you|we got this)\b/,
+    back: /\b(come back|just a few days|any ?time you want|go home whenever|can go home|not forever|only for a bit|a weekend)\b/,
+  };
+  const PUSH = /\b(coward|chicken|scared(y)? cat|baby|you'?re scared|ur scared|don'?t be lame|lame|you owe me|u owe me|if you were my friend|if u were my friend)\b/;
+  function brainWrap(id, base) {
+    const w = function (an, c) {
+      c = c || {}; c.mem = c.mem || {};
+      const f = FR.st(id), g = G(), t = an.t || '', rel = g.rel[id] || 0, tr = trouble(id), k = FR.KIDS[id], rt = (f.rt = f.rt || { asks: 0 }), th = (c.mem.th = c.mem.th || { k: null, s: null });
+      const dec00 = f.rt && f.rt.dec, R = (say, fx, x) => Object.assign({ say, fx: fx || {} }, x || {});
+      if (!tr || (an.has && an.has('selfharm'))) return base.apply(this, arguments);
+      // they tell you about their own trouble
+      if (!f.shared && (ASKTHEM.test(t) || (f.knows && th.k === 'home' && an.q && /\b(you|u)\b/.test(t))) && rel >= 10) { f.shared = true; c.mem.fr2 = 'shared'; return R(tr.tell, { rel: 3 }, { narr: `${k.n} has never told anyone that. You can tell.` }); }
+      if (f.shared && ASKTHEM.test(t)) return R(pick(['same stuff. it\'s whatever', 'still the same. thanks for asking tho. nobody asks']), { rel: 1 });
+      // persuading: only while the running-away talk is on, and they haven't said yes yet
+      const onRun = th.k === 'run' || RUN.test(t) || rt.asks > 0;
+      if (onRun && !f.wouldRun && !(g.party || []).includes(id)) {
+        f.args = f.args || {};
+        if (f.pull == null) f.pull = (f.knows ? 15 : 0) + (rel - 30) / 2 + (f.shared ? tr.sev : tr.sev / 2) + (k.risk || 0.3) * 30;
+        let d = 0, used = [];
+        if (PUSH.test(t) || (an.I && an.I.hostile)) { f.pull -= 15; return R(pick(['wow. ok. that\'s not how u get someone to come with u', 'don\'t call me that. i\'m not scared, i\'m thinking', 'dude. rude. i was actually thinking about it']), { rel: -4 }); }
+        if (f.shared && tr.k.test(t) && !f.args.trouble) { d += 25; used.push('trouble'); }
+        if (ARGS.plan.test(t) && !f.args.plan) { d += 15 + ((g.money || 0) >= 30 || (g.tickets && Object.keys(g.tickets).length) || SH.f('grandmaAddr') ? 10 : 0); used.push('plan'); }
+        if (ARGS.together.test(t) && !f.args.together) { d += 12; used.push('together'); }
+        if (ARGS.back.test(t) && !f.args.back) { d += 8; used.push('back'); }
+        if (used.length) {
+          used.forEach((u) => { f.args[u] = 1; }); f.pull += d; th.k = 'run';
+          if (f.pull >= THR(id)) { f.wouldRun = true; rt.dec = 'in'; th.s = 'when'; SH.flag && SH.flag('talkedFriendIn'); return R(`${tr.yes} when?`, { rel: 4 }, { narr: `${k.n} would come with you. You talked ${k.g === 'he' ? 'him' : k.g === 'she' ? 'her' : 'them'} into it. You're not sure if that makes it better or worse.` }); }
+          // close, but something's still bugging them: tell you what
+          const need = !f.args.plan ? 'plan' : !f.args.together ? 'together' : f.shared && !f.args.trouble ? 'trouble' : !f.args.back ? 'back' : 'time';
+          const NEED = { plan: ['ok but where would we even sleep. like actually. and with what money', 'i mean... maybe. but what\'s the actual plan. like where do we go'], together: ['and what if we get split up or something. i\'d freak out', 'maybe. but promise we\'d stick together? like no matter what?'], trouble: ['...idk. it\'s not like home is great for me either. but', 'i mean. you know how it is at my house. but still'], back: ['what if i want to come home tho. like after a day', 'and if i hate it, i can just go home right?'], time: ['i\'m like... almost there. give me a sec. this is huge', 'ok ok ok. i\'m thinking about it. for real this time'] };
+          rt.dec = rt.dec === 'no' ? 'help' : rt.dec;
+          const ACK = { trouble: ['...yeah. i hate it there. i do.', 'ok that\'s. yeah. that\'s true.'], plan: ['ok that\'s actually a plan.', 'huh. ok. u really thought about it.'], together: ['ok. together. that helps.', 'promise? ok.'], back: ['ok. that makes it less scary.', 'ok. not forever. i can do not forever.'] };
+          const far = f.pull < THR(id) - 25;
+          return R(`${pick(ACK[used[used.length - 1]])} ${far ? pick(['still. this is huge. ', 'but i don\'t know. ']) : ''}${pick(NEED[need])}`, { rel: 1 });
+        }
+        // first time they're asked: decide from who they are, not a coin
+        if (rt.dec == null && /\b(come with|with me|you in|u in|join me|you coming|u coming|would (you|u) come|wanna come|want to come)\b/.test(t)) {
+          if (f.pull >= THR(id)) { rt.dec = 'in'; } else { rt.dec = rel >= 25 ? 'help' : 'no'; rt.asks = (rt.asks || 0); }
+        }
+      }
+      const dec0 = dec00, r = base.apply(this, arguments);
+      if (dec0 == null && (rt.dec === 'help' || rt.dec === 'no') && r && typeof r.say === 'string' && !f.wouldRun && rt.dec !== dec0 && !f._hinted) {
+        f._hinted = true; r.say += ' ' + (f.shared ? pick(['...i mean. part of me wants to. i just don\'t know how it\'d even work', '...ugh. with my stuff at home, part of me really wants to']) : pick(['...not that my house is perfect either', '...it\'s not like everything\'s great at mine either tho']));
+      }
+      return r;
+    };
+    Object.keys(base).forEach((x) => { w[x] = base[x]; }); w._fr2 = true;
+    return w;
+  }
+  Object.keys(FR.KIDS).forEach((id) => { const b = SH.Brain[id]; if (typeof b === 'function' && !b._fr2) SH.Brain[id] = brainWrap(id, b); });
+
+  /* inviting by text: a yes is a yes */
+  const bInv = FR.invite;
+  FR.invite = function (id) {
+    const f = FR.st(id), k = FR.KIDS[id], g = G();
+    if (f.wouldRun && k.fam === 'strict' && Math.random() < 0.12) {
+      SH.Phone.push(id, 'me', 'i left. come with?'); SH.advance(10, { interrupt: false });
+      SH.Phone.push(id, id, `${k.parent === 'Dr. Nair' ? 'my mom' : 'my dad'} took my phone. i'm texting from my ipad under the covers. i can't get out tonight. i'm so sorry. try tomorrow??`);
+      SH.UI.log(`${k.n} wanted to. Their ${k.parent.startsWith('Mr') ? 'dad' : 'mom'} got in the way. Maybe tomorrow.`, 'warn'); return SH.UI.afterAction();
+    }
+    if (f.wouldRun) { const r0 = k.risk; k.risk = 2; try { return bInv.apply(this, arguments); } finally { k.risk = r0; } }
+    return bInv.apply(this, arguments);
+  };
+
+  /* worse trouble at home = lasts longer before homesickness */
+  if (SH.K && SH.K.daily) SH.K.daily.push(() => { const g = G(); (g.party || []).forEach((id) => { const tr = trouble(id), f = FR.st(id); if (tr && f.home > 0 && Math.random() < tr.sev / 40) f.home = Math.max(0, f.home - 1); }); });
 })(window.SH);
 
 </script>
@@ -14051,7 +14163,7 @@ window.SH = window.SH || {};
     return T.people.filter((q) => q.kind === L.kind && (q.staff || q.kind !== 'main' ? open : !SH.isDark()) && !(q.kind === 'park' && (h < 7 || h > 19)) && !(q.kind === 'stop' && (h < 6 || h > 21)));
   };
   function talkTo(q, L) {
-    return act(`Talk to ${q.n}`, q.role, () => SH.Talk.open(q.id, { turnsMax: 9, local: q, place: A.here(), spot: L, first: SH.TownTalk ? SH.TownTalk.opener(q, L) : 'Hi.', onEnd: (c) => { if (c.result === 'help') return SH.Endings.found(A.here().hasPolice ? 'self' : 'sheriff'); if (c.result === 'call') { G().awayNotice = 100; TW.notice(0); return; } done(); } }));
+    return act(`Talk to ${q.n}`, q.role, () => SH.Talk.open(q.id, { turnsMax: /busy/.test(q.mood) ? 8 : 16, local: q, place: A.here(), spot: L, first: SH.TownTalk ? SH.TownTalk.opener(q, L) : 'Hi.', onEnd: (c) => { if (c.result === 'help') return SH.Endings.found(A.here().hasPolice ? 'self' : 'sheriff'); if (c.result === 'call') { G().awayNotice = 100; TW.notice(0); return; } done(); } }));
   }
 
   /* ---------- the action list for a town spot ---------- */
@@ -14290,7 +14402,7 @@ window.SH = window.SH || {};
     if (is(q, /too friendly/)) return `Well hi there! I'm ${q.n}. You look like you could use a friend. ${job}`;
     if (is(q, /suspicious/)) return rep && T.tier !== 'city' ? `...Do I know you from somewhere?` : `Can I help you with something?`;
     if (is(q, /busy/)) return job || `Mm-hm?`;
-    if (is(q, /lonely|talks too much|cheerful/)) return `Well hey there! I'm ${q.n}. I don't think I know you, and I know everybody. ${job}`;
+    if (is(q, /lonely|talks too much|cheerful/)) return T.tier === 'village' || T.tier === 'small' ? `Well hey there! I'm ${q.n}. I don't think I know you, and I know everybody. ${job}` : `Well hey there! I'm ${q.n}. ${job || 'What can I do for you?'}`;
     if (is(q, /nosy/)) return `Hi, sweetie. Whose are you? ${job}`;
     return job || `${q.n}. You need something, kid?`;
   };
@@ -14304,6 +14416,7 @@ window.SH = window.SH || {};
     if (/wifi|internet|charge|outlet/.test(t)) return `${(p.services.wifi || ['library'])[0].replace(/^./, (c) => c.toUpperCase())}. Password's usually on the counter.`;
     if (/library/.test(t)) return say('library', (L) => `${L.name}, ${L.hours ? `open ${L.hours[0]} till ${L.hours[1] > 12 ? L.hours[1] - 12 : L.hours[1]}` : 'right there'}.`) || 'We don\'t have one. There\'s a bookmobile Thursdays.';
     if (/food|eat|hungry|grocer|store/.test(t)) return (loc('diner') ? `${loc('diner').name} for a real meal. ` : '') + (loc('gas') ? `${loc('gas').name} for snacks. ` : '') + (loc('church') ? `And ${loc('church').name} does a supper Wednesdays, free.` : '');
+    if (/laundromat/.test(t)) return say('laundromat', (L) => `${L.name}, on ${T.street}. Warm in there. Nobody minds if you sit.`);
     if (/church/.test(t)) return say('church', (L) => `${L.name}. Side door's never locked.`);
     if (/police|cop|sheriff/.test(t)) return p.hasPolice ? `Station's on ${T.street}. Why, you in trouble?` : 'Sheriff\'s thirty-five minutes out. We mostly handle things ourselves.';
     if (/shelter|youth|safe place|homeless/.test(t)) return say('shelter', (L) => `${L.name}. The brick house with the porch light. They're good people. You didn't hear it from me.`) || 'Nearest shelter\'s in the city. There\'s a number, though. The library has flyers.';
@@ -14327,9 +14440,106 @@ window.SH = window.SH || {};
       default: ['Weather\'s turning.', `Not much happens in ${p.name}. That's how we like it.`, 'You\'re not from around here, are you?'],
     };
     const k = Object.keys(topics).find((x) => q.role.includes(x)) || (/register|clerk/.test(q.role) ? 'counter' : 'default');
-    return SH.TownText.pk('st_' + q.id, topics[k].concat(topics.default));
+    return SH.TownText.pk('st_' + q.id, [...new Set(topics[k].concat(topics.default))]);
   }
 
+
+  /* ---------- topics: what are we talking about, and what about it ---------- */
+  const TOPIC = [
+    ['sleep', /\b(sleep|spend the night|stay tonight|somewhere to stay|where (can|do) (i|people) stay)\b/],
+    ['grandma', /\b(larkspur|grandma|grandmother|nana)\b/], ['wifi', /\b(wi-?fi|internet|password|online|network)\b/], ['bathroom', /\b(bathroom|restroom|toilet|pee)\b/],
+    ['shelter', /\b(shelter|youth (center|house)|safe place|homeless)\b/], ['police', /\b(police|cops?|sheriff)\b/], ['clinic', /\b(doctor|clinic|hospital|nurse|sick|medicine)\b/],
+    ['motel', /\b(motel|hotel|a room|rooms|place to (stay|sleep)|stay the night|crash)\b/], ['station', /\b(train|trains|railway|station|platform)\b/], ['stop', /\b(bus|buses|coach|next ride|get out of (here|town)|leave town)\b/],
+    ['library', /\b(library|librarian|books)\b/], ['laundromat', /\b(laundr\w*|wash (my )?clothes|dryers?)\b/], ['church', /\b(church|pastor|pantry|supper)\b/],
+    ['diner', /\b(diner|restaurant|pancakes?|breakfast|pie)\b/], ['gas', /\b(gas station|gas|snacks?|hot ?dogs?)\b/], ['park', /\b(park|playground|benches?)\b/],
+    ['work', /\b(work|jobs?|hiring|odd jobs?)\b/], ['charge', /\b(charge|charger|outlet|battery)\b/],
+  ];
+  const FACET = [['password', /\bpassword\b/], ['dest', /\bwhere (does|do) (it|they|that|the \w+) go\b|\bwhere('s| is) (it|that) (going|headed)\b|\bwhich (towns|places|cities)\b|\bgo(es)? to\b/], ['cost', /\b(how much|cost|costs|price|expensive|cheap|charge for)\b/], ['open', /\b(open|opens|close|closes|closed|hours)\b/], ['far', /\b(how far|far|how long (does it take|to walk)|distance|walk there)\b/], ['when', /\b(when|what time|next one|how often)\b/], ['where', /\b(where|how do i get|which way|directions|find it)\b/]];
+  const hh = (x) => { x = ((x % 24) + 24) % 24; return x === 0 ? 'midnight' : x === 12 ? 'noon' : x < 12 ? x + ' in the morning' : (x - 12) + (x >= 18 ? ' at night' : ''); };
+  const hash = (s) => { let h = 7; for (const ch of s) h = (h * 31 + ch.charCodeAt(0)) >>> 0; return h; };
+  TT.password = (L) => (L.name.replace(/^the /i, '').replace(/[^A-Za-z]/g, '').slice(0, 7) + (10 + (hash(L.id) % 89))).toLowerCase();
+  TT.dir = function (L, T) {
+    const W = 1000, dy = L.y - T.MY, hwy = T.east ? L.x > 720 : L.x < 280, mid = L.x > 350 && L.x < 650;
+    const a = T.rail && L.y > T.railY - 20 ? 'down by the tracks' : Math.abs(dy) < 35 ? `right on ${T.street}` : dy < 0 ? `just up off ${T.street}` : `a block down from ${T.street}`;
+    const b = hwy ? 'out toward the highway' : mid ? 'in the middle of town' : 'at the quiet end of town';
+    const near = Object.values(T.locs).filter((o) => o.id !== L.id && !o.hidden && !/edge|main|backst/.test(o.kind)).map((o) => [o, Math.hypot(o.x - L.x, o.y - L.y)]).sort((x, y) => x[1] - y[1])[0];
+    return `${a}, ${b}${near && near[1] < 170 ? `, ${pick(['near', 'by', 'across from'])} ${near[0].name.replace(/^The /, 'the ')}` : ''}`;
+  };
+  function topical(q, an, c, T, p, m, t) {
+    const g = G(); t = t.replace(/\b(when|where|what|how|who)s\b/g, "$1's").replace(/\bu\b/g, 'you').replace(/\bur\b/g, 'your');
+    const isQ = an.q || /\?\s*$/.test(t) || /^(when|where|what|how|who|which|is|are|do|does|can|could|any)\b/.test(t);
+    let topic = (TOPIC.find(([, re]) => re.test(t)) || [])[0];
+    if (!topic && /\b(are )?you(r place)? (guys )?(open|close)/.test(t)) topic = q.kind;
+    if (!topic && /\bhere\b/.test(t) && /\b(wifi|charge|bathroom)\b/.test(t)) topic = q.kind;
+    const facet = (FACET.find(([, re]) => re.test(t)) || [])[0];
+    const follow = !topic && c.mem.topic && ((facet && t.split(/\s+/).length <= 5 && !/\b(i|me|my)\b/.test(t)) || /^(and |what about |how about )?(it|that|there|they)\b|\b(it|that one|there|they)\??$/.test(t));
+    if (follow) topic = c.mem.topic;
+    if (!topic) return null;
+    // "is there a motel" / "where's the library" only count as questions; "i went to the library" doesn't need an answer
+    if (!follow && !facet && !isQ && !/\b(is there|any|need|looking for|want)\b/.test(t)) return null;
+    c.mem.topic = topic;
+    const L = topic === 'charge' ? null : loc(topic === 'bathroom' ? (q.kind === 'gas' || q.kind === 'diner' ? q.kind : 'gas') : topic);
+    const f = facet || (/\b(is there|any)\b/.test(t) ? 'where' : 'where');
+    if (topic === 'wifi' || f === 'password') {
+      const w = (p.services.wifi || []), mine = w.includes(q.kind) && loc(q.kind);
+      if (mine && m.toldPw) return pick([`${TT.password(mine)}. Like I said. All lowercase.`, `Still ${TT.password(mine)}, hon. I'll write it on a napkin.`]);
+      if (mine) { m.toldPw = 1; (TW.st().wifi = TW.st().wifi || {})[q.kind] = 1; return `${f === 'password' || /password/.test(t) ? '' : 'Sure do. '}Network's "${mine.name.replace(/^the /i, '')} Guest", password is ${TT.password(mine)}. All lowercase. ${is(q, /busy|suspicious/) ? '' : 'Don\'t go streaming movies, it\'s slow enough already.'}`.trim(); }
+      if (f === 'password') return 'Password for what? We don\'t have wifi here, hon. The library does.';
+      return where(q, 'wifi', T, p);
+    }
+    if (topic === 'sleep') {
+      c.mem.topic = loc('motel') ? 'motel' : null; m.sus += small ? 0.5 : 0.2;
+      if (is(q, /suspicious|no-nonsense/)) return 'Sleep? At home, I\'d hope. Where\'s home, kid?';
+      const sh = loc('shelter'), mo = loc('motel'), ch = loc('church');
+      if (sh) { if (sh.hidden) { sh.hidden = false; SH.Map && (SH.Map.cache = null); } return `If you're asking for real: ${sh.name}. They take kids, and they don't make you call anybody the first night. ${TT.dir(sh, T)[0].toUpperCase() + TT.dir(sh, T).slice(1)}.`; }
+      return `${mo ? `${mo.name} if you've got money. ` : ''}${ch && /kind|soft|lonely|cheerful|tired/.test(q.mood) ? `And... ${ch.name} leaves the side door open. The pastor sleeps with his phone on. You didn't hear that from me.` : 'Otherwise, honey, you should be sleeping at home.'}`;
+    }
+    if (topic === 'charge') return /diner|library|laundromat/.test(q.kind) ? 'Outlet\'s under the window booth. Help yourself.' : q.kind === 'gas' ? 'We sell chargers. Outlet\'s for the coffee machine, sorry.' : 'Library\'s got outlets. Laundromat too, by the change machine.';
+    if (!L) {
+      if (topic === 'grandma') return where(q, 'larkspur', T, p);
+      if (follow) return pick(['We don\'t have one, hon. Like I said.', 'Still don\'t have one. It didn\'t grow back.']);
+      return { motel: 'No motel here. Nearest one\'s the next town over.', station: 'No trains stop here anymore. They tore the platform out in the eighties.', library: 'We don\'t have one. There\'s a bookmobile Thursdays.', shelter: 'Nothing like that here. There\'s a number, though, the church has it.', clinic: 'Nearest doctor\'s the next town. For real emergencies you call 911.', police: 'Sheriff\'s thirty-five minutes out. We mostly handle things ourselves.', diner: 'No diner. Gas station has hot dogs.', laundromat: 'No laundromat. People have machines.' }[topic] || 'We don\'t have one of those, hon.';
+    }
+    if (L.hidden && topic !== 'grandma') { L.hidden = false; SH.Map && (SH.Map.cache = null); }
+    const here = L.id === g.loc, h = SH.hour();
+    if (f === 'open' || (f === 'when' && !/stop|station/.test(topic))) {
+      if (!L.hours) return here ? 'Never closes. Well, it\'s a ' + (topic === 'stop' ? 'bus stop' : 'place') + '. Where would it go.' : `${L.name}? That's not the kind of place that closes.`;
+      const [o, cl] = L.hours, open = SH.isOpen(L.id);
+      return open ? `${here ? 'We\'re' : 'It\'s'} open till ${hh(cl)}.${cl - h < 1.5 ? ' So you\'d better hurry.' : ''}` : `${here ? 'We\'re' : 'It\'s'} closed right now. Opens at ${hh(o)}${h >= cl ? ' tomorrow' : ''}.`;
+    }
+    if (f === 'far') {
+      if (here) return 'You\'re standing in it, hon.';
+      const o = SH.travelOptions(L.id)[0]; const mins = o ? o.mins : 10;
+      return `${L.name}? ${mins <= 4 ? 'Couple minutes\' walk.' : mins <= 12 ? `About ${mins} minutes on foot.` : `Oh, a good ${Math.round(mins / 5) * 5} minutes walking. ${T.tier === 'city' ? 'Take the bus.' : 'Longer if it rains.'}`}`;
+    }
+    if (f === 'cost') {
+      if (topic === 'motel') { const ms = SH.Motels ? SH.Motels.motels(p) : []; return ms.length ? `${ms.map((x) => `${x.n}'s about $${x.rate}`).join(', ')} a night. ${ms.some((x) => x.k === 'sloppy') ? 'Cash. They don\'t ask many questions there. Which isn\'t always a good thing.' : 'They\'ll want a card and a grown-up, though.'}` : 'No motel here to cost anything.'; }
+      if (topic === 'stop' || topic === 'station') return topic === 'station' ? 'Train\'s pricier. Ten, fifteen dollars to the city, more if you buy on board.' : 'County bus is two, three dollars. Exact change. The cheap vans are cheaper, if you don\'t mind the driver.';
+      return { diner: 'Pancakes are five. Pie\'s three. Coffee\'s free if you\'re sitting at the counter long enough.', gas: 'Hot dogs are two-fifty. Granola bars a buck fifty. Don\'t buy the sushi.', laundromat: 'Two-fifty a wash, quarters for the dryer. The change machine eats dollars sometimes.', clinic: 'The walk-in sees you whether you can pay or not. They\'re good like that.', library: 'Free. Everything in there\'s free. That\'s the whole point of it.', church: 'Doesn\'t cost anything. There\'s a basket, but nobody watches it.', park: 'It\'s a park, hon.' }[topic] || 'Doesn\'t cost anything, far as I know.';
+    }
+    if (f === 'when' && (topic === 'stop' || topic === 'station')) {
+      const R = SH.Routes; if (!R || !R.board) return 'There\'s a timetable on the pole.';
+      const B = R.board(p, g.t).filter((b) => (topic === 'station') === !!b.rt.op.T.rail).slice(0, 2);
+      if (!B.length) return topic === 'station' ? 'Nothing more today, I don\'t think. First train\'s early.' : 'Last bus already went. Morning, now.';
+      const P = (id) => (SH.Atlas.data().places.find((x) => x.id === id) || { name: '?' }).name;
+      return `Next one's ${R.fmt(B[0].dep)}, going to ${P(B[0].rt.stops[B[0].rt.stops.length - 1])}.${B[1] ? ` Then ${R.fmt(B[1].dep)}.` : ''} ${is(q, /cheerful|talks too much|lonely/) ? 'They\'re always late. Always.' : ''}`.trim();
+    }
+    if (f === 'dest' && (topic === 'stop' || topic === 'station')) {
+      const R = SH.Routes; const P = (id) => (SH.Atlas.data().places.find((x) => x.id === id) || { name: '?' }).name;
+      const B = R && R.board ? R.board(p, g.t).filter((b) => (topic === 'station') === !!b.rt.op.T.rail) : [];
+      const ends = [...new Set(B.map((b) => P(b.rt.stops[b.rt.stops.length - 1])))].slice(0, 4);
+      return ends.length ? `${ends.length > 1 ? ends.slice(0, -1).join(', ') + ' and ' + ends[ends.length - 1] : ends[0]}, today. ${topic === 'station' ? 'The train goes further, if you\'ve got the money.' : 'Most of them stop everywhere on the way.'}` : 'Nothing else today. Tomorrow, there\'s more.';
+    }
+    if (f === 'where' && (topic === 'stop' || topic === 'station') && !here) return `${L.name}, ${TT.dir(L, T)}. ${topic === 'station' ? 'Trains a few times a day.' : T.tier === 'village' ? 'Couple buses a day, if you\'re lucky.' : 'There\'s a board with the times.'}`;
+    // where
+    if (here) return pick([`You're in it, hon.`, `This is ${L.name}. You're standing in it.`]);
+    const word = { stop: 'bus', station: 'train', gas: 'gas', diner: 'food', motel: 'motel', library: 'library', church: 'church', police: 'police', shelter: 'shelter', work: 'work', grandma: 'larkspur', bathroom: 'bathroom', laundromat: 'laundromat' }[topic];
+    const w = word ? where(q, word, T, p) : null; if (w) return /edge|grandma|shelter|motel|police/.test(topic) || c.mem['dir_' + topic] ? w : (c.mem['dir_' + topic] = 1, `${w} It's ${TT.dir(L, T)}.`);
+    const o = SH.travelOptions(L.id)[0];
+    return `${L.name}. ${o && o.mins > 12 ? 'Bit of a walk.' : 'Not far.'} ${L.sub ? L.sub + '.' : ''}`.trim();
+  }
+  const COV = () => (SH.G.cover = SH.G.cover || {});
+  const STORYSAY = { grandma: 'you were visiting your grandma', moved: 'your family just moved here', camp: 'you were camping with your dad', home: 'you were homeschooled', cousin: 'you were staying with cousins', family: 'you were staying with family' };
   function brain(an, c) {
     const q = (c.opts && c.opts.local) || { n: 'Someone', mood: 'kind', role: '' }, p = (c.opts && c.opts.place) || SH.Atlas.here(), T = TW.cur(), m = mem(q), t = an.t || '';
     c.mem.n = (c.mem.n || 0) + 1;
@@ -14350,7 +14560,10 @@ window.SH = window.SH || {};
     }
     // names & ages: remembered, never re-asked
     const nm = t.match(/\b(?:my name is|i'?m|call me|it'?s)\s+([a-z]{2,12})\b/);
-    if (nm && !/^(fine|ok|okay|good|hungry|lost|tired|twelve|here|not|just|from|visiting|staying|waiting|looking|so|sorry|alright|cold)$/.test(nm[1])) { m.told.name = nm[1][0].toUpperCase() + nm[1].slice(1); return R2(`${m.told.name}. Nice to meet you, ${m.told.name}. ${m.told.age || !small ? '' : 'How old are you, if you don\'t mind me asking?'}`); }
+    if (nm && !/^(fine|ok|okay|good|hungry|lost|tired|twelve|here|not|just|from|visiting|staying|waiting|looking|so|sorry|alright|cold)$/.test(nm[1])) { const said = nm[1][0].toUpperCase() + nm[1].slice(1), cv = COV()[p.id];
+      if (cv && cv.name && cv.name.toLowerCase() !== said.toLowerCase() && (cv.told || []).some((w) => w !== q.n)) { m.sus += 1; g.awayNotice = (g.awayNotice || 0) + (small ? 14 : 8); m.told.name = said; return R2(is(q, /nosy|suspicious/) ? `${said}? ${(cv.told.find((w) => w !== q.n))} said your name was ${cv.name}. ...Which is it, hon?` : `${said}. Huh. I could've sworn somebody said ${cv.name}. Must be thinking of another kid.`); }
+      if (!cv) COV()[p.id] = { name: said, story: null, told: [q.n] }; else { if (!cv.name) cv.name = said; cv.told = cv.told || []; if (!cv.told.includes(q.n)) cv.told.push(q.n); }
+      m.told.name = said; return R2(`${m.told.name}. Nice to meet you, ${m.told.name}. ${m.told.age || !small ? '' : 'How old are you, if you don\'t mind me asking?'}`); }
     if (an.has('age') || /\b(i'?m|i am) (1[0-9]|twelve|thirteen|fourteen|fifteen|sixteen)\b/.test(t)) {
       const young = /\b(1[0-3]|twelve|thirteen)\b/.test(t); m.told.age = young ? 'young' : 'older';
       if (/\b(1[6-9]|sixteen|seventeen)\b/.test(t)) { m.sus++; return R2('Sixteen. Uh huh. And I\'m the Queen of England.'); }
@@ -14359,19 +14572,27 @@ window.SH = window.SH || {};
     }
       if (small && m.askedRel === 1 && !an.has('lie') && !['greet', 'thanks', 'bye', 'yes', 'no', 'deflect'].some((x) => an.has(x)) && !/^(yes|no|yeah|nope|ok|okay|why|what|idk|huh|hi|hey|nobody|none|sure)$/.test(t.trim()) && /^[a-z]+( [a-z]+)?$/.test(t.trim()) && t.length < 25) { m.askedRel = 2; m.sus += 0.5; return R2(is(q, /nosy|suspicious/) ? `${t.trim().replace(/\b\w/g, (x) => x.toUpperCase())}? ...Huh. Can't place 'em. And I'd place 'em.` : 'Hm. Can\'t say I know them. But I don\'t know everybody, I guess.'); }
     // cover stories
-    if (an.has('lie') || /\b(visiting|staying with|my (grandma|grandpa|aunt|uncle|cousin|mom|dad) (lives|is)|waiting for my)\b/.test(t)) {
+    if (an.has('lie') || /\b(visiting|staying with|my (grandma|grandpa|aunt|uncle|cousin|mom|dad) (lives|is)|waiting for my|just moved|we moved|new here|homeschool(ed)?|camp(ing|ground))\b/.test(t)) {
       m.told.cover = t.slice(0, 60); m.sus += small ? 1 : 0.5;
+      // one story per town: people compare notes
+      const sk = /grandma|nana|grandmother/.test(t) ? 'grandma' : /moved|new here/.test(t) ? 'moved' : /camp/.test(t) ? 'camp' : /homeschool/.test(t) ? 'home' : /cousin/.test(t) ? 'cousin' : /aunt|uncle|grandpa/.test(t) ? 'family' : null;
+      const cv0 = COV()[p.id];
+      if (sk && cv0 && cv0.story && cv0.story !== sk && !(sk === 'grandma' && p.grandma)) { m.sus += 1; g.awayNotice = (g.awayNotice || 0) + (small ? 12 : 6); const who = (cv0.told || []).find((w) => w !== q.n);
+        return R2(who ? `Funny. ${who} said you told them ${STORYSAY[cv0.story] || 'something else'}.` : 'Hm. That\'s not what I heard around town.'); }
+      if (sk && !(sk === 'grandma' && p.grandma)) { const cv = COV()[p.id] = cv0 || { name: null, story: null, told: [] }; if (!cv.story) { cv.story = sk; cv.storyText = t.slice(0, 80); } if (!cv.told.includes(q.n)) cv.told.push(q.n); }
       if (/grandma|nana|grandmother/.test(t) && p.grandma) { const w = where(q, t, T, p); return R(w || 'Oh, whose grandma?'); }
       if (m.sus >= 2.5 && /suspicious|no-nonsense/.test(q.mood)) { c.result = 'call'; return R('Uh huh. What\'s their name, then? ...What street? ...That\'s what I thought. Hang on, I\'m making a call. Stay right there.', { end: true }); }
       const rel = (t.match(/\b(grandpa|aunt|uncle|cousin|mom|dad|sister|brother|friend)\b/) || [])[1];
       if (small && rel && !m.askedRel) { m.askedRel = 1; return R2(is(q, /nosy/) ? `Your ${rel}? Which house? I know everybody in ${p.name}.` : is(q, /suspicious/) ? `Is that so. Who's your ${rel}, then?` : pick([`Oh, who's your ${rel}? Maybe I know them.`, `Your ${rel}, huh. Which end of town?`])); }
       return R2(is(q, /nosy/) ? 'Oh yeah? Which house? I know everybody.' : is(q, /suspicious/) ? 'Is that so.' : pick(['Oh, that\'s nice.', 'Well, good. Family\'s good.', 'Mm. Okay.']));
     }
-    // real questions about the town
-    if (an.has('where') || /\b(where|how do i get|is there|any)\b.*\b(motel|hotel|bus|train|station|bathroom|restroom|toilet|pee|sleep|stay|crash|wifi|internet|library|food|eat|church|police|sheriff|shelter|work|job|larkspur|grandma|store|outlet|charge)\b/.test(t)) {
-      const w = where(q, t, T, p); if (w) return R(w);
+    // real questions about the town, with follow-ups ("is it open?", "how far?", "what about the motel?")
+    const tq = topical(q, an, c, T, p, m, t); if (tq) return R(tq);
+    if (an.has('broke') || /\b(no|don'?t have (any)?|out of) money\b|\bbroke\b/.test(t)) {
+      m.sus += small ? 0.3 : 0;
+      if (m.fed !== SH.day() && /lonely|kind|soft|cheerful|tired/.test(q.mood) && /diner|gas/.test(q.kind)) { m.fed = SH.day(); return R(pick(['Then this one\'s on me. Sit. No, sit. I\'m not asking.', 'Well, you\'re not leaving hungry. Here. Don\'t tell my manager, he\'d do the same thing.']), { fx: { full: 18 } }); }
+      const ch = loc('church'); return R(`${ch ? `${ch.name} has a pantry shelf in the hallway, nobody checks what you take. ` : ''}${loc('work') ? `And ${loc('work').short || loc('work').name} sometimes pays cash for an hour's work.` : 'Wish I had more for you.'}`);
     }
-    if (/\b(larkspur|my grandma|grandmother)\b/.test(t)) { const w = where(q, t, T, p); if (w) return R(w); }
     // hungry
     if (an.has('food') || /\b(hungry|starving|haven'?t eaten)\b/.test(t)) {
       if (m.fed !== SH.day() && /lonely|kind|soft|counter|cheerful|tired|pastor/.test(q.mood + ' ' + q.role)) { m.fed = SH.day(); return R(/counter|register/.test(q.role) ? 'Here. On the house. Don\'t argue with me, I\'ll lose my train of thought.' : 'You hungry? Here, I got half a sandwich I wasn\'t going to finish. Don\'t argue.', { fx: { full: 18 } }); }
@@ -14390,8 +14611,10 @@ window.SH = window.SH || {};
     if (an.has('weather')) return R(pick(['Supposed to get colder. You got a real coat?', 'Rain tonight, they say. They\'re usually right about rain.']));
     // they notice: rarely in a city, often in a village, faster once your face is out there
     const lim = (small ? 5 : 7) - (rep ? 2 : 0) - Math.floor(m.sus);
-    if (c.mem.n >= lim && /nosy|no-nonsense|suspicious/.test(q.mood) && T.tier !== 'city') { c.result = 'call'; return R(rep ? 'I know where I\'ve seen you. The Facebook thing. The missing kid. ...Sweetheart, I\'m calling somebody. It\'s for your own good. You stay right there.' : 'Kid, I\'m going to be straight with you. You\'re alone, it\'s a school day, and you look like you slept outside. I\'m calling somebody. It\'s for your own good.', { end: true }); }
+    if (c.mem.n >= lim && /nosy|no-nonsense|suspicious/.test(q.mood) && T.tier !== 'city' && !m.warned) { m.warned = SH.day(); return R(rep ? pick(['...Hang on. Turn your head a little. Do I know you from somewhere?', 'You look awful familiar, you know that? Where do I know you from?']) : pick(['Kid, can I ask you something? Is everything okay at home?', 'Where are your folks, really? And don\'t say the motel.'])); }
+    if (c.mem.n >= lim && /nosy|no-nonsense|suspicious/.test(q.mood) && T.tier !== 'city' && m.warned) { c.result = 'call'; return R(rep ? 'I know where I\'ve seen you. The Facebook thing. The missing kid. ...Sweetheart, I\'m calling somebody. It\'s for your own good. You stay right there.' : 'Kid, I\'m going to be straight with you. You\'re alone, it\'s a school day, and you look like you slept outside. I\'m calling somebody. It\'s for your own good.', { end: true }); }
     if (!m.told.name && c.mem.n === 2 && small) return R('I didn\'t catch your name.');
+    if (an.q || /^(what|where|when|how|who|why|is|are|do|does|can|could)\b/.test(t)) return R(SH.TownText.pk('dunno' + q.id, ['Couldn\'t tell you, hon.', 'Beats me. The library would know.', 'Hm. No idea, sorry.', 'You\'re asking the wrong person. Ask me about pie.']));
     return R(smalltalk(q, T, p));
   }
   TT.self = (q) => { const r = q.role.replace(/ \(.*\)$/, ''); const m = r.match(/^(runs|works|keeps|drives|lives|sits)\b(.*)$/); return m ? `I ${m[1].replace(/s$/, '')}${m[2]}.` : /^(retired|walking|waiting|at the)/.test(r) ? `I'm ${r}.` : `I'm ${/^(the|a|an) /.test(r) ? r : 'the ' + r}.`; };
@@ -14645,6 +14868,244 @@ window.SH = window.SH || {};
     rowOfShops(x, E, id, ['PAWN · GOLD', 'TACOS', 'NO NAME BAR', 'VAPE · PHONE']); R(x, 'rgba(0,0,0,.35)', E.W * 0.47, E.gy - 90, 26, 90); bin(x, E, E.W * 0.5); bin(x, E, E.W * 0.53);
     x.font = 'bold 14px system-ui'; x.fillStyle = 'rgba(180,140,255,.45)'; x.fillText('STAY UP', E.W * 0.2, E.gy - 20);
   };
+})(window.SH);
+
+</script>
+<script>
+/* ctx2.js */
+/* SMALL HOURS — conversation context layer (turn 34).
+   Sits on top of every brain (Harlow people, phone calls, townies). It keeps a short transcript per conversation
+   and fixes the things that made talking feel like a vending machine:
+   - "what did I just ask you?" / "what did you say?"  → they actually remember the last lines
+   - "what about tomorrow?" / "and tonight?"          → carries the last request forward ("can I stay tonight" → "…tomorrow")
+   - "why not?" / "how come?"                         → a reason tied to what they just refused, in their own voice
+   - a few requests the core adults used to answer with therapy-speak (can I stay with you / do you have food / what
+     should I do) get real, in-character answers.
+   Replies never repeat word-for-word what they said the turn before. */
+(function (SH) {
+  const T = SH.Talk, NLP = SH.NLP; if (!T || !NLP || !SH.Brain) return;
+  const pick = (a) => a[Math.floor(Math.random() * a.length)];
+  const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+  const TEEN = /^(jordan|lily|tyler|dex|wren|nia|marco|priya|eli|theo|hazel|rk)/;
+  const teen = (id) => TEEN.test(id);
+  const hist = (c) => (c.mem._h = c.mem._h || []); // [{who:'me'|'npc', t, in}]
+  const lastOf = (c, who, skip = 0) => { const h = hist(c); for (let i = h.length - 1, k = 0; i >= 0; i--) if (h[i].who === who && !h[i].meta) { if (k++ === skip) return h[i]; } return null; };
+  const gist = (s) => { const p = s.split(/(?<=[.!?])\s+/); let o = p[0]; for (let i = 1; i < p.length && o.length < 40; i++) o += ' ' + p[i]; return o.length > 140 ? o.slice(0, 137) + '…' : o; };
+
+  // "can i stay at yours tonight" → "if you could stay at mine tonight"
+  function swap(s) {
+    const M = { i: 'you', "i'm": "you're", 'im': "you're", me: 'me', my: 'your', mine: 'yours', myself: 'yourself', you: 'me', your: 'my', yours: 'mine', "you're": "I'm", u: 'me', ur: 'my', am: 'are', "i've": "you've", "i'll": "you'll" };
+    return s.replace(/[?!.]+$/, '').split(/\s+/).map((w, i, a) => { const lw = w.toLowerCase(), pv = i > 0 ? a[i - 1].toLowerCase() : '';
+      if (lw === 'me') return 'you';
+      if (lw === 'you' || lw === 'u') return i === 0 || /^(do|did|can|could|will|would|are|were|if|and|that|so|when|because|bc)$/.test(pv) ? 'I' : 'me';
+      return M[lw] != null ? M[lw] : w; }).join(' ');
+  }
+  function asked(text) {
+    const t = text.trim().replace(/[?!.]+$/, '');
+    let m;
+    if ((m = t.match(/^(can|could|may) i (.+)$/i))) return `if you could ${swap(m[2])}`;
+    if ((m = t.match(/^(can|could|would|will) you (.+)$/i))) return `if I could ${swap(m[2])}`;
+    if ((m = t.match(/^(do|does|did|is|are|was|were|have|has) (.+)$/i))) return `if ${swap(m[2])}`;
+    if ((m = t.match(/^(what|where|when|why|how|who|which)( \w+)? (are|am|do|can|could|will|would|should) (you|u|i)\b(.*)$/i))) {
+      const subj = /^(you|u)$/i.test(m[4]) ? 'I' : 'you', aux = m[3].toLowerCase(), v = aux === 'do' ? '' : aux === 'are' || aux === 'am' ? (subj === 'I' ? ' am' : ' are') : ' ' + aux;
+      return `${m[1].toLowerCase()}${m[2] || ''} ${subj}${v}${swap(m[5] || '') ? ' ' + swap(m[5]).trim() : ''}`.replace(/\s+/g, ' ').trim();
+    }
+    if ((m = t.match(/^(what|where|when|why|how|who|which)\b(.*)$/i))) return `"${t}"`;
+    return `"${t}"`;
+  }
+
+  const TIME = /\b(tonight|today|tomorrow|tmrw|this weekend|next week|later|in the morning|after school|right now)\b/;
+  const STRONG = ['stay', 'food', 'money', 'meet', 'help', 'run', 'home', 'ride'];
+  /* rewrite elliptical follow-ups using the previous thing you said */
+  function carry(c, text) {
+    const t = text.toLowerCase().trim().replace(/[?!.]+$/, '');
+    let prev = null; for (let k = 0; k < 3; k++) { const x = lastOf(c, 'me', k); if (!x) break; if ((x.I || []).length || TIME.test(x.t)) { prev = x; break; } } if (!prev) return null;
+    const m = t.match(/^(and |what about |how about |ok |okay |but )?(tonight|today|tomorrow|tmrw|this weekend|next week|later|in the morning|after school|right now)$/);
+    if (m) {
+      const strong = (prev.I || []).length > 0;
+      return TIME.test(prev.t) ? prev.t.replace(TIME, m[2]) : `${prev.t.replace(/[?!.]+$/, '')} ${m[2]}`;
+    }
+    return null;
+  }
+
+  /* reasons, when they said no and you ask why */
+  const WHY = {
+    jordan: { stay: ['bc my mom literally checks the garage now. she has like a sixth sense. and she said if she finds u she HAS to call ur mom', 'ok real talk my mom would call ur mom in like 4 seconds. it\'s not that i don\'t want u here'], def: ['idk it\'s just a lot rn', 'bc... idk. i\'m scared i\'ll get u caught'] },
+    lily: { def: ['because!!', 'because mom said. and because i said.'] },
+    okafor: { stay: ['Because I\'m an adult you know from school, and there are rules about that — good ones, even when they feel like a wall. They exist to protect kids. What I can do is help you find a place tonight that\'s actually set up for this.'], def: ['Fair question. I\'d rather tell you the truth than something easy: I have to keep you safe, and sometimes that means I can\'t do the thing you asked.'] },
+    mom: { def: ['Because I\'m your mother and I need to know you\'re safe. That\'s the whole reason. That\'s every reason.'] },
+    grandma: { def: ['Because I love you, mijo. That\'s the only reason I ever have for anything.'] },
+    rick: { def: ['Because I said so.', 'Don\'t start.'] },
+    _adult: { def: ['Because it isn\'t safe, kid. Not for you, not for me.', 'I just can\'t. I\'m sorry.'] },
+    _teen: { def: ['idk it\'s complicated', 'bc it just is ok'] },
+  };
+  const REFUSE = /\b(no|nope|can'?t|cannot|won'?t|not (going to|gonna)|shouldn'?t|i'?m sorry|not allowed|not a good idea|illegal|rules)\b/i;
+
+  /* real answers for requests the core adults used to deflect */
+  const ASK = {
+    okafor: {
+      stay: (c) => { c.mem._refused = 'stay'; return 'I can\'t have you stay with me. I wish the answer were different. But I can help you find somewhere safe tonight — there\'s a youth line that finds beds for kids, and they don\'t call anyone without talking to you first. Want me to dial it with you?'; },
+      food: (c) => { if (c.mem._fed) return 'That was my last granola bar, I\'m afraid. But the cafeteria does breakfast free before first bell — nobody asks why you\'re there.'; c.mem._fed = 1; return { say: 'Here. *slides open a drawer full of granola bars* I keep these for exactly this. Take two. Take three. No, I don\'t want to hear about it.', fx: { full: 14 } }; },
+      advice: () => 'Honestly? The next right thing is somewhere warm tonight, and one adult who knows where you are. That could be your grandma. It could be me. It could be the youth line. It doesn\'t have to be home — not tonight. What feels least scary?',
+    },
+    jordan: {
+      food: (c) => (c.mem._fed ? 'bro i already gave u my pop tarts 😭 i can bring more tmrw' : (c.mem._fed = 1, { say: 'omg wait yes. i have pop tarts and like half a lunchable. meet me by the bike rack? or i can leave it in our mailbox', fx: {} })),
+      advice: () => pick(['ur grandma?? she\'s literally the nicest person alive. she\'d let u stay forever', 'the library is warm and nobody cares if u sit there all day. and it has outlets', 'idk... maybe tell okafor? she\'s not like the other adults i swear']),
+    },
+    grandma: { advice: () => 'You come here. You come to me. 41 Larkspur Lane, the blue door. Everything else we\'ll figure out at my kitchen table.' },
+  };
+  const isAdvice = (t) => /\b(what (should|do|can) i do|where (should|can|do) i go|what now|what do i do now|help me (figure|decide))\b/.test(t);
+  const isFood = (t) => /\b(any food|something to eat|have (any )?food|i'?m (so )?(hungry|starving)|can i (have|get) (some )?food)\b/.test(t);
+
+  /* wrap every brain: memory questions, why-not, real answers, no verbatim repeats, keep a transcript */
+  const inner = SH.Brain, cache = new Map();
+  function wrap(id, fn) {
+    if (cache.has(fn)) return cache.get(fn);
+    const w = function (an, c) {
+      if (!an || !c || !c.mem || (c && c._cx)) return fn.apply(this, arguments);
+      c._cx = true;
+      try {
+        const t = (an.t || '').toLowerCase(), h = hist(c), prevMe = lastOf(c, 'me'), prevNpc = lastOf(c, 'npc');
+        let r = null, meta = false;
+        if (!an.has || !an.has('selfharm')) {
+          // what did I ask / say?
+          if (/\bwhat (did|was) i (just )?(ask|say|tell|asking|saying)\b|\bwhat were we (talking about|saying)\b/.test(t)) { meta = true;
+            r = { say: prevMe ? (teen(id) ? `u asked ${asked(prevMe.raw)}${prevNpc ? '. and i said ' + gist(prevNpc.t).toLowerCase() : ''}` : `You asked ${asked(prevMe.raw)}.${prevNpc ? ` And I said: "${gist(prevNpc.t)}"` : ''}`) : (teen(id) ? 'u literally just got here lol' : 'You haven\'t asked me anything yet.'), fx: {} };
+          } else if (/\bwhat did you (just )?say\b|\bsay that again\b|\bcome again\b|\brepeat that\b/.test(t) && prevNpc) { meta = true;
+            r = { say: teen(id) ? `i said ${prevNpc.t.toLowerCase()}` : `I said, ${prevNpc.t.charAt(0).toLowerCase() + prevNpc.t.slice(1)}`, fx: {} };
+          } else if (/^(why|why not|how come|but why|why tho|why though)\??$/.test(t.trim()) && prevNpc && (REFUSE.test(prevNpc.t) || c.mem._refused)) {
+            const tab = WHY[id] || (teen(id) ? WHY._teen : WHY._adult), k = c.mem._refused || (prevMe && (prevMe.I || []).includes('stay') ? 'stay' : 'def');
+            r = { say: pick(tab[k] || tab.def || WHY._adult.def), fx: {} };
+          } else if (ASK[id]) {
+            const A = ASK[id];
+            const k = an.has && an.has('stay') && A.stay ? 'stay' : isFood(t) && A.food ? 'food' : isAdvice(t) && A.advice ? 'advice' : null;
+            if (k) { const v = A[k](c); r = typeof v === 'string' ? { say: v, fx: {} } : v; }
+          }
+        }
+        if (!r) r = fn.apply(this, arguments) || { say: '...', fx: {} };
+        if (typeof r.say === 'string') {
+          // a carried follow-up ("what about tomorrow?") that lands on an answer they already gave: say so, briefly
+          if (an.carried && h.some((x) => x.who === 'npc' && x.t.trim() === r.say.replace(/\*[^*]+\*\s*/g, '').trim())) {
+            const first = r.say.split(/(?<=[.!?])\s+/)[0];
+            r.say = teen(id) ? pick(['same answer tbh. ' + first.toLowerCase(), 'still no, sorry. ' + first.toLowerCase()]) : pick([`Same answer, I'm afraid. ${first}`, `That part doesn't change, I'm sorry. ${first}`]);
+          }
+          // never the exact same line twice in a row
+          if (prevNpc && r.say.trim() === prevNpc.t.trim()) r.say = teen(id) ? pick(['like i said. ' + r.say.toLowerCase(), 'bro i just said that 😭']) : pick([`Like I said — ${r.say.charAt(0).toLowerCase() + r.say.slice(1)}`, 'I just told you, hon. ' + r.say]);
+          if (REFUSE.test(r.say) && an.has && an.has('stay')) c.mem._refused = 'stay';
+          else if (an.has && !an.has('stay') && !/^(why|how come)/.test(t)) c.mem._refused = REFUSE.test(r.say) ? 'def' : null;
+          h.push({ who: 'me', t: an.carried || an.t, raw: an.carried || an.raw || an.t, meta, I: STRONG.filter((k) => an.has && an.has(k)) }); h.push({ who: 'npc', meta, t: r.say.replace(/\*[^*]+\*\s*/g, '') });
+          if (h.length > 24) h.splice(0, h.length - 24);
+        }
+        return r;
+      } finally { c._cx = false; }
+    };
+    Object.keys(fn).forEach((x) => { w[x] = fn[x]; });
+    cache.set(fn, w); return w;
+  }
+  SH.Brain = new Proxy(inner, { get(tg, key) { const f = tg[key]; return typeof f === 'function' && typeof key === 'string' ? wrap(key, f) : f; }, set(tg, key, v) { tg[key] = v; return true; } });
+
+  /* context carry: rewrite "what about tomorrow?" into the full request before the brain sees it */
+  const bAnalyze = NLP.analyze; let pending = null;
+  NLP.analyze = function (raw) {
+    if (pending && raw === pending.text) {
+      if (pending.full === undefined) pending.full = carry(pending.c, raw) || null;
+      if (pending.full) { const an = bAnalyze.call(this, pending.full); an.raw = raw; an.carried = pending.full; return an; }
+    }
+    return bAnalyze.apply(this, arguments);
+  };
+  const bSay = T.say;
+  T.say = function () {
+    const c = T.cur, inp = document.getElementById('tin');
+    if (c && !c.ended && inp && inp.value.trim()) pending = { c, text: inp.value.trim() };
+    try { return bSay.apply(this, arguments); } finally { pending = null; }
+  };
+  SH.Ctx2 = { swap, asked, carry };
+})(window.SH);
+
+</script>
+<script>
+/* fix34.js */
+/* SMALL HOURS — turn 34 fixes.
+   1) Leaving Harlow IS running away. Before, if you left town by map / bus / ride without pressing "run away",
+      the game still thought you were at home (nobody would look for you, no run started). Now the moment you
+      arrive anywhere outside Harlow while still "at home", the run starts ("— You leave Harlow. —").
+   2) L = back. Closes a menu/dialog (clicks its Back / Close / Never mind if it has one), leaves a conversation
+      (when you're not typing), closes the full map / map / stage pop-ups, and goes back a screen on the phone.
+      Menus with lots of options that had no way out now get a "Back" at the bottom.
+   3) Long option lists scroll (touch, wheel, keys) inside dialogs; no scrollbars, but a soft fade at the
+      bottom shows there's more. */
+(function (SH) {
+  const A = SH.Atlas, $ = (s) => document.querySelector(s);
+
+  /* ---------- 1) leaving town starts the run ---------- */
+  if (A && A.arrive) {
+    const bArr = A.arrive;
+    A.arrive = function (to) {
+      const g = SH.G;
+      if (g && g.phase === 'home' && !g.ended && to && !to.home && SH.Run && SH.Run.start) {
+        const ui = SH.UI.afterAction; SH.UI.afterAction = () => {};   // arrive renders; don't render twice
+        try { SH.Run.start('leftTown', false); } finally { SH.UI.afterAction = ui; }
+      }
+      return bArr.apply(this, arguments);
+    };
+  }
+
+  /* ---------- 2) L = back ---------- */
+  const BACK = /^\s*(\d\s*)?(←\s*)?(back|close|cancel|never ?mind|not now|not today|nah|no thanks|leave it|done|go back|✕)\b/i;
+  const txt = (b) => ([...b.childNodes].filter((n) => n.nodeType === 3 || (n.tagName && !/KBD|SMALL/.test(n.tagName))).map((n) => n.textContent).join('')).trim();
+  function goBack() {
+    const md = $('#modal');
+    if (md && !md.classList.contains('hidden')) {
+      if (SH.Talk && SH.Talk.cur && !SH.Talk.cur.ended && $('#tlog')) { const lv = $('#tleave'); if (lv && lv.style.display !== 'none') { lv.click(); return true; } return false; }
+      const bs = [...md.querySelectorAll('.mchoices button, button')];
+      const b = bs.find((x) => BACK.test(txt(x))) || md.querySelector('.px, .mclose, [data-close]');
+      if (b) { b.click(); return true; }
+      return false;   // a real decision with no way out: stays
+    }
+    if (document.body.classList.contains('mapfull') && SH.MapFull && SH.MapFull.set) { SH.MapFull.set(false); return true; }
+    const mw = $('#mapWrap'); if (mw && !mw.classList.contains('hidden')) { SH.UI.closeMap(); return true; }
+    const pop = $('#pop'); if (pop && !pop.classList.contains('hidden') && SH.Stage && SH.Stage.closePop) { SH.Stage.closePop(); return true; }
+    if (document.body.classList.contains('allopen')) { document.body.classList.remove('allopen'); return true; }
+    const P = SH.Phone; if (P && P.view && P.view.app !== 'home' && P.back) { P.back(); return true; }
+    return false;
+  }
+  SH.goBack = goBack;
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'l' && e.key !== 'L') return;
+    const a = document.activeElement; if (a && /INPUT|TEXTAREA|SELECT/.test(a.tagName) || (a && a.isContentEditable)) return;
+    if (!SH.G || e.ctrlKey || e.metaKey || e.altKey) return;
+    if (goBack()) { e.preventDefault(); e.stopImmediatePropagation(); }
+  }, true);
+
+  /* menus with many options and no way out get a Back */
+  const bDlg = SH.UI.dialog;
+  SH.UI.dialog = function (o) {
+    try {
+      const ch = (o && o.choices || []).filter((c) => !c.cond || c.cond());
+      if (o && !o.noBack && !(SH.G && SH.G.ended) && ch.length >= 4 && !ch.some((c) => BACK.test(String(c.t || '')))) o.choices = (o.choices || []).concat({ t: 'Back', fn: () => {} });
+    } catch (e) {}
+    const r = bDlg.apply(this, arguments);
+    setTimeout(fadeCheck, 30);
+    return r;
+  };
+
+  /* ---------- 3) scrolling long lists ---------- */
+  const css = document.createElement('style');
+  css.textContent = `
+  .mbox:not(.talkbox){display:flex;flex-direction:column;min-height:0}
+  .mbox .mtext{flex:0 1 auto;min-height:0;overflow-y:auto;max-height:42vh}
+  .mbox .mchoices{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y}
+  .mbox .mchoices.more{-webkit-mask-image:linear-gradient(180deg,#000 82%,transparent);mask-image:linear-gradient(180deg,#000 82%,transparent)}
+  #pop,#pbody,#actions{overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+  @media (max-width:760px){.mbox .mtext{max-height:36dvh}}`;
+  document.head.appendChild(css);
+  function fadeCheck() {
+    document.querySelectorAll('.mbox .mchoices').forEach((m) => {
+      const up = () => m.classList.toggle('more', m.scrollHeight - m.scrollTop - m.clientHeight > 6);
+      up(); if (!m._fc) { m._fc = 1; m.addEventListener('scroll', up, { passive: true }); }
+    });
+  }
+  window.addEventListener('resize', () => setTimeout(fadeCheck, 50));
 })(window.SH);
 
 </script>

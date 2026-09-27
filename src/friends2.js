@@ -43,7 +43,7 @@
     const w = function (an, c) {
       c = c || {}; c.mem = c.mem || {};
       const f = FR.st(id), g = G(), t = an.t || '', rel = g.rel[id] || 0, tr = trouble(id), k = FR.KIDS[id], rt = (f.rt = f.rt || { asks: 0 }), th = (c.mem.th = c.mem.th || { k: null, s: null });
-      const R = (say, fx, x) => Object.assign({ say, fx: fx || {} }, x || {});
+      const dec00 = f.rt && f.rt.dec, R = (say, fx, x) => Object.assign({ say, fx: fx || {} }, x || {});
       if (!tr || (an.has && an.has('selfharm'))) return base.apply(this, arguments);
       // they tell you about their own trouble
       if (!f.shared && (ASKTHEM.test(t) || (f.knows && th.k === 'home' && an.q && /\b(you|u)\b/.test(t))) && rel >= 10) { f.shared = true; c.mem.fr2 = 'shared'; return R(tr.tell, { rel: 3 }, { narr: `${k.n} has never told anyone that. You can tell.` }); }
@@ -61,19 +61,25 @@
         if (ARGS.back.test(t) && !f.args.back) { d += 8; used.push('back'); }
         if (used.length) {
           used.forEach((u) => { f.args[u] = 1; }); f.pull += d; th.k = 'run';
-          if (f.pull >= THR(id)) { f.wouldRun = true; rt.dec = 'in'; th.s = 'when'; SH.flag && SH.flag('talkedFriendIn'); return R(`${tr.yes} when?`, { rel: 4 }, { narr: `${k.n} would come with you. You talked them into it. You're not sure if that makes it better or worse.` }); }
+          if (f.pull >= THR(id)) { f.wouldRun = true; rt.dec = 'in'; th.s = 'when'; SH.flag && SH.flag('talkedFriendIn'); return R(`${tr.yes} when?`, { rel: 4 }, { narr: `${k.n} would come with you. You talked ${k.g === 'he' ? 'him' : k.g === 'she' ? 'her' : 'them'} into it. You're not sure if that makes it better or worse.` }); }
           // close, but something's still bugging them: tell you what
           const need = !f.args.plan ? 'plan' : !f.args.together ? 'together' : f.shared && !f.args.trouble ? 'trouble' : !f.args.back ? 'back' : 'time';
           const NEED = { plan: ['ok but where would we even sleep. like actually. and with what money', 'i mean... maybe. but what\'s the actual plan. like where do we go'], together: ['and what if we get split up or something. i\'d freak out', 'maybe. but promise we\'d stick together? like no matter what?'], trouble: ['...idk. it\'s not like home is great for me either. but', 'i mean. you know how it is at my house. but still'], back: ['what if i want to come home tho. like after a day', 'and if i hate it, i can just go home right?'], time: ['i\'m like... almost there. give me a sec. this is huge', 'ok ok ok. i\'m thinking about it. for real this time'] };
           rt.dec = rt.dec === 'no' ? 'help' : rt.dec;
-          return R(pick(f.pull >= THR(id) - 15 ? NEED[need] : ['hm. maybe. i don\'t know', 'that\'s... actually kind of true. still scary tho'].concat(NEED[need])), { rel: 1 });
+          const ACK = { trouble: ['...yeah. i hate it there. i do.', 'ok that\'s. yeah. that\'s true.'], plan: ['ok that\'s actually a plan.', 'huh. ok. u really thought about it.'], together: ['ok. together. that helps.', 'promise? ok.'], back: ['ok. that makes it less scary.', 'ok. not forever. i can do not forever.'] };
+          const far = f.pull < THR(id) - 25;
+          return R(`${pick(ACK[used[used.length - 1]])} ${far ? pick(['still. this is huge. ', 'but i don\'t know. ']) : ''}${pick(NEED[need])}`, { rel: 1 });
         }
         // first time they're asked: decide from who they are, not a coin
         if (rt.dec == null && /\b(come with|with me|you in|u in|join me|you coming|u coming|would (you|u) come|wanna come|want to come)\b/.test(t)) {
           if (f.pull >= THR(id)) { rt.dec = 'in'; } else { rt.dec = rel >= 25 ? 'help' : 'no'; rt.asks = (rt.asks || 0); }
         }
       }
-      return base.apply(this, arguments);
+      const dec0 = dec00, r = base.apply(this, arguments);
+      if (dec0 == null && (rt.dec === 'help' || rt.dec === 'no') && r && typeof r.say === 'string' && !f.wouldRun && rt.dec !== dec0 && !f._hinted) {
+        f._hinted = true; r.say += ' ' + (f.shared ? pick(['...i mean. part of me wants to. i just don\'t know how it\'d even work', '...ugh. with my stuff at home, part of me really wants to']) : pick(['...not that my house is perfect either', '...it\'s not like everything\'s great at mine either tho']));
+      }
+      return r;
     };
     Object.keys(base).forEach((x) => { w[x] = base[x]; }); w._fr2 = true;
     return w;

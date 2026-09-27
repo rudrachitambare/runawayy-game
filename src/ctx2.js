@@ -109,6 +109,11 @@
         }
         if (!r) r = fn.apply(this, arguments) || { say: '...', fx: {} };
         if (typeof r.say === 'string') {
+          // a carried follow-up ("what about tomorrow?") that lands on an answer they already gave: say so, briefly
+          if (an.carried && h.some((x) => x.who === 'npc' && x.t.trim() === r.say.replace(/\*[^*]+\*\s*/g, '').trim())) {
+            const first = r.say.split(/(?<=[.!?])\s+/)[0];
+            r.say = teen(id) ? pick(['same answer tbh. ' + first.toLowerCase(), 'still no, sorry. ' + first.toLowerCase()]) : pick([`Same answer, I'm afraid. ${first}`, `That part doesn't change, I'm sorry. ${first}`]);
+          }
           // never the exact same line twice in a row
           if (prevNpc && r.say.trim() === prevNpc.t.trim()) r.say = teen(id) ? pick(['like i said. ' + r.say.toLowerCase(), 'bro i just said that 😭']) : pick([`Like I said — ${r.say.charAt(0).toLowerCase() + r.say.slice(1)}`, 'I just told you, hon. ' + r.say]);
           if (REFUSE.test(r.say) && an.has && an.has('stay')) c.mem._refused = 'stay';
