@@ -6,7 +6,13 @@
 (function (SH) {
   const A = SH.Atlas, EN = SH.Endings; if (!A || !EN) return;
   const G = () => SH.G;
-  const inVillage = () => { const g = G(); if (!g || !g.away) return false; const p = A.here && A.here(); return !!(p && p.tier === 'village'); };
+  // some code clears g.away just before calling found(); fall back to the town the current location belongs to (t_<pid>_<kind>)
+  const inVillage = () => {
+    const g = G(); if (!g) return false;
+    let p = g.away && A.here ? A.here() : null;
+    if (!p) { const m = /^t_(p\d+)_/.exec(g.loc || '') || (g._lastVillage && g.loc === g._lastVillageLoc ? [0, g._lastVillage] : null); if (m && A.data) p = A.data().places.find((x) => x.id === m[1]); }
+    return !!(p && p.tier === 'village');
+  };
   SH.inVillage = inVillage;
 
   /* nobody notices you */
@@ -33,9 +39,31 @@
       SH.st('full', 40); SH.st('energy', 30); SH.st('health', 15); SH.st('warmth', 20);
       return;
     }
-    if (g && !CHOSEN.has(reason) && inVillage()) { console.info('village: found(' + reason + ') cancelled'); if (SH.Events && SH.Events.Q) SH.Events.Q = SH.Events.Q.filter((e) => e.id !== 'found'); return; }
+    if (g && !CHOSEN.has(reason) && inVillage()) { console.info('village: found(' + reason + ') cancelled'); if (SH.Events && SH.Events.Q) SH.Events.Q = SH.Events.Q.filter((e) => e.id !== 'found'); restore(); return; }
     return bFound.apply(this, arguments);
   };
+  // if something cleared g.away on the way to a (cancelled) found, put you back where you were and redraw
+  function restore() {
+    const g = G(); if (!g || g.ended) return;
+    if (!g.away) { const m = /^t_(p\d+)_/.exec(g.loc || ''); if (m) g.away = m[1]; }
+    setTimeout(() => { try { if (!SH.UI.modalOpen()) SH.UI.afterAction(); } catch (e) {} }, 60);
+  }
+  /* catch-all: no police scene of any kind opens in a village */
+  const COP = /police|officer|deputy|sheriff|cruiser|patrol car|squad car/i;
+  const bDlg = SH.UI.dialog;
+  SH.UI.dialog = function (o) {
+    try { if (o && inVillage() && (o.title === 'Found' || o.who === 'officer' || o.who === 'cop')) { console.info('village: police dialog blocked', o.title); restore(); return; } } catch (e) {}
+    return bDlg.apply(this, arguments);
+  };
+  if (SH.Talk && SH.Talk.open) { const bT = SH.Talk.open; SH.Talk.open = function (npc) { if ((npc === 'officer' || npc === 'cop') && inVillage()) { console.info('village: police talk blocked'); restore(); return; } return bT.apply(this, arguments); }; }
+  if (SH.EndX && SH.EndX.render) {
+    const OKX = /^(later|gone|farm|fever|shack|village|tale)/;
+    const bR = SH.EndX.render;
+    SH.EndX.render = function (d, c) {
+      try { const g = G(); if (inVillage() && !g._tripTo && !OKX.test(d.k || '') && !OKX.test((d.on || [])[0] || '')) { const t = [].concat(d.x(c) || []).join(' '); if (COP.test(t)) { console.info('village: police ending blocked', d.k); if (/exhaust/.test(d.k || '')) { (g.hp = g.hp || {}).debt = 0; SH.UI.log('You don\'t really remember sitting down. Somebody\'s grandmother finds you asleep on her porch step and puts you on her couch under three quilts. You sleep fourteen hours. She doesn\'t ask your name. Nobody out here ever does.', 'good'); SH.st('energy', 60); SH.st('full', 30); SH.st('health', 10); } restore(); return; } } } catch (e) {}
+      return bR.apply(this, arguments);
+    };
+  }
   // queued "found" events (heat checks, phone tracking) are dropped while you're in a village
   if (SH.Events && SH.Events.queue) { const bQ = SH.Events.queue; SH.Events.queue = function (e) { if (e && e.id === 'found' && inVillage()) return; return bQ.apply(this, arguments); }; }
 
