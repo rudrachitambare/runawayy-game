@@ -26,7 +26,7 @@
       SH.UI.log(`${k.n} folds the note and leaves it on the pillow. ${s >= 3 ? 'It\'s a good note. It\'ll help.' : s >= 1 ? 'It says the important part.' : s < 0 ? 'Reading it back, it sounds angrier than either of you meant.' : 'It\'s short. Maybe too short.'}`, s < 0 ? 'bad' : '');
     }, true);
   }
-  K.acts((acts) => { const g = G(); if (g.phase !== 'run' || g.away) return; (g.party || []).filter((id) => KIDS[id] && !W(id).note && FR.st(id).joinedAt && g.t - FR.st(id).joinedAt < 240).forEach((id) => acts.unshift({ label: `Help ${KIDS[id].n} write the note for ${rel(id) === 'mom' ? 'her mom' : 'his dad'}`, sub: 'The one on the pillow', cls: 'safe', fn: () => note(id) })); });
+  K.acts((acts) => { const g = G(); if (g.phase !== 'run' || g.away) return; (g.party || []).filter((id) => KIDS[id] && !W(id).note && FR.st(id).joinedAt && g.t - FR.st(id).joinedAt < 240).forEach((id) => acts.unshift({ label: `Help ${KIDS[id].n} write the note for ${({ she: 'her', he: 'his', they: 'their' })[KIDS[id].g] || 'their'} ${rel(id)}`, sub: 'The one on the pillow', cls: 'safe', fn: () => note(id) })); });
   /* ---------- daily/hourly worry ---------- */
   K.daily.push(() => { (G().party || []).filter((id) => KIDS[id]).forEach((id) => { const x = W(id); bump(id, RATE[KIDS[id].fam] * (x.sched ? 0.5 : 1) * (x.note ? 1 : 1.3)); }); });
   const LINES = {

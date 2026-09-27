@@ -28,6 +28,12 @@
     hazel: [{ sev: 25, k: /\b(house|notice|evict|lose the|quinn place|farm|pink)\b/, tell: 'there\'s a pink notice on our door. we might lose the quinn place. my dad won\'t talk about it, he just works more', yes: 'if we\'re losing the house anyway i\'d rather be somewhere with trees. i\'m in. obviously.' },
       { sev: 20, k: /\b(your dad|ur dad|alone|doubles|by yourself|doesn'?t come home)\b/, tell: 'my dad works doubles so i basically raise myself. some nights he doesn\'t come home at all. it\'s fine. it\'s mostly fine', yes: 'i basically live alone already. at least this way i\'d have company. ok!' }],
   };
+  // Jordan: your best friend since forever. Not one of the Birch Street kids, but he has his own stuff too.
+  TR.jordan = [{ sev: 20, k: /\b(parents|fight|fighting|hours|whisper|your dad|ur dad|money|job)\b/, tell: 'ngl my house is weird rn. my dad\'s hours got cut and they fight every night. like whisper-fighting. it\'s worse than yelling. i just turn my music up', yes: 'better than listening to them whisper-fight all night. ok. i\'m in. fr.' },
+    { sev: 20, k: /\b(ohio|move|moving|transfer|transferred|december)\b/, tell: 'my dad got transferred. we\'re moving to ohio in december. i didn\'t even get a vote. ur literally the only reason i like it here', yes: 'i\'m getting dragged to ohio anyway. might as well go somewhere with u first. i\'m in.' }];
+  if (!FR.KIDS.jordan) FR.KIDS.jordan = { n: 'Jordan', full: 'Jordan Pike', g: 'he', col: '#6aa7ff', ini: 'J', age: 12, vibe: 'best friend', risk: 0.45, fam: 'warm', parent: 'Mrs. Pike', pjob: 'a dental hygienist', extra: true,
+    likes: /\b(skate|skating|skyforge|takis|pizza|raccoons?)\b/, dislikes: /\b(math|mr dale|tyler)\b/, look: { skin: '#c68e62', hair: '#20150e', style: 'short', shirt: '#6aa7ff', top: 'hoodie', young: 1 },
+    hang: 'skating the bowl', where: 'park', we: 'park', hi: 'yo', fb: ['did u see the new skyforge update', 'bro same', 'fr'], bio: {} };
   const trouble = (id) => { const L = TR[id]; if (!L) return null; const s = ((G().story && G().story.seed) || 1) + id.length * 13; return L[s % L.length]; };
   FR.trouble = trouble;
   const THR = (id) => 60 + (FR.KIDS[id].fam === 'strict' ? 10 : 0);
@@ -84,6 +90,7 @@
     Object.keys(base).forEach((x) => { w[x] = base[x]; }); w._fr2 = true;
     return w;
   }
+  FR.brainWrap = brainWrap;
   Object.keys(FR.KIDS).forEach((id) => { const b = SH.Brain[id]; if (typeof b === 'function' && !b._fr2) SH.Brain[id] = brainWrap(id, b); });
 
   /* inviting by text: a yes is a yes */
