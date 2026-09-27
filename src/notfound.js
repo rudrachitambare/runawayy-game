@@ -21,7 +21,7 @@
     K.D('Disappear for good?', ['Not running anymore. Not hiding. Just... staying gone. Letting your old life close behind you like water.', ...ps.map(([t, ok]) => `${ok ? '✓' : '·'} ${t}`), why || 'You could do it. You really could. It would cost you things you can\'t get back.'],
       (why ? [] : [{ t: 'Disappear for good', cls: 'hot', sub: 'This ends the game with a never-found ending.', fn: () => K.D('Are you sure?', ['Your mom. Your room. Your name. Everyone who is looking for you.', 'This is the kind of choice you only get once.'], [{ t: 'Yes. Stay gone.', cls: 'hot', fn: () => { g.flags.goneForGood = 1; SH.EndX.trigger('gone', { place: p }); } }, { t: 'Not yet', fn: K.back }]) }]).concat([{ t: 'Back', fn: K.back }]));
   }
-  K.me((p, ch) => { if (K.days() >= 14) ch.push({ t: '🌫️ Disappear for good', sub: ready(p) ? 'You could. Really.' : 'Not yet', fn: () => offer(p) }); });
-  K.daily.push(() => { const g = G(); if (!g.away || g.flags.goneOffered || K.days() < 45) return; const p = A.here(); if (!ready(p)) return; g.flags.goneOffered = 1; setTimeout(() => offer(p), 100); });
+  K.me((p, ch) => { if (K.days() >= 14 && !G().later) ch.push({ t: '🌫️ Disappear for good', sub: ready(p) ? 'You could. Really.' : 'Not yet', fn: () => offer(p) }); });
+  K.daily.push(() => { const g = G(); if (!g.away || g.later || g.flags.goneOffered || K.days() < 45) return; const p = A.here(); if (!ready(p)) return; g.flags.goneOffered = 1; setTimeout(() => offer(p), 100); });
   SH.NotFound = { pillars, ready, offer };
 })(window.SH);

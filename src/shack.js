@@ -23,6 +23,14 @@
   const biome = (p) => TW.biome ? TW.biome(p.biome) : 'forest';
   const rainy = () => (SH.raining && SH.raining()) || false;
   const day = () => SH.day();
+  /* friends at the shack (turn 40): more hands, faster work, and they have opinions */
+  const crew = () => (K.party ? K.party() : []);
+  const FLINE = {
+    build: ['{f} holds the other end without being asked. It goes twice as fast and half as crooked.', '{f} keeps up a running commentary the whole time ("this is a load-bearing branch, Sam, respect it"). You get it done faster just to make it stop. You don\'t actually want it to stop.', '{f} turns out to be good at knots. Like, suspiciously good. "Scouts. For one month. Don\'t ask."', '{f} steps back, squints, and says, "It\'s ugly." Then, after a second: "It\'s OUR ugly."', 'You and {f} work without talking for a long time. It\'s the good kind of not talking.'],
+    gather: ['{f} carries the bigger half and pretends it\'s nothing.', '{f} finds a stick shaped exactly like a gun and then, seeing your face, throws it into the creek and finds a normal stick.', '{f} races you back to the pile. {f} cheats. You let it happen.', '{f} names every log. This one is Gerald.'],
+  };
+  const fline = (k) => { const c = crew(); if (!c.length) return ''; return ' ' + pick(FLINE[k]).split('{f}').join(K.nm(pick(c))); };
+  const hands = () => (crew().length ? 0.6 : 1);
 
   /* ---------- the shack's parts: they are base upgrades, so warmth/dry/hidden/safe all work through bases.js ---------- */
   const PARTS = [
@@ -49,14 +57,15 @@
   function gather(kind, p) {
     const g = G(), b = biome(p), slow = rainy() ? 1.5 : 1, st = TW.st ? TW.st() : (g.twx = g.twx || {});
     const lim = (g._resDay = g._resDay || {}); const key = p.id + ':' + day(); lim[key] = lim[key] || { log: 0 };
-    if (kind === 'branch') { if (TW.time(Math.round(40 * slow), 0.02, { exert: 1.5 })) return; const n = 4 + Math.floor(Math.random() * 4); add('branch', n); SH.st('energy', -6); SH.st('hyg', -3);
+    if (kind === 'branch') { if (TW.time(Math.round(40 * slow), 0.02, { exert: 1.5 })) return; const n = 4 + Math.floor(Math.random() * 4); add('branch', n + crew().length * 3); SH.st('energy', -6); SH.st('hyg', -3);
       log(`You pick up fallen branches ${pick(SPOT[b] || SPOT.forest)}. ${n} good ones, straight enough, dry enough${rainy() ? '. Well, not dry. Nothing is dry today. It takes forever' : ''}. Your hands are scratched and sticky with sap.`, ''); }
     if (kind === 'log') {
       if (lim[key].log >= 2) { log('You look for another log you can actually move. Everything left is either rotten through or the size of a car. Tomorrow.', 'sys'); return done(); }
-      if (TW.time(Math.round(60 * slow), 0.03, { exert: 2.5 })) return; lim[key].log++; add('log', 1); SH.st('energy', -12); SH.st('hyg', -4);
+      if (TW.time(Math.round(60 * slow), 0.03, { exert: 2.5 })) return; lim[key].log++; add('log', crew().length ? 2 : 1); SH.st('energy', -12); SH.st('hyg', -4);
       log(pick(['You find a fallen log about as long as you are tall and drag it, a few feet at a time, to your pile. You have to sit down twice.', 'A dead tree came down in some storm. You roll one piece of it end over end back to your spot. Your arms are shaking by the end.']), ''); }
-    if (kind === 'stone') { if (TW.time(Math.round(40 * slow), 0.02, { exert: 1.8 })) return; const n = 5 + Math.floor(Math.random() * 5); add('stone', n); SH.st('energy', -8);
+    if (kind === 'stone') { if (TW.time(Math.round(40 * slow), 0.02, { exert: 1.8 })) return; const n = 5 + Math.floor(Math.random() * 5); add('stone', n + crew().length * 4); SH.st('energy', -8);
       log(`You carry stones up from ${STONES[b] || STONES.forest}, two at a time, like eggs. ${n} of them. The pile looks bigger than it feels.`, ''); }
+    if (crew().length) log(fline('gather').trim(), '');
     log(`Your pile: ${pileTxt()}.`, 'sys'); done();
   }
 
@@ -69,12 +78,14 @@
     if (h < 7 || h >= 19) { log(`The ${F.place} is dark except for the yard light. A dog barks once, like a warning. Come back in daylight.`, 'sys'); return done(); }
     const first = !me.met; me.met = 1;
     const buy = (k, n, price, line) => ({ t: `Buy ${nm(k, n)}: $${price}`, sub: line, fn: () => { if (!TW.pay(price, `${F.n}: ${nm(k, n)}`)) return farm(p); add(k, n); if (TW.time(5, 0)) return; log(`${F.n} ${pick(['takes your money and doesn\'t count it.', 'folds the bills into a shirt pocket.', 'says "don\'t hurt yourself" and means it.'])} Your pile: ${pileTxt()}.`, 'good'); farm(p); } });
-    const work = (label, mins, cash, goods, line) => ({ t: label, sub: me.work === day() ? 'Already worked today. Come back tomorrow.' : `${Math.round(mins / 60 * 10) / 10}h · $${cash}, or ${Object.entries(goods).map(([k, n]) => nm(k, n)).join(' + ')}`, fn: () => {
+    const gl = (goods) => Object.entries(goods).map(([k, n]) => nm(k, n)).join(' + ');
+    const work = (label, mins, cash, goods, line) => ({ t: label, sub: me.work === day() ? 'Already worked today. Come back tomorrow.' : `${Math.round(mins / 60 * 10) / 10}h · $${cash}, and ${F.g === 'she' ? 'she' : 'he'} might throw in some materials`, fn: () => {
       if (me.work === day()) { log(`"You did plenty today," ${F.n} says. "Go on."`, 'sys'); return farm(p); }
-      SH.UI.dialog({ title: F.place, text: [line, 'How do you want to be paid?'], choices: [
-        { t: `Cash: $${cash}`, fn: () => { me.work = day(); if (TW.time(mins, 0.02, { exert: 2 })) return; SH.money(cash); SH.st('energy', -20); SH.st('hyg', -10); SH.st('full', -10); log(`${F.n} pays you $${cash} in fives and ones, and a glass of water from the hose.`, 'good'); done(); } },
-        { t: `In stuff: ${Object.entries(goods).map(([k, n]) => nm(k, n)).join(' + ')}`, fn: () => { me.work = day(); if (TW.time(mins, 0.02, { exert: 2 })) return; Object.entries(goods).forEach(([k, n]) => add(k, n)); SH.st('energy', -20); SH.st('hyg', -10); SH.st('full', -10); log(`"Take it, it's just sitting there rotting," ${F.n} says, and helps you load it into a wheelbarrow you promise to bring back. You do. Your pile: ${pileTxt()}.`, 'good'); done(); } },
-        { t: 'Never mind', fn: () => farm(p) }] });
+      me.work = day(); log(line, ''); if (TW.time(mins, 0.02, { exert: 2 })) return;
+      SH.money(cash); SH.st('energy', -20); SH.st('hyg', -10); SH.st('full', -10); SH.Village && SH.Village.bump(p, 'farm', 1);
+      SH.UI.dialog({ title: F.place, text: [`${F.n} pays you $${cash} in fives and ones, and a glass of water from the hose.`, `"There's ${gl(goods)} by the shed, just sitting there rotting. Take it if you want it."`], choices: [
+        { t: `Take it: ${gl(goods)}`, fn: () => { Object.entries(goods).forEach(([k, n]) => add(k, n)); log(`You load it into a wheelbarrow you promise to bring back. You do. Your pile: ${pileTxt()}.`, 'good'); done(); } },
+        { t: 'No thanks, the money\'s plenty', fn: () => { SH.Village && SH.Village.bump(p, 'farm', 1); log(`${F.n} shrugs. "Offer stands." ${F.g === 'she' ? 'She' : 'He'} looks at you a little differently after that. Like you might be all right.`, ''); done(); } }] });
     } });
     const hi = first ? [`${F.n} is in the yard with a bucket, and looks at you a long second. "Whose kid are you?"`, pick([`You say you're staying with family in town. ${F.g === 'she' ? 'She' : 'He'} nods like that's an answer. Out here people let you have your business.`, `"Visiting," you say. "Mm," ${F.n} says, and goes back to the bucket. "Well. You look like you could use something to do."`])] : [pick([`${F.n} lifts a hand without looking up. "Back again."`, `${F.n} is fixing a fence. "Help yourself to the hose if you're thirsty."`])];
     if (first) TW.notice(0.02);
@@ -83,6 +94,7 @@
       buy('tin', 1, 6, 'A sheet of old roofing tin off the shed. A little rusty. Rain doesn\'t care.'), buy('nail', 1, 2, 'A coffee can of bent-but-fine nails.'),
       work('Work: stack hay bales in the loft', 120, 10, { plank: 6, straw: 1 }, `"Bales go up, stacked tight, don't fall out of the loft." It's hot and itchy and you're sneezing the whole time.`),
       work('Work: muck out the stalls', 90, 8, { straw: 2, rope: 1 }, `"Shovel, wheelbarrow, pile out back. Don't let the goat eat your shoelaces." The goat tries anyway.`),
+      ...(SH.Village && SH.Village.sell ? SH.Village.sell(p, () => farm(p)) : []),
       { t: 'Back', fn: done }] });
   }
 
@@ -110,7 +122,7 @@
     const up = b ? b.up : [];
     const rows = PARTS.filter((pt) => !up.includes(pt.id)).map((pt) => {
       const blocked = pt.after && !up.includes(pt.after), o = firstHave(pt);
-      return { t: `${pt.n}${o && !blocked ? ' ✓' : ''}`, sub: blocked ? `First: ${PARTS.find((x) => x.id === pt.after).n.toLowerCase()}` : `${Math.round(pt.mins / 60 * 10) / 10}h · needs ${needTxt(pt.need)}`, fn: () => build(p, pt) };
+      return { t: `${pt.n}${o && !blocked ? ' ✓' : ''}`, sub: blocked ? `First: ${PARTS.find((x) => x.id === pt.after).n.toLowerCase()}` : `${Math.round(pt.mins * hands() / 60 * 10) / 10}h · needs ${needTxt(pt.need)}`, fn: () => build(p, pt) };
     });
     const built = PARTS.filter((pt) => up.includes(pt.id)).map((pt) => pt.n.toLowerCase());
     SH.UI.dialog({ title: b ? '🛖 Your shack' : '🛖 Build a shack', text: [b ? (built.length ? `So far: ${built.join(', ')}.` : 'A cleared spot and a plan.') : `There's a flat spot ${pick(SPOT[biome(p)] || SPOT.forest)}, out of sight of the road. You could build something here. Something that's yours.`, `Your pile: ${pileTxt()}.`, rows.length ? 'Gather branches, logs and stones out here. Buy boards, straw, twine and tin from the farm down the road or the gas station.' : 'It\'s done. It\'s a real shack. You built it.'], choices: rows.concat(b ? [{ t: SH.hour() >= 20 || SH.hour() < 6 ? 'Sleep in your shack' : 'Rest in your shack (2h)', cls: 'safe', fn: () => B.sleep(p) }] : [], [{ t: 'Back', fn: done }]) });
@@ -123,9 +135,9 @@
     take(o);
     if (!b) { b = g.base = { type: 'camp', shack: true, pid: p.id, up: [], day: day(), nights: 0 }; log(`You have a base: a shack you're building outside ${p.name}.`, 'good'); }
     b.shack = true;
-    if (TW.time(Math.round(pt.mins * (rainy() ? 1.3 : 1)), 0.02, { exert: 2 })) return;
+    if (TW.time(Math.round(pt.mins * hands() * (rainy() ? 1.3 : 1)), 0.02, { exert: 2 })) return;
     b.up.push(pt.id); SH.st('energy', -Math.round(pt.mins / 8)); SH.st('hyg', -8); SH.st('mood', 6); SH.st('stress', -6); SH.flag('builtShack');
-    log(`${pt.n}: done. ${pt.d}`, 'good');
+    log(`${pt.n}: done. ${pt.d}${fline('build')}`, 'good');
     const left = PARTS.filter((x) => !b.up.includes(x.id)).length;
     if (!left) log('You stand back and look at it. Walls, roof, a door that latches, a fire ring, a bed. Nobody gave you this. You made it out of a forest and some farmer\'s leftover boards.', 'good');
     done();
@@ -150,5 +162,5 @@
   if (bGas) TW.KIND.gas = function (a, L, T, p, c) { bGas.apply(this, arguments); if (ok(p) && c.open) shelf(a); };
   if (bMain) TW.KIND.main = function (a, L, T, p, c) { bMain.apply(this, arguments); if (ok(p) && !c.dark) a.push(act('Check the FREE pile on the main road', '15 min · people leave lumber out sometimes', () => freePile(p))); };
 
-  SH.Shack = { PARTS, pile, add, gather, farm, build, buildMenu };
+  SH.Shack = { PARTS, pile, add, have, take, gather, farm, build, buildMenu, NAMES, nm, pileTxt, FARM, biome, rainy, ok, crew };
 })(window.SH);
