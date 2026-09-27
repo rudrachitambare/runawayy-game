@@ -4,7 +4,7 @@
    "run out of supplies" for things that don't use supplies.
    SOLO: no role screen; you do everything (make and sell), and you have to keep half an eye out yourself.
    TEAM: each person gets a role named for the actual work (walks the dogs / knocks on doors / keeps watch);
-   doubling up on a role still helps, just less. Everyone gets an equal cut; you decide what to do with yours.
+   doubling up on a role still helps, just less. You carry the group's money (it pays for everyone), or put half in the group jar.
    Money: cash, or half of your cut into the group jar (only if you have one). Honest work only. */
 (function (SH) {
   const K = SH.K, A = SH.Atlas; if (!K || !A) return;
@@ -76,7 +76,7 @@
       L.map(([id, k]) => ({ t: `${k.i} ${k.n}`, sub: `${k.d}${k.need ? ` Needs a ${k.need}.` : ''}${k.cost ? ` About $${k.cost} in supplies a shift.` : ''}`, fn: () => {
         if (k.need && !(G().bag.includes('x_' + k.need) || (G().owned || []).includes('x_' + k.need))) return K.D('Missing something', `You need a ${k.need} first. The hardware shelf at the gas station or a hardware store has them.`, [{ t: 'Okay', fn: () => pickKind(p) }]);
         const def = solo() ? `${G().name || 'Sam'}'s ${k.n.split(/[ /]/)[0]}` : `${G().name || 'Sam'} & Co.`;
-        K.ask('Name it', ['What\'s it called? It goes on the sign.'], def, (name) => { G().biz = G().biz || {}; G().biz[p.id] = { kind: id, name: (name || def).slice(0, 32), roles: {}, shifts: 0, total: 0, pid: p.id }; setTimeout(() => (solo() ? menu(p) : roles(p)), 30); });
+        K.ask('Name it', ['What\'s it called? It goes on the sign.'], def, (name) => { G().biz = G().biz || {}; G().biz[p.id] = { kind: id, name: (name || def).slice(0, 32), roles: {}, shifts: 0, total: 0, pid: p.id }; setTimeout(() => (solo() ? menu(p) : roles(p)), 30); }); const inp = document.querySelector('#kask'); if (inp) { inp.value = def; inp.select && setTimeout(() => inp.select(), 40); }
       } })).concat([{ t: 'Back', fn: K.back }]));
   }
   function roles(p, i = 0) {
@@ -100,14 +100,14 @@
     if (rain) { mult *= b.kind === 'fix' ? 0.7 : 0.35; prob = k.rain; }
     else if (r < 0.16) { const [pk, pt] = K.pick(k.probs); prob = pt; mult *= pk === 'out' ? 0.55 : pk === 'hard' ? 0.85 : 0.7; }
     else if (r < 0.23 && cnt.look < 1 && p.tier !== 'village') { g.awayNotice = (g.awayNotice || 0) + (cnt.look ? 8 : 15); prob = solo() ? 'A customer asks where you go to school. And what your last name is. You were busy and didn\'t see that kind of customer coming.' : 'A customer asks where you all go to school. And which church. And what your last names are. Nobody was watching for that kind of customer.'; }
-    const earn = Math.max(1, Math.round(k.base * mult)), cut = solo() ? earn : Math.round(earn / n);
+    const earn = Math.max(1, Math.round(k.base * mult)), cut = earn;
     b.shifts++; b.total += earn; SH.st('mood', 5); SH.st('energy', b.kind === 'leaves' || b.kind === 'carwash' ? -16 : -10); (g.skills = g.skills || {}).business = Math.min(100, (g.skills.business || 0) + 3);
     K.party().forEach((id) => SH.Group && SH.Group.att(id, 2));
     const good = K.pick(k.good), lead = !solo() && K.party().find((id) => b.roles[id] === 'sell');
     const flavor = lead && Math.random() < 0.4 ? `${K.nm(lead)} is a natural with customers. ${good}` : good;
-    const pay = [{ t: solo() ? `Keep the $${earn}` : `Split it: $${cut} each`, sub: solo() ? '' : `$${earn} total. Everyone gets the same.`, fn: () => { SH.money(cut); after(p); } }];
-    if (SH.Bank && SH.Bank.crewAdd && g.crew && cut >= 2) pay.push({ t: `Put half your cut in the group jar ($${Math.floor(cut / 2)})`, fn: () => { SH.money(cut); try { SH.Bank.crewAdd(Math.floor(cut / 2), 'cash'); } catch (e) {} after(p); } });
-    K.D(`${k.i} ${b.name}: shift ${b.shifts}`, [flavor, prob, `Made $${earn}${solo() ? '' : ` together`}.`].filter(Boolean), pay);
+    const pay = [{ t: solo() ? `Keep the $${earn}` : `Hold onto the $${earn}`, sub: solo() ? '' : 'You carry the group\'s money. It pays for everyone\'s food and beds.', fn: () => { SH.money(cut); after(p); } }];
+    if (SH.Bank && SH.Bank.crewAdd && g.crew && cut >= 2) pay.push({ t: `Put half in the group jar ($${Math.floor(cut / 2)})`, fn: () => { SH.money(cut); try { SH.Bank.crewAdd(Math.floor(cut / 2), 'cash'); } catch (e) {} after(p); } });
+    K.D(`${k.i} ${b.name}: shift ${b.shifts}`, [rain ? null : flavor, prob, `Made $${earn}${solo() ? '' : ` together`}.`].filter(Boolean), pay);
   }
   function after(p) { if (K.chance(0.12 + (G().heat || 0) / 400) && p.tier !== 'village' && SH.Police) return SH.Police.stop(p, 'business', () => menu(p)); menu(p); }
   K.hub((p, ch, dark) => { if (dark) return; const b = biz(p), k = b && KINDS[b.kind]; ch.push({ t: k ? `${k.i} ${b.name}` : '💼 Start a business', sub: k ? `Your ${k.n.toLowerCase()} · $${b.total} so far` : 'Stand, car wash, dog walking, yard work…', fn: () => menu(p) }); });

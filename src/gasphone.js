@@ -6,8 +6,8 @@
   const A = SH.Actions, NT = SH.Net; if (!A || !A.list || !NT) return;
   const G = () => SH.G;
   const gasHere = () => { const g = G(); return g && g.away && /^t_.+_gas$/.test(g.loc || ''); };
-  const here = () => { try { const L = SH.Atlas && SH.Atlas.here && SH.Atlas.here(); return (L && L.name) || 'the gas station'; } catch (e) { return 'the gas station'; } };
-  const shut = () => { try { const L = SH.Atlas.here(), h = SH.hour(); return L && L.hours && !(h >= L.hours[0] && h < L.hours[1]); } catch (e) { return false; } };
+  const here = () => { try { const L = SH.LOC && SH.LOC[G().loc]; return (L && L.name) || 'the gas station'; } catch (e) { return 'the gas station'; } };
+  const shut = () => { try { const L = SH.LOC && SH.LOC[G().loc], h = SH.hour(); return L && L.hours && !(h >= L.hours[0] && h < L.hours[1]); } catch (e) { return false; } };
   function burner() {
     const g = G(), x = NT.x && NT.x(); if (!x) return SH.UI.toast('The clerk says the phones are sold out.');
     if (x.burner && !g.phone.confiscated) return SH.UI.toast('You already have a burner.');
