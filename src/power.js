@@ -35,13 +35,13 @@
   };
   const bAdv = SH.advance;
   SH.advance = function (mins) {
-    try { watch(); } catch (e) {}
-    const g = G(), plugged = g && (g.charging || (g.phase === 'home' && g.loc === 'home' && g.room === 'bedroom')), full0 = g && g.phone && g.phone.bat >= 99.5;
+    const g = G();
+    try { if (g && g._inCharge) own(); else watch(); } catch (e) {}
     const r = bAdv.apply(this, arguments);
-    try { if (plugged && full0) gain((mins || 10) * 0.55); watch(); } catch (e) {}
+    try { if (g && g._inCharge) own(); else watch(); } catch (e) {}
     return r;
   };
-  const bAA = SH.UI.afterAction; SH.UI.afterAction = function () { try { watch(); } catch (e) {} return bAA.apply(this, arguments); };
+  const bAA = SH.UI.afterAction; SH.UI.afterAction = function () { try { if (G() && G()._inCharge) own(); else watch(); } catch (e) {} return bAA.apply(this, arguments); };
   // motel rooms and bases set the battery straight to 100 after their hour: watch() in afterAction credits the bank the same amount
 
   /* ---------- using things ---------- */
@@ -80,7 +80,9 @@
   const bList = AC.list;
   if (bList) AC.list = function () {
     const r = bList.apply(this, arguments);
-    try { sync(); (r.acts || []).forEach((a) => { if (/^Buy a power bank/.test(a.label)) a.sub = 'Holds 3 phone charges. Recharges with your phone.'; if (/^Use the power bank/.test(a.label) && G().banks && G().banks.powerbank) a.sub = chargesTxt(G().banks.powerbank, 'powerbank'); }); } catch (e) {}
+    try { sync(); (r.acts || []).forEach((a) => {
+      // plugging in at an outlet: the power bank charges alongside, at the phone's speed (~68% an hour), even once the phone is full
+      if (/charge (your )?phone|charge phone/i.test(a.label) && !a._pw && typeof a.fn === 'function') { const f = a.fn; a._pw = 1; a.fn = function () { const g = G(), t0 = g.t; g._inCharge = true; own(); try { return f.apply(this, arguments); } finally { g._inCharge = false; gain(Math.max(0, g.t - t0) * 68 / 60); own(); } }; } if (/^Buy a power bank/.test(a.label)) a.sub = 'Holds 3 phone charges. Recharges with your phone.'; if (/^Use the power bank/.test(a.label) && G().banks && G().banks.powerbank) a.sub = chargesTxt(G().banks.powerbank, 'powerbank'); }); } catch (e) {}
     return r;
   };
   // a new Harlow power bank arrives full (3 charges) and fresh

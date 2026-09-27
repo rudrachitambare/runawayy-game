@@ -513,3 +513,12 @@ New `src/logic.js` (after dialer.js):
 3. **Stuff stays put.** On any location change (checked around SH.advance and afterAction), non-ride g.owned goes to G.stored[from] ('harlow' or pid), and G.stored[to] comes back. Logged both ways. Bikes and scooters travel with you. catalog.js overflow toast updated.
 4. **Local officer.** EN.found sets G._cop (Officer/Deputy + surname hashed from the pid). SH.nm is wrapped to swap "Officer Lowe" and rewrite the ride-home and "officer looks at you" lines. NPCS_META.officer name is swapped (and restored for Harlow).
 5. **Shoplifting** (actions2.js): per-store memory G.lift. Caught → blocked there for 7 days. Risk is 0.35 + 0.2 per try that day. On the run, loot is granola, chips or apple.
+
+## #49 — Chargers & power banks (turn 49)
+User: the charger and power bank acted one-time. The rule now: a power bank holds 3 charges, recharges with the phone at the same speed (phone speed unchanged), and breaks after 20 charges.
+New `src/power.js` (after logic.js):
+- G.banks[id] = {left, used}. Caps: powerbank (Harlow) and x_powerbank hold 3 charges; x_powerbank2 holds 5. LIFE = 2000% delivered, then the bank is removed with a "dies" log and a warning 3 charges before.
+- G.pbCharge mirrors the Harlow bank. Harlow shop text: "Holds 3 phone charges".
+- Outlet acts (/charge (your )?phone/) are wrapped in AC.list: the bank gains 68%/hr of elapsed time, while G._inCharge suppresses the watcher.
+- Other outlet rises (motel, base) are matched via watch() on advance and afterAction. Solar and crank don't feed the bank.
+- Tapping the charger or x_cable runs the local charge act, or a toast listing where outlets are. SH.has('charger') is also true with x_cable.
