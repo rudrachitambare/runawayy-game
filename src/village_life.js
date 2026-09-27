@@ -145,6 +145,13 @@
   wrapKind('gas', (a, L, T, p, c) => { if (!c.open) return;
     if (!has('line') && WATER.includes(S.biome(p))) a.push(act('Buy a hook-and-line kit: $3', 'Hooks, line, sinkers, a bobber, on a card', () => { if (!TW.pay(3, 'Fishing kit')) return done(); S.add('line', 1); log('A little fishing kit on a cardboard card. The clerk says the fish are "biting at the dock, or they were in 1994."', ''); done(); }));
     if (!has('knife')) a.push(act('Buy a pocketknife: $7', 'Small, folding. For carving and cutting twine.', () => { if (!TW.pay(7, 'Pocketknife')) return done(); S.add('knife', 1); log('A small folding knife in a blister pack. The clerk looks at you, looks at the knife, shrugs. "Cut away from yourself."', ''); done(); })); });
+  // gas stations everywhere keep a little rack of hair dye and cheap glasses by the register
+  { const bG = TW.KIND.gas; TW.KIND.gas = function (a, L, T, p, c) { bG.apply(this, arguments); try { if (!c.open) return; const C = SH.Catalog; if (!C || !C.give) return;
+    const own = (id) => { const g = G(); return (g.bag || []).includes('x_' + id) || (g.owned || []).includes('x_' + id); }, lk = G().look || {};
+    [['dye', 'Box hair dye', 12, 'On the rack by the register, next to the phone chargers. One shade: "Midnight Espresso."', 'You pay for a box of hair dye. The clerk doesn\'t even look at the box.'], ['glasses', 'Clear-lens reading glasses', 11, 'A spinning rack of cheap glasses. The weakest ones are almost clear.', 'You try on six pairs in the little mirror and pick the ones that make you look like a stranger.']].forEach(([id, n, price, sub, line]) => {
+      if (own(id) || lk[id]) return;
+      a.push(act(`Buy ${n.toLowerCase()}: $${price}`, sub, () => { if (!TW.pay(price, n)) return done(); C.give('x_' + id); TW.notice(0.02); log(line + ' (Use it from You & your group → Change your look.)', ''); done(); }));
+    }); } catch (e) { console.warn(e); } }; }
   // the edge of town: trades, plus reading the sky
   const bEdge = TW.KIND.edge;
   TW.KIND.edge = function (a, L, T, p, c) {

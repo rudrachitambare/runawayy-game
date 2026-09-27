@@ -18,7 +18,12 @@
   const BY_TIER = { village: ['general'], small: ['general', 'hardware', 'pharmacy'], town: ['market', 'hardware', 'pharmacy', 'sport', 'tech'], city: ['mall', 'market', 'hardware', 'pharmacy', 'sport', 'tech'] };
   const NOTICE = { village: 7, small: 4, town: 2, city: 0.5 };
   const price = (p, s, place) => Math.max(1, Math.round(p.price * STORES[s].mul * (place.tier === 'village' ? 1.1 : place.tier === 'city' ? 0.92 : 1)));
-  function stock(s, place) { const st = STORES[s]; let L = st.cats.flatMap((c) => C.byCat(c)); if (st.max) L = L.filter((p) => p.price <= st.max || p.cat === 'food'); if (place.tier === 'village') L = L.filter((_, i) => (i + place.pop) % 3 !== 0); return L; }
+  // disguise basics are always on the shelf at general stores, pharmacies and supermarkets, and villages never drop them (or medicine)
+  const KEEP = ['x_dye', 'x_glasses', 'x_cap', 'x_beanie'];
+  function stock(s, place) { const st = STORES[s]; let L = st.cats.flatMap((c) => C.byCat(c)); if (st.max) L = L.filter((p) => p.price <= st.max || p.cat === 'food');
+    if (['general', 'pharmacy', 'market'].includes(s)) KEEP.forEach((id) => { if (!L.some((p) => p.id === id)) { const it = C.byCat('clothes').find((p) => p.id === id); if (it) L.push(it); } });
+    if (place.tier === 'village') L = L.filter((p, i) => KEEP.includes(p.id) || p.cat === 'health' || (i + place.pop) % 3 !== 0);
+    return L; }
 
   function store(place, s, cat) {
     const st = STORES[s], L = stock(s, place), cats = [...new Set(L.map((p) => p.cat))];

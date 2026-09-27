@@ -436,3 +436,13 @@ File: `src/tales.js`, loaded after later.js.
 - Postcards: at an open gas station while missing, $1, once a week, +3 heat, and `cards++`.
 - Calendar: first snow, Thanksgiving (4th Thursday of November), Christmas Eve (a call home sets flag calledHome, +10 heat), New Year's Eve, and the first warm spring day (the stone footing matters).
 - New later endings: laterCall (p7, calledHome) and laterPostcards (p5, 3+ cards). The other later endings get a line about the kid (if you told the kid the truth) and about Mom's emails (momWrote). The never-found "After" section's Mom line changes if you kept in contact.
+
+## 42. No inspector in villages; findable hair dye (turn 42)
+- User: no city inspector (or any stand-in) in villages; the "Condemned" ending must not happen in villages.
+  - bases.js sleep(): the 'found' threat is filtered out for building bases when p.tier === 'village'.
+  - endx_more.js: fBaseBuilding requires c.tier !== 'village'.
+  - Bigger places are unchanged.
+- Hair dye was hard to find. The dye is catalog category 'clothes', so pharmacies and supermarkets never stocked it, and village general stores randomly dropped a third of their items.
+  - shops.js `stock()`: KEEP = x_dye, x_glasses, x_cap, x_beanie are always stocked at general stores, pharmacies and supermarkets. Villages never drop KEEP items or health items.
+  - village_life.js: every gas station (all tiers) has "Buy box hair dye $12" and "Buy clear-lens reading glasses $11" via `SH.Catalog.give`. They are hidden once owned or used.
+  - The identity.js hints now name the right places.

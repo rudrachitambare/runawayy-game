@@ -52,7 +52,7 @@
     const g = G(), b = g.base, dark = SH.hour() >= 20 || SH.hour() < 6; SH.advance(dark ? 8 * 60 : 120, { interrupt: false }); if (g.ended) return;
     b.nights += dark ? 1 : 0; SH.st('energy', dark ? 30 + 12 * fx('rest') + 5 * fx('warm') : 15); SH.st('warmth', 10 * fx('warm')); SH.st('mood', 3 * fx('mood'));
     if (A.noticed(p, 0.04 / (1 + fx('hide')))) return;
-    const th = dark && K.chance(0.35) ? K.pick(THREATS.filter((x) => x[1]())) : null;
+    const th = dark && K.chance(0.35) ? K.pick(THREATS.filter((x) => x[1]() && !(x[0] === 'found' && b.type === 'building' && p && p.tier === 'village'))) : null;
     if (th && th[0] === 'found') { const who = b.type === 'camp' ? 'A park ranger' : b.type === 'barn' ? 'The farmer who owns the barn' : 'A city inspector'; g.awayNotice = (g.awayNotice || 0) + 25; g.base = null; return K.D('Found your base', `${who} finds your ${TYPES[b.type].n.toLowerCase()} in the morning. You're already gone (you heard the footsteps), but your base isn't yours anymore.`, K.ok()); }
     if (th) { th[3](); return K.D('A long night', th[2], [{ t: 'Okay', fn: () => base(p) }]); }
     K.D('Morning at base', K.pick(['Birds. Actual birds. You slept through the whole night.', 'It\'s starting to feel like somewhere. Like yours.', 'You wake up and know exactly where you are, and it\'s okay.']), [{ t: 'Okay', fn: () => base(p) }]);
