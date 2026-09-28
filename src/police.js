@@ -68,7 +68,7 @@
     g.awayNotice = 95; g.heat = Math.min(100, (g.heat || 0) + 15); // the town will remember you (fades 8 a day while you're gone)
     SH.st('stress', 20); SH.st('energy', -15);
     const base = g.base && g.base.pid === p.id;
-    const line = `You run. Through a yard, over a fence, behind the ${p.tier === 'city' ? 'bus depot' : 'feed store'}, and you keep going until ${p.name} is just lights behind you. ${mi} miles on foot to ${to.name}.${base ? ` Your base is still back in ${p.name}, and so is everything you left there. ${p.name} will remember your face for a while.` : ` ${p.name} will remember your face for a while.`}`;
+    const line = `You run. Through a yard, over a fence, behind the ${p.tier === 'city' ? 'bus depot' : 'feed store'}, and you keep going until ${p.name} is just ${SH.hour() >= 19 || SH.hour() < 6 ? 'lights' : 'a water tower'} behind you. ${mi} miles on foot to ${to.name}.${base ? ` Your base is still back in ${p.name}, and so is everything you left there. ${p.name} will remember your face for a while.` : ` ${p.name} will remember your face for a while.`}`;
     A.arrive(to, { k: 'walk', n: 'Run', mins: Math.max(30, Math.round(mi * 22)), cost: 0, e: Math.round(mi * 4) }, line);
   }
   /* turn 54: being noticed all the way (100) brings a patrol car to talk to you instead of ending the game on the spot */

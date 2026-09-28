@@ -539,3 +539,8 @@ New `src/power.js` (after logic.js):
 - Why people texted the burner: the class group chat was exempt from the "doesn't have your new number" gate (net2). Removed; only lighthouse/harbor/bank/carrier stay exempt. Anyone you text or call from the burner gets the number (as before).
 - Fixed "{name}" showing literally in friends' parents' texts (parents.js fill).
 - Police departments (atlas.js): small towns 20% (was 65%, same r() call so the world doesn't shift); about 25% of towns have no PD (hash of the name), covered by county deputies; cities always; Harlow and Cedar Falls always. Sheriff ending text no longer says "a town this small".
+
+## #54 (turn 54): an officer talks first, and you can run
+- User lost a good base run to an officer in a small town (said the officer talked first and it went badly). Chose: "a chance to get out of it".
+- atlas.js noticed(): at awayNotice ≥ 100 (outside villages) it calls SH.Police.closeIn(p) instead of ending: notice pinned at 99, a patrol car pulls up (police.js stop ctx 'notice', starts +15 suspicion). Talk goes fine → notice 45 (or 75 if "keeping an eye on you"); game goes on.
+- Any cop talk that ends in "come with me" (ctx work/business/notice) now opens cornered(): "Go with them" (found) or "Grab your stuff and run". Odds 55%, +15 dark, −8 per group member, −20 if energy < 25 (clamped 15–85%). Success: you run on foot to the nearest village within 9 mi (else the nearest place), heat +15, stress +20; the old town remembers you (notice 95, fades 8/day while gone); a base there stays there. Failure: found.

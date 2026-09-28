@@ -1,0 +1,10 @@
+const errs=[]; p.on('pageerror', e=>errs.push(e.message)); const r=[];
+await goTown('p6'); await p.evaluate(()=>{ SH.G.t=Math.floor(SH.G.t/1440)*1440+13*60; document.querySelector('#modal').classList.add('hidden'); SH.G.awayNotice=98; SH.Atlas.noticed(SH.Atlas.here(), 0.5); });
+await p.waitForTimeout(400);
+await convo(['hi officer, sorry', 'im helping my grandma with her farm stand', 'the hendersons, on the east road', 'thank you, yes sir']);
+await p.waitForTimeout(300); await p.evaluate(()=>{ const b=document.querySelector('#tdone'); b&&b.click(); });
+r.push('after Continue: ended '+await p.evaluate(()=>!!SH.G.ended)+' notice '+await p.evaluate(()=>SH.G.awayNotice));
+await p.evaluate(()=>{ document.querySelector('#modal').classList.add('hidden'); SH.Police.cornered(SH.Atlas.here(), 'Officer Reyes'); window._r=Math.random; Math.random=()=>0.01; });
+await choose('Grab your stuff'); await p.evaluate(()=>{ Math.random=window._r; }); await p.waitForTimeout(600);
+r.push(await p.evaluate(()=>{ const t=document.body.innerText; const i=t.indexOf('You run.'); return i<0?'NO RUN TEXT':t.slice(i,i+330).replace(/\s+/g,' '); }));
+return r.join('\n')+'\nERRS '+errs.join('|');
