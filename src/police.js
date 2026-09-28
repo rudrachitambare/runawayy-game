@@ -98,10 +98,11 @@
      Only when it's a stranger stopping a kid who might be you (not when you walked in, not in a friend's kitchen, not
      collapsed). She thinks you're the kid on the poster, so she starts more suspicious than a patrol car. Telling her the
      truth about home still gets you the "Someone Wrote It Down" ending. */
+  const placeNow = () => { const g = G(), m = /^t_(p\d+)_/.exec(g.loc || ''), id = g.away || (m && m[1]); return (id && A.data().places.find((q) => q.id === id)) || A.here(); };
   const ESC = ['tracked', 'police', 'post', 'security', 'agent', 'bus', 'sheriff', 'away', 'railagent', 'train'];
   const canEscape = (reason) => ESC.includes(reason);
   function foundBrain(an, c, base) {
-    const g = G(), m = c.mem, t = an.t, raw = an.raw || '', p = A.here(), S = (say, x) => K.say(say, x);
+    const g = G(), m = c.mem, t = an.t, raw = an.raw || '', p = placeNow(), S = (say, x) => K.say(say, x);
     if (m.sus == null) m.sus = (g.heat || 0) / 4 + 20 + (c.opts.reason === 'tracked' ? 15 : 0);
     const real = (g.name || 'Sam').toLowerCase();
     // the truth (or anything about home being bad) goes to the normal officer: that's the safe-placement path
@@ -124,7 +125,7 @@
     return S(K.pick(['Where do you live, then?', 'Who are your folks?', 'What are you doing out here on your own?', 'Your mom\'s been worried sick. You sure you\'re not her kid?']));
   }
   function foundTalk(reason) {
-    const p = A.here(), g = G();
+    const p = placeNow(), g = G();
     const done = (c) => {
       if (c.result === 'free' || c.result === 'watch') return release(c.result, reason);
       if (c.result === 'take' && !c.mem.truth) { const cop = (g._cop && g._cop.name) || 'The officer'; return setTimeout(() => cornered(p || {}, cop, () => SH.Endings.foundEnd(reason)), 60); }

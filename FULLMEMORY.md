@@ -544,3 +544,11 @@ New `src/power.js` (after logic.js):
 - User lost a good base run to an officer in a small town (said the officer talked first and it went badly). Chose: "a chance to get out of it".
 - atlas.js noticed(): at awayNotice ≥ 100 (outside villages) it calls SH.Police.closeIn(p) instead of ending: notice pinned at 99, a patrol car pulls up (police.js stop ctx 'notice', starts +15 suspicion). Talk goes fine → notice 45 (or 75 if "keeping an eye on you"); game goes on.
 - Any cop talk that ends in "come with me" (ctx work/business/notice) now opens cornered(): "Go with them" (found) or "Grab your stuff and run". Odds 55%, +15 dark, −8 per group member, −20 if energy < 25 (clamped 15–85%). Success: you run on foot to the nearest village within 9 mi (else the nearest place), heat +15, stress +20; the old town remembers you (notice 95, fades 8/day while gone); a base there stays there. Failure: found.
+
+## #55 (turn 55): talk your way out of the "Found" officer
+- User wanted the "So. Want to tell me why you left?" chat to work like the patrol car: lie, stay positive, same effects.
+- police.js foundTalk/foundBrain (endings.js EN.found routes to it when SH.Police.canEscape(reason)): escapable reasons tracked, police, post, security, agent, bus, sheriff, away, railagent, train. NOT self (walked in), host (friend's kitchen), exhausted, cedarLost.
+- Suspicion starts heat/4 + 20 (+15 more if tracked by phone). Same scoring as the patrol car: polite −4, cover story matching the town's cover −8 (different story +30, no cover +5), cover name −6 (different name than your cover +25), your real name / "that's me" +40, rude +25, family +5, school in school hours +15, a different excuse than a past stop +30. After the 4th message: <40 she lets you go (notice 45), 40–69 lets you go but watching (notice 75, heat +5), ≥70 → cornered (go with them = foundEnd, or run).
+- Truth about home still goes to the normal officer → "Someone Wrote It Down" (toldPolice).
+- The patrol car now also understands your cover story (coverSay, once per talk).
+- cornered/bolt take an onGo callback so "go with them" from the found chat ends properly (no loop).
