@@ -4163,7 +4163,7 @@ window.SH = window.SH || {};
       agent: 'The ticket agent sits with you on the bench, one hand on your shoulder, until a police officer arrives. She buys you a hot chocolate from the machine.', bus: 'At the second stop, a police officer climbs aboard and walks down the aisle, looking at faces. She stops at yours.',
       cedarLost: 'Cedar Falls. You get off the bus and realize you don\'t know Grandma\'s address. You walk until you can\'t. A police officer finds you asleep on a bench outside the post office.',
       host: 'Your friend\'s parent hangs up the phone and sits down across from you. "She\'s on her way. So is an officer. Nobody is angry. I promise you, nobody in this kitchen is angry."',
-      sheriff: 'There\'s no police station in a town this small. So it takes forty minutes, but a county sheriff\'s cruiser eventually crunches into the gravel lot, and a deputy in a brown jacket gets out slow.',
+      sheriff: 'There\'s no police station here, just the county sheriff. So it takes forty minutes, but a county sheriff\'s cruiser eventually crunches into the gravel lot, and a deputy in a brown jacket gets out slow.',
       away: 'You stand out. A new kid in a place this size always does. Someone called it in, kindly. A cruiser pulls up beside you.',
       exhausted: 'Six days. Your body is done. When the cruiser pulls up, you don\'t even try to get up.' }[reason] || 'A police cruiser.';
     D({ title: 'Found', who: 'officer', text: [intro, '"Hey. I\'m Officer Lowe. You\'re ' + G.name + ', right? Your mom\'s been really worried. You\'re not in trouble. Running away isn\'t a crime. I just need to make sure you\'re okay."'],
@@ -6665,7 +6665,7 @@ window.SH = window.SH || {};
   A.TIERS = {
     city: { n: 'City', pop: [180000, 1400000], police: (p) => `City police department: about ${Math.round(p / 450)} officers, 24/7. Patrol cars everywhere.`, sheriff: false },
     town: { n: 'Town', pop: [14000, 90000], police: (p) => `Town police department: ${Math.round(p / 600)} officers, a station open all night.`, sheriff: false },
-    small: { n: 'Small town', pop: [1200, 9000], police: (p, r) => r() < 0.65 ? `Small department: ${Math.max(2, Math.round(p / 900))} officers, the chief works days. The county sheriff covers nights.` : 'No police department. The county sheriff covers it from the county seat, about 20 minutes out.', sheriff: true },
+    small: { n: 'Small town', pop: [1200, 9000], police: (p, r) => r() < 0.2 ? `Small department: ${Math.max(2, Math.round(p / 900))} officers, the chief works days. The county sheriff covers nights.` : 'No police department. The county sheriff covers it from the county seat, about 20 minutes out.', sheriff: true },
     village: { n: 'Village', pop: [90, 1100], police: (p, r) => `No police. The county sheriff is ${25 + Math.floor(r() * 25)} minutes away. State troopers pass through on the highway.`, sheriff: true },
   };
 
@@ -6711,6 +6711,9 @@ window.SH = window.SH || {};
       p.motto = p.home ? 'Home of the 1911 station clock' : pick(r, ['"A Nice Place to Stay"', 'Home of the county fair', 'Pop. ' + p.pop.toLocaleString() + ' and one stoplight', 'Birthplace of a minor astronaut', 'Famous for its pie', 'You just missed the festival', 'Est. 1854']);
       if (p.home) p.police = 'Harlow PD: 64 officers on Route 9. You\'ve met Officer Lowe.';
       if (p.grandma) p.police = 'Cedar Falls PD: 6 officers, and the chief went to school with Grandma.';
+      // turn 52: about a quarter of towns have no PD of their own (hash of the name, so the world's random sequence doesn't shift)
+      if (p.tier === 'town' && !p.home && !p.grandma && [...p.name].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7) % 100 < 25) p.police = 'No police department. The town contracts with the county sheriff: two deputies on days, one on nights, out of a substation by the highway.';
+      p.hasPolice = !!(p.home || p.grandma) || !/^No police/.test(p.police);
     });
     // roads: every place links to its nearest neighbours; a highway spanning tree joins towns & cities; then make it all connected
     const roads = [], rk = new Set(), dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
@@ -7176,7 +7179,7 @@ window.SH = window.SH || {};
   P.send = function (id, text) {
     const g = G(); if (!text || !text.trim() || !P.ok() || g.phone.airplane) return bSend.apply(this, arguments);
     const x = X();
-    if (x.burner && !x.gave[id] && !['class', 'lighthouse', 'harbor'].includes(id)) { x.gave[id] = true; P.push(id, 'sys', 'Texting from your new number. ' + ((SH.NPCS_META[id] || {}).n || 'They') + ' has it now.', false); }
+    if (x.burner && !x.gave[id] && !['lighthouse', 'harbor'].includes(id)) { x.gave[id] = true; P.push(id, 'sys', 'Texting from your new number. ' + ((SH.NPCS_META[id] || {}).n || 'They') + ' has it now.', false); }
     if (!NT.spend(MB.text, 'text')) {
       P.push(id, 'me', text, false); P.push(id, 'sys', '⏳ Sending… (no data, no wifi)', false);
       x.queue.push({ id, text, t: g.t }); g.stats.textsSent++; SH.advance(2, { interrupt: false }); SH.UI.renderSide(); P.render(); return;
@@ -7189,7 +7192,7 @@ window.SH = window.SH || {};
   P.push = function (id, from, text, notify) {
     const g = G(), x = g && g.net && g.net.x;
     if (g && x && from !== 'me' && from !== 'sys' && !NT._flushing) {
-      const blocked = x.burner && !x.gave[id] && !['class', 'lighthouse', 'harbor', 'bank', 'carrier'].includes(id);
+      const blocked = x.burner && !x.gave[id] && !['lighthouse', 'harbor', 'bank', 'carrier'].includes(id); // turn 52: the class chat only has your OLD number
       if (blocked) { (x.oldInbox = x.oldInbox || []).push({ id, from, text, t: g.t }); return; }
       if (!NT.canData()) { x.inbox.push({ id, from, text, t: g.t, notify }); return; }
       NT.spend(MB.text * (/📷|photo|pic/i.test(text) ? 30 : 1));
@@ -9530,7 +9533,7 @@ window.SH = window.SH || {};
   K.hourly.push((h) => {
     const g = G(), hr = h % 24; if (g.phase !== 'run') return;
     (g.party || []).filter((id) => KIDS[id]).forEach((id) => {
-      const x = W(id), k = KIDS[id], hid = 'host_' + id, fill = (s) => s.replace(/\{k\}/g, k.n).replace(/\{p\}/g, rel(id) === 'mom' ? 'Mom' : 'Dad').replace(/\{s\}/g, SH.nm('{name}')).replace(/she's/g, k.g === 'he' ? 'he\'s' : k.g === 'they' ? 'they\'re' : 'she\'s');
+      const x = W(id), k = KIDS[id], hid = 'host_' + id, fill = (s) => s.replace(/\{k\}/g, k.n).replace(/\{p\}/g, rel(id) === 'mom' ? 'Mom' : 'Dad').replace(/\{s\}|\{name\}/g, (G().name || 'Sam')).replace(/she's/g, k.g === 'he' ? 'he\'s' : k.g === 'they' ? 'they\'re' : 'she\'s');
       if ((hr === 9 || hr === 19) && x.w > 20 && K.chance(k.fam === 'away' ? 0.4 : 0.85)) SH.Phone.push(hid, hid, fill(K.pick(LINES[x.w > 70 ? 'high' : x.w > 40 ? 'mid' : 'low'])));
       if (x.w > 40 && !x.mom) { x.mom = true; SH.Phone.push('mom', 'mom', `${k.parent} just called me. Is ${k.n} with you? Sweetheart, two families are losing their minds. Please.`); }
       if (x.w > 65 && !x.chirp) { x.chirp = true; SH.UI.log(`${k.parent} posted on Chirp: "MISSING: ${k.full}, 12. Last seen with a friend. Please share." It has 2,400 shares by lunch.`, 'bad'); g.heat = Math.min(100, (g.heat || 0) + 8); }
@@ -16756,7 +16759,7 @@ window.SH = window.SH || {};
     try {
       if (r && r.acts && gasHere() && !shut()) {
         const g = G(), x = NT.x && NT.x();
-        if (x && (!x.burner || g.phone.confiscated)) r.acts.push({ label: 'Buy a prepaid phone ($30)', sub: g.phone.confiscated ? 'You don\'t have yours. This one works.' : 'New number. Nobody has it.', fn: burner });
+        if (x && (!x.burner || g.phone.confiscated)) r.acts.push({ label: 'Buy a prepaid phone ($30)', sub: g.phone.confiscated ? 'You don\'t have yours. This one works.' : 'New number. Nobody has it.', fn: () => SH.GasPhone.burner() });
         if (!g.phone.confiscated) {
           r.acts.push({ label: 'Buy a night data pack ($3)', sub: '1 GB, midnight–6 AM', fn: () => { NT.nightPack(); SH.UI.afterAction(); } });
           r.acts.push({ label: 'Buy a monthly data bundle ($20)', sub: '8 GB for 30 days', fn: () => { NT.bundle(); SH.UI.afterAction(); } });
@@ -16767,6 +16770,70 @@ window.SH = window.SH || {};
     return r;
   };
   SH.GasPhone = { burner };
+})(window.SH);
+
+</script>
+<script>
+/* phones2.js */
+/* SMALL HOURS — turn 52: two phones, and nobody texts the kid sitting next to them.
+   1) Friends who ran away WITH you don't text or call you. They're right there. (Their own parents still text
+      THEM, which shows up in the host_ threads as before.)
+   2) Buying a burner doesn't throw your old phone away. It goes in your pocket switched off: weighs nothing,
+      can't be dropped or pawned, and pings nobody. Anything sent to your old number waits on it.
+      Tap it: see how much is waiting. Turning it on is possible, but it shows up on the family map.
+   3) The Phone item reads "Burner phone" once you have one. */
+(function (SH) {
+  const P = SH.Phone; if (!P || !SH.ITEMS) return;
+  const G = () => SH.G;
+  const party = () => { const g = G(); return g ? (g.party || []).concat(g.rkids || []) : []; };
+  const withYou = (id) => { const g = G(); return !!(g && g.phase === 'run' && party().includes(id)); };
+  const X = () => (SH.Net && SH.Net.x ? SH.Net.x() : null);
+
+  /* ---------- 1) people with you don't text you ---------- */
+  const bPush = P.push;
+  P.push = function (id, from, text) {
+    try { if (from !== 'me' && from !== 'sys' && withYou(id) && !/^host_/.test(id)) return; } catch (e) {}
+    return bPush.apply(this, arguments);
+  };
+  if (P.incoming) { const bInc = P.incoming; P.incoming = function (id, onAnswer, onDecline) { if (withYou(id)) return; return bInc.apply(this, arguments); }; }
+
+  /* ---------- 2) the old phone ---------- */
+  SH.ITEMS.oldphone = { n: 'Your old phone (off)', w: 0, i: '📴', d: 'Switched off in your pocket. Weighs nothing. Anything sent to your old number waits here.', fixed: true };
+  const ph = SH.ITEMS.phone;
+  if (ph) {
+    const base = { n: ph.n, d: ph.d, i: ph.i };
+    const burn = () => { const x = X(); return !!(x && x.burner); };
+    Object.defineProperty(ph, 'n', { get: () => (burn() ? 'Burner phone' : base.n), configurable: true });
+    Object.defineProperty(ph, 'd', { get: () => (burn() ? `The $30 gray brick. ${X().burner.num}. Only people you text from it have this number.` : base.d), configurable: true });
+  }
+  const ensureOld = () => { const g = G(), x = X(); if (g && x && x.burner && !x.burner.noOld && !g.bag.includes('oldphone')) g.bag.push('oldphone'); };
+  const waiting = () => { const x = X(); return x ? (x.oldInbox || []).length : 0; };
+  function tapOld() {
+    const g = G(), x = X(), n = waiting(), who = [...new Set((x.oldInbox || []).map((m) => (SH.NPCS_META[m.id] || {}).n).filter(Boolean))].slice(0, 4);
+    SH.UI.dialog({ title: '📴 Your old phone', text: [
+      'Switched off. The cracked case, the sticker on the back. It feels heavier than it is.',
+      n ? `There are ${n} message${n === 1 ? '' : 's'} waiting for your old number${who.length ? `: ${who.join(', ')}${who.length < new Set((x.oldInbox || []).map((m) => m.id)).size ? ' and others' : ''}` : ''}. You can't read them without turning it on.` : 'Nothing has come in for your old number that you know of. You can\'t know without turning it on.',
+      'If you turn it on, it finds a tower, and your family\'s map puts a dot right where you\'re standing.'],
+      choices: [
+        { t: 'Leave it off', cls: 'safe', fn: () => SH.UI.afterAction && SH.UI.afterAction() },
+        { t: 'Turn it on for a minute', cls: 'hot', sub: 'Read what came in. Everyone can see where you are.', fn: () => turnOn() }] });
+  }
+  function turnOn() {
+    const g = G(), x = X(), msgs = (x.oldInbox || []).splice(0);
+    if (g.away) g.awayNotice = (g.awayNotice || 0) + 25; g.heat = Math.min(100, (g.heat || 0) + 10);
+    SH.Net && (SH.Net._flushing = true);
+    try { msgs.forEach((m) => { (g.threads[m.id] = g.threads[m.id] || []).push({ from: m.from, text: m.text, t: m.t }); g.unread = g.unread || {}; g.unread[m.id] = (g.unread[m.id] || 0) + 1; }); } finally { SH.Net && (SH.Net._flushing = false); }
+    SH.UI.log(msgs.length ? `The old phone buzzes ${msgs.length} time${msgs.length === 1 ? '' : 's'} in your hand, one after another. You read them all. Then you hold the power button until the screen goes black again. Somewhere, a dot on a map blinked where you are.` : 'The old phone finds a tower. Nothing comes in. You turn it back off, but somewhere a dot on a map blinked where you are.', 'bad');
+    SH.Phone.render && SH.Phone.render(); SH.UI.afterAction && SH.UI.afterAction();
+  }
+  const AC = SH.Actions;
+  if (AC && AC.useItem) { const bUse = AC.useItem; AC.useItem = function (id) { if (id === 'oldphone') return tapOld(); return bUse.apply(this, arguments); }; }
+  // add the old phone whenever a burner appears (either shop); a burner bought after your phone was taken doesn't have one
+  if (SH.GasPhone && SH.GasPhone.burner) { const b = SH.GasPhone.burner; SH.GasPhone.burner = function () { const had = G().phone.confiscated, r = b.apply(this, arguments); const x = X(); if (x && x.burner && had) x.burner.noOld = true; ensureOld(); return r; }; }
+  if (SH.Net && SH.Net.buyBurner) { const b = SH.Net.buyBurner; SH.Net.buyBurner = function () { const r = b.apply(this, arguments); ensureOld(); return r; }; }
+  if (SH.migrate) { const bm = SH.migrate; SH.migrate = function (g) { const r = bm.apply(this, arguments); try { ensureOld(); } catch (e) {} return r; }; }
+  const bAdv = SH.advance; SH.advance = function () { const r = bAdv.apply(this, arguments); try { ensureOld(); } catch (e) {} return r; };
+  SH.Phones2 = { tapOld, withYou };
 })(window.SH);
 
 </script>

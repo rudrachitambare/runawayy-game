@@ -1,0 +1,20 @@
+const errs=[]; p.on('pageerror', e=>errs.push(e.message)); const r=[];
+await goTown('p6');
+await p.evaluate(()=>{ const g=SH.G; g.party=['jordan','priya']; g.money=200; g.t=Math.floor(g.t/1440)*1440+11*60; window._log=[]; const P=SH.Phone; const b=P.push; P.push=function(id,from,text){ const before=(SH.G.threads[id]||[]).length; const res=b.apply(this,arguments); const after=(SH.G.threads[id]||[]).length; if(from!=='me'&&from!=='sys') window._log.push((after>before?'IN ':'held/drop ')+id+': '+String(text).slice(0,60)); return res; }; });
+await p.evaluate(()=>{ for(let i=0;i<24;i++){ SH.advance(60); document.querySelector('#modal').classList.add('hidden'); } });
+const L1=await p.evaluate(()=>window._log.splice(0));
+r.push('no burner: jordan/priya IN = '+L1.filter(l=>/^IN (jordan|priya):/.test(l)).length+'; host IN = '+L1.filter(l=>/^IN host_/.test(l)).length+'; {name} left = '+L1.filter(l=>/\{name\}/.test(l)).length+'; sample host: '+(L1.find(l=>/host_/.test(l))||''));
+await p.evaluate(()=>{ SH.G.t=Math.floor(SH.G.t/1440)*1440+11*60; }); await go('gas'); await clean();
+r.push(await act('prepaid phone')); await p.evaluate(()=>document.querySelector('#modal').classList.add('hidden'));
+r.push(await p.evaluate(()=>'bag '+JSON.stringify(SH.G.bag)+' w '+SH.bagWeight().toFixed(2)+' phone name: '+SH.ITEMS.phone.n+' | old: '+SH.ITEMS.oldphone.n));
+await p.evaluate(()=>{ SH.G.party=[]; for(let i=0;i<24;i++){ SH.advance(60); document.querySelector('#modal').classList.add('hidden'); } });
+const L2=await p.evaluate(()=>window._log.splice(0));
+r.push('with burner (party gone): IN = '+L2.filter(l=>/^IN /.test(l)).join(' || ').slice(0,300)+' ; held = '+L2.filter(l=>/^held/.test(l)).length+' ; oldInbox '+await p.evaluate(()=>SH.Net.x().oldInbox.length));
+await p.evaluate(()=>SH.Actions.useItem('oldphone')); await p.waitForTimeout(200);
+r.push('tap old: '+await p.evaluate(()=>document.querySelector('#modal:not(.hidden)').innerText.replace(/\s+/g,' ').slice(0,420)));
+await choose('Turn it on'); await p.waitForTimeout(200);
+r.push('after on: oldInbox '+await p.evaluate(()=>SH.Net.x().oldInbox.length+' unread mom '+(SH.G.unread.mom||0)+' notice '+SH.G.awayNotice+' | log '+document.querySelector('#log').innerText.slice(0,200).replace(/\s+/g,' ')));
+r.push('drop old? '+await p.evaluate(()=>SH.Bank && SH.Bank.pawnable ? SH.Bank.pawnable().includes('oldphone') : 'n/a'));
+// police odds
+r.push(await p.evaluate(()=>{ const P=SH.Atlas.data().places; const c={}; P.forEach(x=>{ c[x.tier]=c[x.tier]||[0,0]; c[x.tier][0]++; if(x.hasPolice) c[x.tier][1]++; }); return 'PD by tier (total, withPD): '+JSON.stringify(c); }));
+return r.join('\n')+'\nERRS '+errs.join('|');
