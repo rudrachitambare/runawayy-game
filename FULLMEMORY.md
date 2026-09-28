@@ -572,3 +572,4 @@ New `src/power.js` (after logic.js):
 
 ## 60. Built It Yourself reached (never found)
 - The end screen said "there are 15 endings" (stale). Now it shows SH.EndX.total() plus how many you have seen (129 at the time).
+- PENDING, build only when the user says "go": (a) make the longRun exhaustion rule less harsh, (b) load cash onto PocketPal at any gas station.
