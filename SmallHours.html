@@ -1348,7 +1348,7 @@ window.SH = window.SH || {};
     if (G.phase === 'home' && SH.day() > SH.HOME_DAYS) {
       SH.Events.queue({ id: 'stayedEnd', run: () => SH.Endings.stayed() });
     }
-    if (G.phase === 'run' && SH.day() - SH.day(G.missingAt) >= 6 && (G.s.health < 40 || G.s.full < 25 || G.s.energy < 20 || (!G.away && !G.veh && !G.hideout && !(G.base && G.base.level) && SH.day() - SH.day(G.missingAt) >= 9))) {
+    if (G.phase === 'run' && !(G._exGrace > G.t) && SH.day() - SH.day(G.missingAt) >= 6 && (G.s.health < 40 || G.s.full < 25 || G.s.energy < 20 || (!G.away && !G.veh && !G.hideout && !(G.base && G.base.level) && SH.day() - SH.day(G.missingAt) >= 9))) {
       SH.Events.queue({ id: 'longRun', run: () => SH.Endings.found('exhausted') });
     }
     G.newDayPending = true;
@@ -9656,7 +9656,7 @@ window.SH = window.SH || {};
       if (st[0] === 'family') { m.sus += 5; return S('Your family, huh? Which one\'s yours? I know most people around here.'); }
       return S('Good for you. Which church?');
     }
-    const nm = raw.match(/\b(?:my name is|i'?m|name'?s|call me)\s+([A-Z][a-z'-]{1,13})\b/);
+    const nm = raw.match(/\b(?:[Mm]y name is|[Ii]'?m|[Ii] am|[Nn]ame'?s|[Cc]all me)\s+([A-Z][a-z'-]{1,13})\b/);
     if (nm) { const cv = SH.Identity && SH.Identity.name(p); if (cv && cv.toLowerCase() !== nm[1].toLowerCase()) { m.sus += 25; return S(`${nm[1]}? The lady at the diner called you ${cv}.`); } return S(`Okay, ${nm[1]}. And your last name?`); }
     if (/\b(permit|license)\b/.test(t)) { m.sus -= 5; return S('Kids with lemonade don\'t need a permit. Kids with a whole operation... we\'ll see.'); }
     if (/\b(sorry|yes sir|yes ma'?am|officer|thank you)\b/.test(t)) m.sus -= 4;
@@ -9726,10 +9726,10 @@ window.SH = window.SH || {};
      truth about home still gets you the "Someone Wrote It Down" ending. */
   const placeNow = () => { const g = G(), m = /^t_(p\d+)_/.exec(g.loc || ''), id = g.away || (m && m[1]); return (id && A.data().places.find((q) => q.id === id)) || A.here(); };
   const ESC = ['tracked', 'police', 'post', 'security', 'agent', 'bus', 'sheriff', 'away', 'railagent', 'train'];
-  const canEscape = (reason) => ESC.includes(reason);
+  const canEscape = (reason) => !['self', 'host'].includes(reason); // turn 56: everything else too (collapsed, lost, etc.)
   function foundBrain(an, c, base) {
     const g = G(), m = c.mem, t = an.t, raw = an.raw || '', p = placeNow(), S = (say, x) => K.say(say, x);
-    if (m.sus == null) m.sus = (g.heat || 0) / 4 + 20 + (c.opts.reason === 'tracked' ? 15 : 0);
+    if (m.sus == null) m.sus = (g.heat || 0) / 4 + 20 + (c.opts.reason === 'tracked' ? 15 : 0) + (c.opts.reason === 'exhausted' ? 10 : 0);
     const real = (g.name || 'Sam').toLowerCase();
     // the truth (or anything about home being bad) goes to the normal officer: that's the safe-placement path
     if (an.has('selfharm') || an.has('disclose') || /\b(ran away|run away|running away|i left home|left home|can'?t go (back|home)|scared to go home|don'?t want to go home|he hits|hurts me|my stepdad|rick)\b/.test(t)) { m.truth = 1; return base(an, c); }
@@ -9737,7 +9737,7 @@ window.SH = window.SH || {};
     if (new RegExp(`\\b(that'?s me|yeah,? i'?m ${real}|yes,? i'?m ${real}|i'?m ${real}|my name is ${real}|it'?s me)\\b`).test(t)) { m.sus += 40; return S('Thought so. Okay. Thank you for being honest with me.'); }
     if (an.has('hostile') || an.shout) { m.sus += 25; return S('Hey. Easy. I\'m not the bad guy here.'); }
     const cv = coverSay(t, p, m); if (cv) return S(cv);
-    const nm = raw.match(/\b(?:my name is|i'?m|name'?s|call me)\s+([A-Z][a-z'-]{1,13})\b/);
+    const nm = raw.match(/\b(?:[Mm]y name is|[Ii]'?m|[Ii] am|[Nn]ame'?s|[Cc]all me)\s+([A-Z][a-z'-]{1,13})\b/);
     if (nm && nm[1].toLowerCase() !== real) { const cn = SH.Identity && p && SH.Identity.name(p); if (cn && cn.toLowerCase() !== nm[1].toLowerCase()) { m.sus += 25; return S(`${nm[1]}? The lady at the diner called you ${cn}.`); } m.sus += cn ? -6 : 4; return S(cn ? `${nm[1]}. Huh. Okay, ${nm[1]}.` : `${nm[1]}. Okay. You look an awful lot like the kid on this poster, ${nm[1]}.`); }
     if (/\b(not (me|her|him|them)|wrong (kid|person|girl|boy)|got the wrong|that'?s not me|never heard of)\b/.test(t)) { m.sus += 3; return S('Could\'ve sworn. Same jacket as the photo, even.'); }
     const st = STORY.find(([, re]) => re.test(t));
@@ -9762,6 +9762,7 @@ window.SH = window.SH || {};
   function release(res, reason) {
     const g = G(); g._copTalk = false;
     if (!g.away) { const m = /^t_(p\d+)_/.exec(g.loc || ''); if (m) g.away = m[1]; }
+    if (reason === 'exhausted') { g._exGrace = g.t + 24 * 60; SH.st('energy', 10); }
     g.awayNotice = res === 'watch' ? 75 : 45; if (res === 'watch') g.heat = Math.min(100, (g.heat || 0) + 5);
     SH.UI.log(res === 'watch' ? 'The cruiser pulls away slowly. You can feel it in the mirror. Don\'t push your luck here.' : 'The cruiser pulls away. You stand there until your hands stop shaking. Then you walk the other way.', res === 'watch' ? 'bad' : '');
     SH.UI.afterAction && SH.UI.afterAction();

@@ -552,3 +552,9 @@ New `src/power.js` (after logic.js):
 - Truth about home still goes to the normal officer → "Someone Wrote It Down" (toldPolice).
 - The patrol car now also understands your cover story (coverSay, once per talk).
 - cornered/bolt take an onGo callback so "go with them" from the found chat ends properly (no loop).
+
+## #56 (turn 56): the found chat still said "Okay. Mm."
+- User's found chat ignored the lies. Cause: their found reason wasn't in the escapable list, so the old officer answered (converse filler "Okay." "Mm."). Most likely reason 'exhausted': state.js longRun fires found('exhausted') any hour after day 6 on the run if health < 40, fullness < 25 or energy < 20 (base building drains energy).
+- Now every found chat is talk-out-able except 'self' (walked into the station) and 'host' (friend's parent's kitchen). Exhausted starts +10 suspicion; being let go after collapsing gives 24h grace (g._exGrace) before longRun can fire again, and +10 energy.
+- "I'm Sean" (capital I) is now read as a name by both cops.
+- NOT changed (asked user): the harsh longRun rule itself.
