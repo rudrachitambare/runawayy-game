@@ -32,12 +32,15 @@
     }
     const nm = raw.match(/\b(?:[Mm]y name is|[Ii]'?m|[Ii] am|[Nn]ame'?s|[Cc]all me)\s+([A-Z][a-z'-]{1,13})\b/);
     if (nm) { const cv = SH.Identity && SH.Identity.name(p); if (cv && cv.toLowerCase() !== nm[1].toLowerCase()) { m.sus += 25; return S(`${nm[1]}? The lady at the diner called you ${cv}.`); } return S(`Okay, ${nm[1]}. And your last name?`); }
-    if (/\b(permit|license)\b/.test(t)) { m.sus -= 5; return S('Kids with lemonade don\'t need a permit. Kids with a whole operation... we\'ll see.'); }
+    if (/\b(permit|license)\b/.test(t)) { m.sus -= 5; const bk = (((g.biz || {})[p.id]) || {}).kind; const what = { lemonade: 'Kids with a lemonade stand', carwash: 'Kids washing cars', dogs: 'Kids walking dogs', leaves: 'Kids raking leaves', art: 'Kids selling bracelets', fix: 'Kids patching bike tires' }[bk] || 'Kids doing odd jobs'; return S(`${what} don't need a permit. Kids with a whole operation... we'll see.`); }
     if (/\b(sorry|yes sir|yes ma'?am|officer|thank you)\b/.test(t)) m.sus -= 4;
     if (c.turn >= 4) { if (m.sus >= 70) { c.result = 'take'; return S('Alright. I think you\'d better come with me. Just until we sort out who you are.', { end: true }); } c.result = m.sus >= 40 ? 'watch' : 'ok'; return S(m.sus >= 40 ? 'I\'m going to be keeping an eye on you. You understand?' : 'Alright. Stay out of trouble. And wear a jacket, it\'s getting cold.', { end: true }); }
     return S(K.pick(['So what\'s all this, then?', 'Where are your parents?', 'Shouldn\'t you be in school?', 'What\'s your name, kid?']));
   };
+  const talks = (p) => { const g = G(); g.copTalks = g.copTalks || {}; return (g.copTalks[p.id] = g.copTalks[p.id] || { n: 0, last: -1e9 }); };
+  const leftAlone = (p) => talks(p).n >= 3;
   function stop(p, ctx, then) {
+    if (ctx !== 'notice') { const tk = talks(p); if (tk.n >= 3 || G().t - tk.last < 1440) { if (tk.n >= 3 && K.chance(0.3)) SH.UI.log(K.pick([`The patrol car rolls past. The ${p.hasPolice ? 'officer' : 'deputy'} lifts two fingers off the wheel at you and keeps going.`, `The ${p.hasPolice ? 'officer' : 'deputy'} drives by, slows down just enough to nod, and doesn't stop. You're a regular now.`]), ''); return then ? then({}) : undefined; } }
     const cop = COPS[(p.pop + p.name.length) % COPS.length].replace('Officer', p.hasPolice ? 'Officer' : 'Deputy'); K.npc('cop', cop, cop + (p.hasPolice ? ', ' + p.name + ' PD' : ', county sheriff'), '#2b4a7a');
     const who = p.hasPolice ? 'officer' : 'deputy';
     const intro = ctx === 'business' ? `A patrol car pulls up to the curb. The ${who} gets out slowly, the way they do when they're not in a hurry but they are curious.` : ctx === 'notice' ? `A patrol car pulls up beside you and the window comes down. Somebody in ${p.name} called about a kid on their own. The ${who} doesn't get out yet. That's something.` : 'While you\'re working, a patrol car rolls by, slows, and stops.';
@@ -46,6 +49,7 @@
       const g = G(); g._copTalk = false;
       if (c.result === 'help') return SH.Endings.found('self');
       if (c.result === 'take') return setTimeout(() => cornered(p, cop), 60);
+      if (c.result === 'ok' || c.result === 'watch' || !c.result) { const tk = talks(p); tk.n++; tk.last = g.t; if (tk.n === 3) SH.UI.log(`That's the third time the ${p.hasPolice ? 'officer' : 'deputy'} has talked to you. Same questions, same answers. You get the feeling that's the last time.`, 'good'); }
       if (ctx === 'notice') g.awayNotice = c.result === 'watch' ? 75 : 45; // they came, they talked, they left. People relax a little.
       else if (c.result === 'watch') g.awayNotice = (g.awayNotice || 0) + 20;
       if (c.result === 'watch') g.heat = Math.min(100, (g.heat || 0) + 5);
@@ -77,6 +81,7 @@
   function closeIn(p) {
     const g = G(); if (!p || p.home || p.tier === 'village' || g.ended) return false;
     if (g._copTalk && SH.Talk && SH.Talk.cur && !SH.Talk.cur.ended) return true;
+    if (leftAlone(p)) { g.awayNotice = 45; SH.UI.log(`Somebody calls in about a kid on their own. You find out later the ${p.hasPolice ? 'officer' : 'deputy'} just said, "I know that kid. That kid's fine," and didn't even come out.`, 'good'); return true; }
     g._copTalk = true; g.awayNotice = 99;
     setTimeout(() => { if (!G().ended) stop(p, 'notice'); }, 80);
     return true;
