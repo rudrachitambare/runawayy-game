@@ -6,7 +6,7 @@
   const K = SH.K, A = SH.Atlas; if (!K || !A) return;
   const G = K.G;
   function pillars(p) {
-    const g = G(), b = g.base, look = g.look ? Object.values(g.look).filter(Boolean).length : 0, biz = Object.values(g.biz || {}).filter(Boolean);
+    const g = G(), b = g.base, look = g.look ? Object.values(g.look).filter(Boolean).length : 0, biz = Object.values(g.biz || {}).filter((x) => x && x.kind);
     return [
       ['A place to sleep', !!((b && b.up.length >= 3) || (g.room && g.room.until - g.t > 6 * 1440) || (g.lessons && g.lessons.n >= 6))],
       ['A way to eat', g.money >= 120 || biz.some((x) => x.total >= 100) || Object.values(g.street || {}).some((x) => x >= 30)],

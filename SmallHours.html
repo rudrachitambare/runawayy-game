@@ -9658,12 +9658,15 @@ window.SH = window.SH || {};
     }
     const nm = raw.match(/\b(?:[Mm]y name is|[Ii]'?m|[Ii] am|[Nn]ame'?s|[Cc]all me)\s+([A-Z][a-z'-]{1,13})\b/);
     if (nm) { const cv = SH.Identity && SH.Identity.name(p); if (cv && cv.toLowerCase() !== nm[1].toLowerCase()) { m.sus += 25; return S(`${nm[1]}? The lady at the diner called you ${cv}.`); } return S(`Okay, ${nm[1]}. And your last name?`); }
-    if (/\b(permit|license)\b/.test(t)) { m.sus -= 5; return S('Kids with lemonade don\'t need a permit. Kids with a whole operation... we\'ll see.'); }
+    if (/\b(permit|license)\b/.test(t)) { m.sus -= 5; const bk = (((g.biz || {})[p.id]) || {}).kind; const what = { lemonade: 'Kids with a lemonade stand', carwash: 'Kids washing cars', dogs: 'Kids walking dogs', leaves: 'Kids raking leaves', art: 'Kids selling bracelets', fix: 'Kids patching bike tires' }[bk] || 'Kids doing odd jobs'; return S(`${what} don't need a permit. Kids with a whole operation... we'll see.`); }
     if (/\b(sorry|yes sir|yes ma'?am|officer|thank you)\b/.test(t)) m.sus -= 4;
     if (c.turn >= 4) { if (m.sus >= 70) { c.result = 'take'; return S('Alright. I think you\'d better come with me. Just until we sort out who you are.', { end: true }); } c.result = m.sus >= 40 ? 'watch' : 'ok'; return S(m.sus >= 40 ? 'I\'m going to be keeping an eye on you. You understand?' : 'Alright. Stay out of trouble. And wear a jacket, it\'s getting cold.', { end: true }); }
     return S(K.pick(['So what\'s all this, then?', 'Where are your parents?', 'Shouldn\'t you be in school?', 'What\'s your name, kid?']));
   };
+  const talks = (p) => { const g = G(); g.copTalks = g.copTalks || {}; return (g.copTalks[p.id] = g.copTalks[p.id] || { n: 0, last: -1e9 }); };
+  const leftAlone = (p) => talks(p).n >= 3;
   function stop(p, ctx, then) {
+    if (ctx !== 'notice') { const tk = talks(p); if (tk.n >= 3 || G().t - tk.last < 1440) { if (tk.n >= 3 && K.chance(0.3)) SH.UI.log(K.pick([`The patrol car rolls past. The ${p.hasPolice ? 'officer' : 'deputy'} lifts two fingers off the wheel at you and keeps going.`, `The ${p.hasPolice ? 'officer' : 'deputy'} drives by, slows down just enough to nod, and doesn't stop. You're a regular now.`]), ''); return then ? then({}) : undefined; } }
     const cop = COPS[(p.pop + p.name.length) % COPS.length].replace('Officer', p.hasPolice ? 'Officer' : 'Deputy'); K.npc('cop', cop, cop + (p.hasPolice ? ', ' + p.name + ' PD' : ', county sheriff'), '#2b4a7a');
     const who = p.hasPolice ? 'officer' : 'deputy';
     const intro = ctx === 'business' ? `A patrol car pulls up to the curb. The ${who} gets out slowly, the way they do when they're not in a hurry but they are curious.` : ctx === 'notice' ? `A patrol car pulls up beside you and the window comes down. Somebody in ${p.name} called about a kid on their own. The ${who} doesn't get out yet. That's something.` : 'While you\'re working, a patrol car rolls by, slows, and stops.';
@@ -9672,6 +9675,7 @@ window.SH = window.SH || {};
       const g = G(); g._copTalk = false;
       if (c.result === 'help') return SH.Endings.found('self');
       if (c.result === 'take') return setTimeout(() => cornered(p, cop), 60);
+      if (c.result === 'ok' || c.result === 'watch' || !c.result) { const tk = talks(p); tk.n++; tk.last = g.t; if (tk.n === 3) SH.UI.log(`That's the third time the ${p.hasPolice ? 'officer' : 'deputy'} has talked to you. Same questions, same answers. You get the feeling that's the last time.`, 'good'); }
       if (ctx === 'notice') g.awayNotice = c.result === 'watch' ? 75 : 45; // they came, they talked, they left. People relax a little.
       else if (c.result === 'watch') g.awayNotice = (g.awayNotice || 0) + 20;
       if (c.result === 'watch') g.heat = Math.min(100, (g.heat || 0) + 5);
@@ -9703,6 +9707,7 @@ window.SH = window.SH || {};
   function closeIn(p) {
     const g = G(); if (!p || p.home || p.tier === 'village' || g.ended) return false;
     if (g._copTalk && SH.Talk && SH.Talk.cur && !SH.Talk.cur.ended) return true;
+    if (leftAlone(p)) { g.awayNotice = 45; SH.UI.log(`Somebody calls in about a kid on their own. You find out later the ${p.hasPolice ? 'officer' : 'deputy'} just said, "I know that kid. That kid's fine," and didn't even come out.`, 'good'); return true; }
     g._copTalk = true; g.awayNotice = 99;
     setTimeout(() => { if (!G().ended) stop(p, 'notice'); }, 80);
     return true;
@@ -10137,7 +10142,7 @@ window.SH = window.SH || {};
     ['note', '📝 A Good Note', 'Help a friend write a note that actually helps', (g) => Object.values(g.pw || {}).some((x) => x.note && x.note.s >= 3)], ['cover', '🎭 Method Actor', 'Keep a cover story in 3 towns', (g) => Object.keys(g.cover || {}).length >= 3],
     ['disguise', '🪞 Stranger in the Mirror', 'Change your look 4 ways', (g) => (g.flags.disguise || 0) >= 4], ['rk', '🧒 Found Family', 'Another runaway joins your group', (g) => (g.rkids || []).length >= 1],
     ['helped', '🚪 Walked Them Home', 'Help a runaway kid reach a safe adult', (g) => (g.helped || 0) >= 1], ['base', '🏕️ Home Base', 'Fully upgrade 5 things at a base', (g) => g.base && g.base.up.length >= 5],
-    ['biz', '🍋 Small Business', 'Earn $100 from a group business', (g) => Object.values(g.biz || {}).some((b) => b && b.total >= 100)], ['week', '📅 One Week', 'Stay away 7 days', (g) => g.missingAt && (g.t - g.missingAt) / 1440 >= 7],
+    ['biz', '🍋 Small Business', 'Earn $100 from a group business', (g) => Object.values(g.biz || {}).some((b) => b && b.kind && b.total >= 100)], ['week', '📅 One Week', 'Stay away 7 days', (g) => g.missingAt && (g.t - g.missingAt) / 1440 >= 7],
     ['month', '🗓️ One Month', 'Stay away 30 days', (g) => g.missingAt && (g.t - g.missingAt) / 1440 >= 30], ['halloween', '🎃 Just a Kid', 'Trick-or-treat while missing', (g) => g.flags.trickOrTreat],
     ['winter', '❄️ First Snow', 'Still out there in December', (g) => g.missingAt && cal(g.t).m === 11], ['group4', '👥 Crew of Four', 'Have a group of four', () => K.grp() >= 4],
     ['comfort', '🫂 Stay', 'Talk a homesick friend through it', (g) => Object.values(g.att || {}).some((x) => x >= 40)], ['lemonrep', '👋 People Wave', 'Earn a good reputation in a town', (g) => g.away && W.rep(A.here()) >= 30],
@@ -10156,7 +10161,7 @@ window.SH = window.SH || {};
    group, cover, disguise, the town, the season. Bittersweet on purpose: every one of them costs something. */
 (function (SH) {
   const X = SH.EndX; if (!X) return;
-  const g = (c) => c.g, B = (c) => c.g.base, bz = (c) => Object.values(c.g.biz || {}).filter(Boolean).sort((a, b) => b.total - a.total)[0];
+  const g = (c) => c.g, B = (c) => c.g.base, bz = (c) => Object.values(c.g.biz || {}).filter((x) => x && x.kind).sort((a, b) => b.total - a.total)[0];
   const cov = (c) => (c.place && (c.g.cover || {})[c.place.id] || {}).name;
   const as = (c) => (cov(c) ? `"${cov(c)}"` : 'a kid with a different name');
   const grp = (c) => (c.n ? ` ${c.pl} ${c.n === 1 ? 'was' : 'were'} there for all of it.` : '');
@@ -10204,7 +10209,7 @@ window.SH = window.SH || {};
 (function (SH) {
   const X = SH.EndX; if (!X) return;
   const H = ['foundHome'], S = ['foundSafe'], HS = ['foundHome', 'foundSafe'];
-  const bz = (c) => Object.values(c.g.biz || {}).filter(Boolean).sort((a, b) => b.total - a.total)[0];
+  const bz = (c) => Object.values(c.g.biz || {}).filter((x) => x && x.kind).sort((a, b) => b.total - a.total)[0];
   const nlook = (c) => (c.g.look ? Object.values(c.g.look).filter(Boolean).length : 0);
   const cov = (c) => (c.place && (c.g.cover || {})[c.place.id] || {}).name;
   const hp = (c) => c.g.hp || {};
@@ -10276,7 +10281,7 @@ window.SH = window.SH || {};
     F('fKart', 2, (c) => c.g.lessons && c.g.lessons.kart >= 2, 'Pole Position', 'found · at the go-kart track', (c) => ['They find you at the go-kart track, mid-race, in the lead.', 'The officer waits at the fence until the checkered flag. You win. He claps. Then he waves you over, and your stomach drops, and he says "nice line through turn three" before he says anything else.', `${mom(c)} makes you promise never to drive anything until you're sixteen. You mostly keep the promise.${safeLine(c)}`]),
     F('fStallPawn', 2, (c) => Object.values(c.g.street || {}).some((x) => x >= 15) && c.tier === 'city', 'Everybody on the Block', 'found · the side streets', (c) => ['The woman from the alley stall, the pawn shop guy, the waitress, the fake-ID guy (who pretends he\'s never seen you): the whole side street watched the police walk you to the car.', 'The stall woman runs over with a hoodie. "It\'s cold. Take it. Don\'t argue." You don\'t argue.', `The side street never told anyone where you slept. They just made sure you were okay, in their way.${safeLine(c)}`]),
     F('fVillageStore', 2, (c) => false && c.tier === 'village', 'The Store Owner', (c) => `found · ${c.town}`, (c) => [`The woman at the ${c.town} general store knew for three days before she called. She told the deputy that, straight out: "I wanted to see if the kid would tell me. The kid didn't. So I called."`, 'She gives you a bag of peppermints and a bottle of juice for the ride. "You come back and visit," she says. "With your mother. I want to meet her."', `You do, the next summer. The two of them talk for an hour on the porch about you like you're not there.${safeLine(c)}`]),
-    F('fBusiness2', 3, (c) => { const b = Object.values(c.g.biz || {}).filter(Boolean)[0]; return b && b.shifts >= 6 && c.n >= 1; }, 'Last Shift', 'found · the whole team', (c) => [`You were halfway through a shift when they came. ${c.pl} kept working until the last customer was served. Professionalism.`, 'The officer counted the cash box with you, twice, and wrote it on the report: "business proceeds, $ amount, to be returned to minors." It\'s the only police report in the county with a profit margin on it.', `Every one of you went home with an equal share.${safeLine(c)}`]),
+    F('fBusiness2', 3, (c) => { const b = Object.values(c.g.biz || {}).filter((x) => x && x.kind)[0]; return b && b.shifts >= 6 && c.n >= 1; }, 'Last Shift', 'found · the whole team', (c) => [`You were halfway through a shift when they came. ${c.pl} kept working until the last customer was served. Professionalism.`, 'The officer counted the cash box with you, twice, and wrote it on the report: "business proceeds, $ amount, to be returned to minors." It\'s the only police report in the county with a profit margin on it.', `Every one of you went home with an equal share.${safeLine(c)}`]),
     F('fBaseBarn', 3, (c) => c.g.base && c.g.base.type === 'barn', 'The Farmer\'s Barn', 'found · the hayloft', (c) => ['The farmer who owned the barn found you, eventually. He stood at the bottom of the ladder for a long time before he said anything.', '"You fixed the loft door," he said. "That\'s been broken since 1996." He called the sheriff. Then he made you eggs while you waited.', `He asks the deputy to tell your family you're welcome back anytime. "Summers," he says. "Work, not hiding."${safeLine(c)}`]),
     F('fBaseBuilding', 3, (c) => c.g.base && c.g.base.type === 'building' && c.tier !== 'village', 'Condemned', 'found · the old building', (c) => ['A city inspector came to condemn the building and found your curtains, your bed, your heater, your very neat stack of library books.', 'He sat down on your crate and read the top book for a while before he called anyone. "My daughter loves this one," he said.', `The building got torn down in spring. You drove past it once, with ${mom(c)}, and she held your hand.${safeLine(c)}`]),
     F('fBaseCamp', 3, (c) => c.g.base && c.g.base.type === 'camp', 'The Ranger', 'found · the forest camp', (c) => ['The ranger followed the smell of your campfire. She stood at the edge of your clearing and said "I\'m not going to yell. Is anybody hurt?"', 'She checked the fire ring, the tarp, the food hung from a branch, and whistled. "Somebody taught you right." Nobody taught you. You watched videos.', `She drives you out in the ranger truck, and lets you work the radio.${safeLine(c)}`]),
@@ -10298,7 +10303,7 @@ window.SH = window.SH || {};
   const K = SH.K, A = SH.Atlas; if (!K || !A) return;
   const G = K.G;
   function pillars(p) {
-    const g = G(), b = g.base, look = g.look ? Object.values(g.look).filter(Boolean).length : 0, biz = Object.values(g.biz || {}).filter(Boolean);
+    const g = G(), b = g.base, look = g.look ? Object.values(g.look).filter(Boolean).length : 0, biz = Object.values(g.biz || {}).filter((x) => x && x.kind);
     return [
       ['A place to sleep', !!((b && b.up.length >= 3) || (g.room && g.room.until - g.t > 6 * 1440) || (g.lessons && g.lessons.n >= 6))],
       ['A way to eat', g.money >= 120 || biz.some((x) => x.total >= 100) || Object.values(g.street || {}).some((x) => x >= 30)],

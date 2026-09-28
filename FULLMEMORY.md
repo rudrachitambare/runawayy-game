@@ -558,3 +558,8 @@ New `src/power.js` (after logic.js):
 - Now every found chat is talk-out-able except 'self' (walked into the station) and 'host' (friend's parent's kitchen). Exhausted starts +10 suspicion; being let go after collapsing gives 24h grace (g._exGrace) before longRun can fire again, and +10 energy.
 - "I'm Sean" (capital I) is now read as a name by both cops.
 - NOT changed (asked user): the harsh longRun rule itself.
+
+## #57 (turn 57): deputies leave you alone
+- User: too many deputy stops in a small town, back-to-back. police.js: per-town g.copTalks[pid] = {n, last}. Routine stops (work/business) skip if the last talk in that town was < 24h ago, or after 3 talks that ended fine (then the patrol car just waves sometimes). The 3rd talk logs "You get the feeling that's the last time." After 3, being noticed all the way (call-in) is waved off by the officer ("I know that kid. That kid's fine."), notice → 45.
+- The permit reply names the actual business (dogs, car wash, yard work…).
+- Bug fix: home hustles (jobs.js) and town businesses share G.biz. Ending/pillar/milestone lookups now only count entries with .kind (endx_found/gone/more, notfound, worldsys), so the "small business" never-found ending and pillar work.

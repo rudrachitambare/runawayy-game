@@ -3,7 +3,7 @@
    group, cover, disguise, the town, the season. Bittersweet on purpose: every one of them costs something. */
 (function (SH) {
   const X = SH.EndX; if (!X) return;
-  const g = (c) => c.g, B = (c) => c.g.base, bz = (c) => Object.values(c.g.biz || {}).filter(Boolean).sort((a, b) => b.total - a.total)[0];
+  const g = (c) => c.g, B = (c) => c.g.base, bz = (c) => Object.values(c.g.biz || {}).filter((x) => x && x.kind).sort((a, b) => b.total - a.total)[0];
   const cov = (c) => (c.place && (c.g.cover || {})[c.place.id] || {}).name;
   const as = (c) => (cov(c) ? `"${cov(c)}"` : 'a kid with a different name');
   const grp = (c) => (c.n ? ` ${c.pl} ${c.n === 1 ? 'was' : 'were'} there for all of it.` : '');

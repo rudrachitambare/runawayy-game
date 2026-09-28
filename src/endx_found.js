@@ -4,7 +4,7 @@
 (function (SH) {
   const X = SH.EndX; if (!X) return;
   const H = ['foundHome'], S = ['foundSafe'], HS = ['foundHome', 'foundSafe'];
-  const bz = (c) => Object.values(c.g.biz || {}).filter(Boolean).sort((a, b) => b.total - a.total)[0];
+  const bz = (c) => Object.values(c.g.biz || {}).filter((x) => x && x.kind).sort((a, b) => b.total - a.total)[0];
   const nlook = (c) => (c.g.look ? Object.values(c.g.look).filter(Boolean).length : 0);
   const cov = (c) => (c.place && (c.g.cover || {})[c.place.id] || {}).name;
   const hp = (c) => c.g.hp || {};

@@ -61,7 +61,7 @@
     ['note', '📝 A Good Note', 'Help a friend write a note that actually helps', (g) => Object.values(g.pw || {}).some((x) => x.note && x.note.s >= 3)], ['cover', '🎭 Method Actor', 'Keep a cover story in 3 towns', (g) => Object.keys(g.cover || {}).length >= 3],
     ['disguise', '🪞 Stranger in the Mirror', 'Change your look 4 ways', (g) => (g.flags.disguise || 0) >= 4], ['rk', '🧒 Found Family', 'Another runaway joins your group', (g) => (g.rkids || []).length >= 1],
     ['helped', '🚪 Walked Them Home', 'Help a runaway kid reach a safe adult', (g) => (g.helped || 0) >= 1], ['base', '🏕️ Home Base', 'Fully upgrade 5 things at a base', (g) => g.base && g.base.up.length >= 5],
-    ['biz', '🍋 Small Business', 'Earn $100 from a group business', (g) => Object.values(g.biz || {}).some((b) => b && b.total >= 100)], ['week', '📅 One Week', 'Stay away 7 days', (g) => g.missingAt && (g.t - g.missingAt) / 1440 >= 7],
+    ['biz', '🍋 Small Business', 'Earn $100 from a group business', (g) => Object.values(g.biz || {}).some((b) => b && b.kind && b.total >= 100)], ['week', '📅 One Week', 'Stay away 7 days', (g) => g.missingAt && (g.t - g.missingAt) / 1440 >= 7],
     ['month', '🗓️ One Month', 'Stay away 30 days', (g) => g.missingAt && (g.t - g.missingAt) / 1440 >= 30], ['halloween', '🎃 Just a Kid', 'Trick-or-treat while missing', (g) => g.flags.trickOrTreat],
     ['winter', '❄️ First Snow', 'Still out there in December', (g) => g.missingAt && cal(g.t).m === 11], ['group4', '👥 Crew of Four', 'Have a group of four', () => K.grp() >= 4],
     ['comfort', '🫂 Stay', 'Talk a homesick friend through it', (g) => Object.values(g.att || {}).some((x) => x >= 40)], ['lemonrep', '👋 People Wave', 'Earn a good reputation in a town', (g) => g.away && W.rep(A.here()) >= 30],
