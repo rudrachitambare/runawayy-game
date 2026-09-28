@@ -38,7 +38,7 @@
   P.send = function (id, text) {
     const g = G(); if (!text || !text.trim() || !P.ok() || g.phone.airplane) return bSend.apply(this, arguments);
     const x = X();
-    if (x.burner && !x.gave[id] && !['class', 'lighthouse', 'harbor'].includes(id)) { x.gave[id] = true; P.push(id, 'sys', 'Texting from your new number. ' + ((SH.NPCS_META[id] || {}).n || 'They') + ' has it now.', false); }
+    if (x.burner && !x.gave[id] && !['lighthouse', 'harbor'].includes(id)) { x.gave[id] = true; P.push(id, 'sys', 'Texting from your new number. ' + ((SH.NPCS_META[id] || {}).n || 'They') + ' has it now.', false); }
     if (!NT.spend(MB.text, 'text')) {
       P.push(id, 'me', text, false); P.push(id, 'sys', '⏳ Sending… (no data, no wifi)', false);
       x.queue.push({ id, text, t: g.t }); g.stats.textsSent++; SH.advance(2, { interrupt: false }); SH.UI.renderSide(); P.render(); return;
@@ -51,7 +51,7 @@
   P.push = function (id, from, text, notify) {
     const g = G(), x = g && g.net && g.net.x;
     if (g && x && from !== 'me' && from !== 'sys' && !NT._flushing) {
-      const blocked = x.burner && !x.gave[id] && !['class', 'lighthouse', 'harbor', 'bank', 'carrier'].includes(id);
+      const blocked = x.burner && !x.gave[id] && !['lighthouse', 'harbor', 'bank', 'carrier'].includes(id); // turn 52: the class chat only has your OLD number
       if (blocked) { (x.oldInbox = x.oldInbox || []).push({ id, from, text, t: g.t }); return; }
       if (!NT.canData()) { x.inbox.push({ id, from, text, t: g.t, notify }); return; }
       NT.spend(MB.text * (/📷|photo|pic/i.test(text) ? 30 : 1));

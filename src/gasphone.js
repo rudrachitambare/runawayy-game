@@ -30,7 +30,7 @@
     try {
       if (r && r.acts && gasHere() && !shut()) {
         const g = G(), x = NT.x && NT.x();
-        if (x && (!x.burner || g.phone.confiscated)) r.acts.push({ label: 'Buy a prepaid phone ($30)', sub: g.phone.confiscated ? 'You don\'t have yours. This one works.' : 'New number. Nobody has it.', fn: burner });
+        if (x && (!x.burner || g.phone.confiscated)) r.acts.push({ label: 'Buy a prepaid phone ($30)', sub: g.phone.confiscated ? 'You don\'t have yours. This one works.' : 'New number. Nobody has it.', fn: () => SH.GasPhone.burner() });
         if (!g.phone.confiscated) {
           r.acts.push({ label: 'Buy a night data pack ($3)', sub: '1 GB, midnight–6 AM', fn: () => { NT.nightPack(); SH.UI.afterAction(); } });
           r.acts.push({ label: 'Buy a monthly data bundle ($20)', sub: '8 GB for 30 days', fn: () => { NT.bundle(); SH.UI.afterAction(); } });

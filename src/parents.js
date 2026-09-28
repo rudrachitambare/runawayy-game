@@ -37,7 +37,7 @@
   K.hourly.push((h) => {
     const g = G(), hr = h % 24; if (g.phase !== 'run') return;
     (g.party || []).filter((id) => KIDS[id]).forEach((id) => {
-      const x = W(id), k = KIDS[id], hid = 'host_' + id, fill = (s) => s.replace(/\{k\}/g, k.n).replace(/\{p\}/g, rel(id) === 'mom' ? 'Mom' : 'Dad').replace(/\{s\}/g, SH.nm('{name}')).replace(/she's/g, k.g === 'he' ? 'he\'s' : k.g === 'they' ? 'they\'re' : 'she\'s');
+      const x = W(id), k = KIDS[id], hid = 'host_' + id, fill = (s) => s.replace(/\{k\}/g, k.n).replace(/\{p\}/g, rel(id) === 'mom' ? 'Mom' : 'Dad').replace(/\{s\}|\{name\}/g, (G().name || 'Sam')).replace(/she's/g, k.g === 'he' ? 'he\'s' : k.g === 'they' ? 'they\'re' : 'she\'s');
       if ((hr === 9 || hr === 19) && x.w > 20 && K.chance(k.fam === 'away' ? 0.4 : 0.85)) SH.Phone.push(hid, hid, fill(K.pick(LINES[x.w > 70 ? 'high' : x.w > 40 ? 'mid' : 'low'])));
       if (x.w > 40 && !x.mom) { x.mom = true; SH.Phone.push('mom', 'mom', `${k.parent} just called me. Is ${k.n} with you? Sweetheart, two families are losing their minds. Please.`); }
       if (x.w > 65 && !x.chirp) { x.chirp = true; SH.UI.log(`${k.parent} posted on Chirp: "MISSING: ${k.full}, 12. Last seen with a friend. Please share." It has 2,400 shares by lunch.`, 'bad'); g.heat = Math.min(100, (g.heat || 0) + 8); }

@@ -33,7 +33,7 @@
   A.TIERS = {
     city: { n: 'City', pop: [180000, 1400000], police: (p) => `City police department: about ${Math.round(p / 450)} officers, 24/7. Patrol cars everywhere.`, sheriff: false },
     town: { n: 'Town', pop: [14000, 90000], police: (p) => `Town police department: ${Math.round(p / 600)} officers, a station open all night.`, sheriff: false },
-    small: { n: 'Small town', pop: [1200, 9000], police: (p, r) => r() < 0.65 ? `Small department: ${Math.max(2, Math.round(p / 900))} officers, the chief works days. The county sheriff covers nights.` : 'No police department. The county sheriff covers it from the county seat, about 20 minutes out.', sheriff: true },
+    small: { n: 'Small town', pop: [1200, 9000], police: (p, r) => r() < 0.2 ? `Small department: ${Math.max(2, Math.round(p / 900))} officers, the chief works days. The county sheriff covers nights.` : 'No police department. The county sheriff covers it from the county seat, about 20 minutes out.', sheriff: true },
     village: { n: 'Village', pop: [90, 1100], police: (p, r) => `No police. The county sheriff is ${25 + Math.floor(r() * 25)} minutes away. State troopers pass through on the highway.`, sheriff: true },
   };
 
@@ -79,6 +79,9 @@
       p.motto = p.home ? 'Home of the 1911 station clock' : pick(r, ['"A Nice Place to Stay"', 'Home of the county fair', 'Pop. ' + p.pop.toLocaleString() + ' and one stoplight', 'Birthplace of a minor astronaut', 'Famous for its pie', 'You just missed the festival', 'Est. 1854']);
       if (p.home) p.police = 'Harlow PD: 64 officers on Route 9. You\'ve met Officer Lowe.';
       if (p.grandma) p.police = 'Cedar Falls PD: 6 officers, and the chief went to school with Grandma.';
+      // turn 52: about a quarter of towns have no PD of their own (hash of the name, so the world's random sequence doesn't shift)
+      if (p.tier === 'town' && !p.home && !p.grandma && [...p.name].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7) % 100 < 25) p.police = 'No police department. The town contracts with the county sheriff: two deputies on days, one on nights, out of a substation by the highway.';
+      p.hasPolice = !!(p.home || p.grandma) || !/^No police/.test(p.police);
     });
     // roads: every place links to its nearest neighbours; a highway spanning tree joins towns & cities; then make it all connected
     const roads = [], rk = new Set(), dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);

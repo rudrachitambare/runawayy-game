@@ -109,7 +109,7 @@
       agent: 'The ticket agent sits with you on the bench, one hand on your shoulder, until a police officer arrives. She buys you a hot chocolate from the machine.', bus: 'At the second stop, a police officer climbs aboard and walks down the aisle, looking at faces. She stops at yours.',
       cedarLost: 'Cedar Falls. You get off the bus and realize you don\'t know Grandma\'s address. You walk until you can\'t. A police officer finds you asleep on a bench outside the post office.',
       host: 'Your friend\'s parent hangs up the phone and sits down across from you. "She\'s on her way. So is an officer. Nobody is angry. I promise you, nobody in this kitchen is angry."',
-      sheriff: 'There\'s no police station in a town this small. So it takes forty minutes, but a county sheriff\'s cruiser eventually crunches into the gravel lot, and a deputy in a brown jacket gets out slow.',
+      sheriff: 'There\'s no police station here, just the county sheriff. So it takes forty minutes, but a county sheriff\'s cruiser eventually crunches into the gravel lot, and a deputy in a brown jacket gets out slow.',
       away: 'You stand out. A new kid in a place this size always does. Someone called it in, kindly. A cruiser pulls up beside you.',
       exhausted: 'Six days. Your body is done. When the cruiser pulls up, you don\'t even try to get up.' }[reason] || 'A police cruiser.';
     D({ title: 'Found', who: 'officer', text: [intro, '"Hey. I\'m Officer Lowe. You\'re ' + G.name + ', right? Your mom\'s been really worried. You\'re not in trouble. Running away isn\'t a crime. I just need to make sure you\'re okay."'],
