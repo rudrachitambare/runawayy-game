@@ -80,7 +80,7 @@
       <h4>After</h4>${ep.map(([w, t]) => `<p><b style="font-family:system-ui;font-size:13px;color:var(--amber)">${w}.</b> ${t}</p>`).join('')}
       <h4>Moments</h4><div>${mo.map((x) => `<span class="stamp">${x}</span>`).join('') || '<span class="stamp">—</span>'}</div>
       <h4>This story</h4>${storyCard()}
-      <h4>There are other ways this story goes</h4><p style="font-size:13.5px;color:var(--muted)">Every new story reshuffles the breaking point, the side stories, the weather, the timing, even who you are. And there are 15 endings. Some depend on who you tell, and exactly what you type when it matters.</p>
+      <h4>There are other ways this story goes</h4><p style="font-size:13.5px;color:var(--muted)">Every new story reshuffles the breaking point, the side stories, the weather, the timing, even who you are. And there are ${SH.EndX && SH.EndX.total ? SH.EndX.total() + ' endings' + (SH.EndX.seenList ? ` (you've seen ${SH.EndX.seenList().length})` : '') : 'a lot of endings'}. Some depend on who you tell, and exactly what you type when it matters.</p>
       <h4>If any of this is close to home</h4><div class="resources">This is fiction, but these are real, free and confidential:<br>
       🇺🇸 National Runaway Safeline: <b>1-800-RUNAWAY</b> (1-800-786-2929), 1800runaway.org · Crisis: call/text <b>988</b><br>
       🇮🇳 CHILDLINE: <b>1098</b> · Emergency: <b>112</b><br>

@@ -569,3 +569,6 @@ New `src/power.js` (after logic.js):
 - police.js: one cop name per town for both (Police.copName(p, dep), same surname list + hash as logic.js; logic.js uses it). release() now counts: 'free' ("sorry kid, you look like her") → n = max(3, n+1) (done with you in that town); 'watch' → +1. closeIn also waves off within 24h of the last talk (notice 60).
 - New src/cop_settle.js (after clauses.js): EN.found for away/sheriff/exhausted/police in a non-village town is waved off (log line, notice 45/60) when the town's cop talks n ≥ 3 or last talk < 24h. Exhausted wave-off: grace 24h, energy +12, full +20 (sandwich from the window).
 - Test: tests/t59.drv.js.
+
+## 60. Built It Yourself reached (never found)
+- The end screen said "there are 15 endings" (stale). Now it shows SH.EndX.total() plus how many you have seen (129 at the time).
