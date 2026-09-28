@@ -20,6 +20,7 @@
       if (!real && K.chance(0.4)) g.flags.charityCheck = { pid: p.id, day: SH.day() + 1, n: m.charity };
       m.sus += real ? -5 : 8; return S(real ? 'Good cause. My mom gave to them every Christmas.' : `"${m.charity}." He writes it down. "Never heard of it."`);
     }
+    const cv = coverSay(t, p, m); if (cv) return S(cv);
     const st = STORY.find(([, re]) => re.test(t));
     if (st) {
       if (prev && prev.story !== st[0]) { m.sus += 30; return S(`Hm. Last week you told me this was a ${prev.story === 'school' ? 'school project' : prev.story === 'charity' ? 'charity thing' : prev.story === 'family' ? 'family thing' : 'church thing'}.`); }
@@ -52,18 +53,19 @@
     } });
   }
   /* turn 54: when it goes badly you get one choice: go with them, or grab your stuff and run */
-  function cornered(p, cop) {
+  function cornered(p, cop, onGo) {
+    const go = onGo || (() => { G().away = null; SH.Endings.found(p.hasPolice ? 'away' : 'sheriff'); });
     const g = G(), n = (g.party || []).length + (g.rkids || []).length, dark = SH.isDark ? SH.isDark() : (SH.hour() >= 20 || SH.hour() < 6);
     const odds = Math.max(0.15, Math.min(0.85, 0.55 + (dark ? 0.15 : 0) - 0.08 * n - ((g.s.energy || 0) < 25 ? 0.2 : 0)));
     K.D(`${cop} opens the back door`, [`"Come on. Nobody's in trouble. We just need to figure out who you are."`, `${cop} is standing between you and the car, not between you and the street.`],
-      [{ t: 'Go with them', cls: 'safe', fn: () => { g.away = null; SH.Endings.found(p.hasPolice ? 'away' : 'sheriff'); } },
-       { t: 'Grab your stuff and run', cls: 'hot', sub: `${dark ? 'It\'s dark, which helps. ' : ''}${n ? 'Harder with ' + (n === 1 ? 'two of you' : 'all of you') + '. ' : ''}${(g.s.energy || 0) < 25 ? 'You\'re exhausted. ' : ''}If it works, you have to leave ${p.name}.`, fn: () => bolt(p, cop, odds) }]);
+      [{ t: 'Go with them', cls: 'safe', fn: go },
+       { t: 'Grab your stuff and run', cls: 'hot', sub: `${dark ? 'It\'s dark, which helps. ' : ''}${n ? 'Harder with ' + (n === 1 ? 'two of you' : 'all of you') + '. ' : ''}${(g.s.energy || 0) < 25 ? 'You\'re exhausted. ' : ''}If it works, you have to leave ${p.name}.`, fn: () => bolt(p, cop, odds, go) }]);
   }
-  function bolt(p, cop, odds) {
+  function bolt(p, cop, odds, go) {
     const g = G();
-    if (!K.chance(odds)) { SH.UI.log(`You make it two blocks. ${cop} doesn't even run. The car just turns the corner ahead of you and waits.`, 'bad'); g.away = null; return SH.Endings.found(p.hasPolice ? 'away' : 'sheriff'); }
+    if (!K.chance(odds)) { SH.UI.log(`You make it two blocks. ${cop} doesn't even run. The car just turns the corner ahead of you and waits.`, 'bad'); return go(); }
     const D = A.data(), near = D.places.filter((q) => q.id !== p.id && !q.home).map((q) => [q, A.miles(p, q)]).sort((a, b) => a[1] - b[1]);
-    const pickQ = (near.find(([q, mi]) => q.tier === 'village' && mi <= 9) || near.find(([, mi]) => mi <= 9) || near[0]); if (!pickQ) { g.away = null; return SH.Endings.found('away'); }
+    const pickQ = (near.find(([q, mi]) => q.tier === 'village' && mi <= 9) || near.find(([, mi]) => mi <= 9) || near[0]); if (!pickQ) return go();
     const [to, mi] = pickQ;
     g.awayNotice = 95; g.heat = Math.min(100, (g.heat || 0) + 15); // the town will remember you (fades 8 a day while you're gone)
     SH.st('stress', 20); SH.st('energy', -15);
@@ -81,5 +83,63 @@
   }
   K.daily.push(() => { const g = G(), cc = g.flags && g.flags.charityCheck; if (!cc || SH.day() < cc.day) return; g.flags.charityCheck = null; g.flags.charityExposed = cc.n; g.heat = Math.min(100, (g.heat || 0) + 15); SH.UI.log(`The officer in town called around about "${cc.n}". Nobody's ever heard of it. Now he's asking about you.`, 'bad'); if (g.away === cc.pid) g.awayNotice = (g.awayNotice || 0) + 30; });
   const bAct = A.act; A.act = function (k) { const p = A.here(); if (k === 'work' && p.tier !== 'village' && K.chance(0.1 + (G().heat || 0) / 500)) { const r = bAct.apply(this, arguments); if (!G().ended) setTimeout(() => SH.Police.stop(p, 'work'), 60); return r; } return bAct.apply(this, arguments); };
-  SH.Police = { stop, STORY, closeIn, cornered };
+  /* ---------- turn 55: your cover story counts with police ---------- */
+  const COVER_RE = { grandma: /\b(grandma|grandmother|nana|granny)\b/, moved: /\b(just moved|moved here|moved in|new here|new in town|we moved|family moved)\b/, camp: /\b(campground|camping|camp site|campsite)\b/, home: /\bhome ?school/, cousin: /\bcousins?\b/ };
+  const COVER_OK = { grandma: 'Visiting grandma. Okay. Which house?', moved: 'New family, huh? Welcome to town, I guess.', camp: 'Up at the campground. Sure.', home: 'Homeschooled. That explains the hour.', cousin: 'Staying with cousins. Alright.' };
+  function coverSay(t, p, m) {
+    if (!p || m.coverSaid) return null;
+    const id = Object.keys(COVER_RE).find((k) => COVER_RE[k].test(t)); if (!id) return null;
+    m.coverSaid = 1; const cv = (G().cover || {})[p.id];
+    if (cv && cv.story && cv.story !== id) { m.sus += 30; return `Huh. That's not what you told folks at the diner.`; }
+    if (cv && cv.story === id) { m.sus -= 8; return COVER_OK[id]; }
+    m.sus += 5; return COVER_OK[id].replace(/\.$/, '') + '. Nobody mentioned it to me.';
+  }
+  /* ---------- turn 55: the "Found" officer can be talked out of it, like the patrol car ----------
+     Only when it's a stranger stopping a kid who might be you (not when you walked in, not in a friend's kitchen, not
+     collapsed). She thinks you're the kid on the poster, so she starts more suspicious than a patrol car. Telling her the
+     truth about home still gets you the "Someone Wrote It Down" ending. */
+  const ESC = ['tracked', 'police', 'post', 'security', 'agent', 'bus', 'sheriff', 'away', 'railagent', 'train'];
+  const canEscape = (reason) => ESC.includes(reason);
+  function foundBrain(an, c, base) {
+    const g = G(), m = c.mem, t = an.t, raw = an.raw || '', p = A.here(), S = (say, x) => K.say(say, x);
+    if (m.sus == null) m.sus = (g.heat || 0) / 4 + 20 + (c.opts.reason === 'tracked' ? 15 : 0);
+    const real = (g.name || 'Sam').toLowerCase();
+    // the truth (or anything about home being bad) goes to the normal officer: that's the safe-placement path
+    if (an.has('selfharm') || an.has('disclose') || /\b(ran away|run away|running away|i left home|left home|can'?t go (back|home)|scared to go home|don'?t want to go home|he hits|hurts me|my stepdad|rick)\b/.test(t)) { m.truth = 1; return base(an, c); }
+    if (m.truth) return base(an, c);
+    if (new RegExp(`\\b(that'?s me|yeah,? i'?m ${real}|yes,? i'?m ${real}|i'?m ${real}|my name is ${real}|it'?s me)\\b`).test(t)) { m.sus += 40; return S('Thought so. Okay. Thank you for being honest with me.'); }
+    if (an.has('hostile') || an.shout) { m.sus += 25; return S('Hey. Easy. I\'m not the bad guy here.'); }
+    const cv = coverSay(t, p, m); if (cv) return S(cv);
+    const nm = raw.match(/\b(?:my name is|i'?m|name'?s|call me)\s+([A-Z][a-z'-]{1,13})\b/);
+    if (nm && nm[1].toLowerCase() !== real) { const cn = SH.Identity && p && SH.Identity.name(p); if (cn && cn.toLowerCase() !== nm[1].toLowerCase()) { m.sus += 25; return S(`${nm[1]}? The lady at the diner called you ${cn}.`); } m.sus += cn ? -6 : 4; return S(cn ? `${nm[1]}. Huh. Okay, ${nm[1]}.` : `${nm[1]}. Okay. You look an awful lot like the kid on this poster, ${nm[1]}.`); }
+    if (/\b(not (me|her|him|them)|wrong (kid|person|girl|boy)|got the wrong|that'?s not me|never heard of)\b/.test(t)) { m.sus += 3; return S('Could\'ve sworn. Same jacket as the photo, even.'); }
+    const st = STORY.find(([, re]) => re.test(t));
+    if (st && !m.story) { m.story = st[0]; const prev = ex(p || {}); if (prev && prev.story && prev.story !== st[0]) { m.sus += 30; return S('Funny. That\'s not what you told the officer last time.'); } m.sus += st[0] === 'school' && SH.isWeekday && SH.isWeekday() && SH.hour() < 15 ? 15 : st[0] === 'family' ? 5 : 0; return S(st[0] === 'school' ? 'A school thing. Which school?' : st[0] === 'charity' ? 'A charity. Sure.' : st[0] === 'family' ? 'Your family, huh. Which one?' : 'Which church?'); }
+    if (/\b(sorry|yes sir|yes ma'?am|officer|thank you|thanks)\b/.test(t)) m.sus -= 4;
+    if (c.turn >= 4) {
+      if (m.sus >= 70) { c.result = 'take'; return S('I don\'t think so, hon. Come on. Let\'s get you in the car.', { end: true }); }
+      c.result = m.sus >= 40 ? 'watch' : 'free';
+      return S(m.sus >= 40 ? 'Alright. I\'m not sure about you. I\'m going to be around, okay? You know where to find me.' : 'Okay. Sorry, kid. You really do look just like the kid on the poster. Get home safe, alright?', { end: true });
+    }
+    return S(K.pick(['Where do you live, then?', 'Who are your folks?', 'What are you doing out here on your own?', 'Your mom\'s been worried sick. You sure you\'re not her kid?']));
+  }
+  function foundTalk(reason) {
+    const p = A.here(), g = G();
+    const done = (c) => {
+      if (c.result === 'free' || c.result === 'watch') return release(c.result, reason);
+      if (c.result === 'take' && !c.mem.truth) { const cop = (g._cop && g._cop.name) || 'The officer'; return setTimeout(() => cornered(p || {}, cop, () => SH.Endings.foundEnd(reason)), 60); }
+      SH.Endings.foundEnd(reason);
+    };
+    SH.Talk.open('officer', { ctx: 'found', turnsMax: 7, noLeave: true, reason, escape: true, first: 'So. Want to tell me why you left?', onEnd: done });
+  }
+  function release(res, reason) {
+    const g = G(); g._copTalk = false;
+    if (!g.away) { const m = /^t_(p\d+)_/.exec(g.loc || ''); if (m) g.away = m[1]; }
+    g.awayNotice = res === 'watch' ? 75 : 45; if (res === 'watch') g.heat = Math.min(100, (g.heat || 0) + 5);
+    SH.UI.log(res === 'watch' ? 'The cruiser pulls away slowly. You can feel it in the mirror. Don\'t push your luck here.' : 'The cruiser pulls away. You stand there until your hands stop shaking. Then you walk the other way.', res === 'watch' ? 'bad' : '');
+    SH.UI.afterAction && SH.UI.afterAction();
+  }
+  const bOff = SH.Brain.officer;
+  if (bOff) SH.Brain.officer = function (an, c) { if (c && c.opts && c.opts.escape) return foundBrain(an, c, bOff); return bOff.apply(this, arguments); };
+  SH.Police = { stop, STORY, closeIn, cornered, canEscape, foundTalk, release };
 })(window.SH);

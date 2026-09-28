@@ -113,7 +113,7 @@
       away: 'You stand out. A new kid in a place this size always does. Someone called it in, kindly. A cruiser pulls up beside you.',
       exhausted: 'Six days. Your body is done. When the cruiser pulls up, you don\'t even try to get up.' }[reason] || 'A police cruiser.';
     D({ title: 'Found', who: 'officer', text: [intro, '"Hey. I\'m Officer Lowe. You\'re ' + G.name + ', right? Your mom\'s been really worried. You\'re not in trouble. Running away isn\'t a crime. I just need to make sure you\'re okay."'],
-      choices: [{ t: 'Talk to her (type it)', sub: 'What you say now changes where you sleep tonight.', fn: () => SH.Talk.open('officer', { ctx: 'found', turnsMax: 6, noLeave: true, first: 'So. Want to tell me why you left?', onEnd: () => EN.foundEnd(reason) }) }] });
+      choices: [{ t: 'Talk to her (type it)', sub: 'What you say now changes where you sleep tonight.', fn: () => (SH.Police && SH.Police.canEscape && SH.Police.canEscape(reason) ? SH.Police.foundTalk(reason) : SH.Talk.open('officer', { ctx: 'found', turnsMax: 6, noLeave: true, first: 'So. Want to tell me why you left?', onEnd: () => EN.foundEnd(reason) })) }] });
   };
   EN.foundEnd = function (reason) {
     const G = SH.G;
