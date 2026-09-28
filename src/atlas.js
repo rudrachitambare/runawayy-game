@@ -219,7 +219,7 @@
   A.noticed = (p, k) => noticed(p, k);
   function noticed(p, k) {
     const G = SH.G; G.awayNotice = (G.awayNotice || 0) + Math.round(100 * p.notice * k * (G.reported ? (SH.Net && SH.Net.posterMult ? SH.Net.posterMult(p) : 1.6) : 0.8) * (G.party && G.party.length ? 1.4 : 1) * (A.mods || []).reduce((m, f) => { try { return m * f(p, k); } catch (e) { return m; } }, 1));
-    if (G.awayNotice >= 100) { G.away = null; SH.Endings.found(p.hasPolice ? 'away' : 'sheriff'); return true; }
+    if (G.awayNotice >= 100) { if (SH.Police && SH.Police.closeIn && SH.Police.closeIn(p)) return true; G.away = null; SH.Endings.found(p.hasPolice ? 'away' : 'sheriff'); return true; } // turn 54: an officer comes to talk first
     return false;
   }
   A.act = function (k) {
