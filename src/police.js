@@ -7,6 +7,10 @@
   const G = K.G;
   const COPS = ['Officer Reyes', 'Officer Lindgren', 'Deputy Hale', 'Officer Nakamura', 'Deputy Boone'];
   const STORY = [['school', /\b(school|project|assignment|class|homework|business class|economics)\b/], ['charity', /\b(charity|donat|fundrais|raising money|for (the )?(shelter|animals|hospital|cancer|kids|food bank))/], ['family', /\b(helping|help) (my|our) (aunt|uncle|grandma|grandpa|mom|dad|family|cousin)|(my|our) (aunt|uncle|family|grandma)'?s? (business|farm|shop|stand|truck)\b/], ['church', /\b(church|youth group|bible|scouts|troop)\b/]];
+  /* turn 59: one cop per town, the same person whether they stop you at work or come because you were 'found' */
+  const SUR = ['Ruiz', 'Hanley', 'Okonkwo', 'Brandt', 'Castillo', 'Pruitt', 'Nakamura', 'Sorensen', 'Dube', 'Whitaker', 'Aguilar', 'Kowalski'];
+  const hash = (s) => { let h = 2166136261; s = String(s); for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; };
+  const copName = (p, dep) => `${(dep || !p.hasPolice) ? 'Deputy' : 'Officer'} ${SUR[hash(p.id) % SUR.length]}`;
   const ex = (p) => { const g = G(); g.excuse = g.excuse || {}; return g.excuse[p.id]; };
   SH.Brain.cop = function (an, c) {
     const p = c.opts.p, m = c.mem, t = an.t, raw = an.raw || '', g = G(), prev = ex(p); m.sus = m.sus || (g.heat || 0) / 4 + (c.opts.ctx === 'notice' ? 15 : 0);
@@ -41,7 +45,7 @@
   const leftAlone = (p) => talks(p).n >= 3;
   function stop(p, ctx, then) {
     if (ctx !== 'notice') { const tk = talks(p); if (tk.n >= 3 || G().t - tk.last < 1440) { if (tk.n >= 3 && K.chance(0.3)) SH.UI.log(K.pick([`The patrol car rolls past. The ${p.hasPolice ? 'officer' : 'deputy'} lifts two fingers off the wheel at you and keeps going.`, `The ${p.hasPolice ? 'officer' : 'deputy'} drives by, slows down just enough to nod, and doesn't stop. You're a regular now.`]), ''); return then ? then({}) : undefined; } }
-    const cop = COPS[(p.pop + p.name.length) % COPS.length].replace('Officer', p.hasPolice ? 'Officer' : 'Deputy'); K.npc('cop', cop, cop + (p.hasPolice ? ', ' + p.name + ' PD' : ', county sheriff'), '#2b4a7a');
+    const cop = copName(p); K.npc('cop', cop, cop + (p.hasPolice ? ', ' + p.name + ' PD' : ', county sheriff'), '#2b4a7a');
     const who = p.hasPolice ? 'officer' : 'deputy';
     const intro = ctx === 'business' ? `A patrol car pulls up to the curb. The ${who} gets out slowly, the way they do when they're not in a hurry but they are curious.` : ctx === 'notice' ? `A patrol car pulls up beside you and the window comes down. Somebody in ${p.name} called about a kid on their own. The ${who} doesn't get out yet. That's something.` : 'While you\'re working, a patrol car rolls by, slows, and stops.';
     const first = ctx === 'notice' ? K.pick(['Hey. Got a minute? Couple of folks have mentioned you.', 'Hi there. You\'re not from around here, are you?']) : K.pick(['Afternoon. What\'ve we got going on here?', 'Hey there. You in charge of this?']);
@@ -81,6 +85,7 @@
   function closeIn(p) {
     const g = G(); if (!p || p.home || p.tier === 'village' || g.ended) return false;
     if (g._copTalk && SH.Talk && SH.Talk.cur && !SH.Talk.cur.ended) return true;
+    if (!leftAlone(p) && g.t - talks(p).last < 1440) { g.awayNotice = 60; SH.UI.log(`Somebody calls in about a kid on their own. ${copName(p)} already talked to you today and doesn't come back out.`, 'good'); return true; }
     if (leftAlone(p)) { g.awayNotice = 45; SH.UI.log(`Somebody calls in about a kid on their own. You find out later the ${p.hasPolice ? 'officer' : 'deputy'} just said, "I know that kid. That kid's fine," and didn't even come out.`, 'good'); return true; }
     g._copTalk = true; g.awayNotice = 99;
     setTimeout(() => { if (!G().ended) stop(p, 'notice'); }, 80);
@@ -141,6 +146,7 @@
   function release(res, reason) {
     const g = G(); g._copTalk = false;
     if (!g.away) { const m = /^t_(p\d+)_/.exec(g.loc || ''); if (m) g.away = m[1]; }
+    { const p = placeNow(); if (p && !p.home && p.tier !== 'village') { const tk = talks(p); tk.n = res === 'free' ? Math.max(3, tk.n + 1) : tk.n + 1; tk.last = g.t; } } // turn 59: a found-officer talk counts; 'sorry kid' = done with you
     if (reason === 'exhausted') { g._exGrace = g.t + 24 * 60; SH.st('energy', 10); }
     g.awayNotice = res === 'watch' ? 75 : 45; if (res === 'watch') g.heat = Math.min(100, (g.heat || 0) + 5);
     SH.UI.log(res === 'watch' ? 'The cruiser pulls away slowly. You can feel it in the mirror. Don\'t push your luck here.' : 'The cruiser pulls away. You stand there until your hands stop shaking. Then you walk the other way.', res === 'watch' ? 'bad' : '');
@@ -148,5 +154,5 @@
   }
   const bOff = SH.Brain.officer;
   if (bOff) SH.Brain.officer = function (an, c) { if (c && c.opts && c.opts.escape) return foundBrain(an, c, bOff); return bOff.apply(this, arguments); };
-  SH.Police = { stop, STORY, closeIn, cornered, canEscape, foundTalk, release };
+  SH.Police = { stop, STORY, closeIn, cornered, canEscape, foundTalk, release, copName, talks, leftAlone, placeNow };
 })(window.SH);

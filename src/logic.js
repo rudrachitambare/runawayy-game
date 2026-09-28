@@ -84,7 +84,7 @@
       const pid = pidNow(), p = pid && placeOf(pid);
       if (p && !p.home) {
         const dep = reason === 'sheriff' || !p.hasPolice, sur = COPS[hash(pid) % COPS.length];
-        g._cop = { name: `${dep ? 'Deputy' : 'Officer'} ${sur}`, org: dep ? 'County Sheriff' : `${p.name} PD`, place: p.name };
+        g._cop = { name: SH.Police && SH.Police.copName ? SH.Police.copName(p, dep) : `${dep ? 'Deputy' : 'Officer'} ${sur}`, org: dep ? 'County Sheriff' : `${p.name} PD`, place: p.name };
       } else g._cop = null;
       if (META && SH.NPCS_META.officer) Object.assign(SH.NPCS_META.officer, g._cop ? { n: g._cop.name, full: g._cop.org } : META);
       return bFound.apply(this, arguments);

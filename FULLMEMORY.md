@@ -563,3 +563,9 @@ New `src/power.js` (after logic.js):
 - User: too many deputy stops in a small town, back-to-back. police.js: per-town g.copTalks[pid] = {n, last}. Routine stops (work/business) skip if the last talk in that town was < 24h ago, or after 3 talks that ended fine (then the patrol car just waves sometimes). The 3rd talk logs "You get the feeling that's the last time." After 3, being noticed all the way (call-in) is waved off by the officer ("I know that kid. That kid's fine."), notice → 45.
 - The permit reply names the actual business (dogs, car wash, yard work…).
 - Bug fix: home hustles (jobs.js) and town businesses share G.biz. Ending/pillar/milestone lookups now only count entries with .kind (endx_found/gone/more, notfound, worldsys), so the "small business" never-found ending and pillar work.
+
+## 59. "Deputy Okonkwo keeps visiting, 5 times already"
+- Cause: "Okonkwo" is the FOUND officer name (logic.js renames Officer Lowe per town). Found-officer chats (EN.found away/sheriff/exhausted/police in a town, e.g. a local you told calls, cornered → go with them) were never counted by the turn-57 limit, which only covered patrol stops.
+- police.js: one cop name per town for both (Police.copName(p, dep), same surname list + hash as logic.js; logic.js uses it). release() now counts: 'free' ("sorry kid, you look like her") → n = max(3, n+1) (done with you in that town); 'watch' → +1. closeIn also waves off within 24h of the last talk (notice 60).
+- New src/cop_settle.js (after clauses.js): EN.found for away/sheriff/exhausted/police in a non-village town is waved off (log line, notice 45/60) when the town's cop talks n ≥ 3 or last talk < 24h. Exhausted wave-off: grace 24h, energy +12, full +20 (sandwich from the window).
+- Test: tests/t59.drv.js.
