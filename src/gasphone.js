@@ -35,6 +35,7 @@
           r.acts.push({ label: 'Buy a night data pack ($3)', sub: '1 GB, midnight–6 AM', fn: () => { NT.nightPack(); SH.UI.afterAction(); } });
           r.acts.push({ label: 'Buy a monthly data bundle ($20)', sub: '8 GB for 30 days', fn: () => { NT.bundle(); SH.UI.afterAction(); } });
         }
+        if (SH.Bank && SH.Bank.loadCash && g.money >= 2) r.acts.push({ label: 'Load cash onto PocketPal', sub: '$1 fee · at the register', fn: () => SH.Bank.loadCash(Math.floor(g.money), here()) }); // turn 61: any gas station, not just the QuikMart
         if (!(g.bag || []).includes('x_bucket') && SH.ITEMS && (SH.ITEMS.x_bucket || SH.ITEMS.bucket)) r.acts.push({ label: 'Buy a bucket ($5)', sub: 'Car washes, water, sitting on', fn: () => { if (g.money < 5) return SH.UI.toast('$5. Not enough cash.'); SH.money(-5); SH.addBag(SH.ITEMS.x_bucket ? 'x_bucket' : 'bucket', true); SH.UI.log('A plastic bucket from behind the ice machine. It goes on the backpack strap.', 'sys'); SH.UI.afterAction(); } });
       }
     } catch (e) {}

@@ -75,7 +75,7 @@
   Bk.fromSav = function (amt) { const b = Bk.state(); if (Bk.access()) return SH.UI.toast(Bk.access()); amt = Math.min(amt, b.sav); if (amt <= 0) return; b.sav -= amt; b.bal += amt; log('From Savings', amt); P.render(); };
   /* cash <-> card happens at a register (cash back / load cash) */
   Bk.cashBack = function (amt) { const g = G(), b = Bk.state(); if (Bk.access()) return SH.UI.toast(Bk.access()); if (b.frozen) return SH.UI.toast('Card frozen.'); amt = Math.min(amt, b.bal); if (amt <= 0) return SH.UI.toast('Nothing on the card.'); b.bal -= amt; log('Cash back · QuikMart', -amt); momSees('Cash back at QuikMart', -amt); SH.money(amt); SH.UI.toast(`You get ${$2(amt)} in cash.`); SH.UI.afterAction(); };
-  Bk.loadCash = function (amt) { const g = G(), b = Bk.state(); if (Bk.access()) return SH.UI.toast(Bk.access()); amt = Math.min(amt, g.money); if (amt < 1) return SH.UI.toast('No cash to load.'); SH.money(-amt); b.bal += amt; log('Cash load · QuikMart ($1 fee)', amt - 1); b.bal -= 1; SH.UI.toast(`Loaded ${$2(amt - 1)} onto PocketPal ($1 fee).`); SH.UI.afterAction(); };
+  Bk.loadCash = function (amt, where) { const g = G(), b = Bk.state(); if (Bk.access()) return SH.UI.toast(Bk.access()); amt = Math.min(amt, g.money); if (amt < 1) return SH.UI.toast('No cash to load.'); SH.money(-amt); b.bal += amt; log(`Cash load · ${where || 'QuikMart'} ($1 fee)`, amt - 1); b.bal -= 1; SH.UI.toast(`Loaded ${$2(amt - 1)} onto PocketPal ($1 fee).`); SH.UI.afterAction(); };
 
   /* ---------- crew pot (group account) ---------- */
   Bk.crewable = () => { const g = G(); return Object.keys((g.friends || {})).filter((id) => g.friends[id].met && (g.rel[id] || 0) >= 35); };
