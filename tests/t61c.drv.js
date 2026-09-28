@@ -1,0 +1,11 @@
+const errs=[]; p.on('pageerror', e=>errs.push(e.message)); const r=[];
+await goTown('p6');
+r.push(await p.evaluate(()=>{ const g=SH.G; g.t+=8*1440; g.missingAt=g.t-7*1440; g.s.full=30; g._exWarn=0; document.querySelector('#modal').classList.add('hidden'); SH.advance(60); SH.advance(60);
+ return 'phase '+g.phase+' days '+(SH.day()-SH.day(g.missingAt))+' warn '+g._exWarn+' village '+SH.inVillage()+' | '+[...document.querySelectorAll('#log .entry, #log > div')].slice(0,3).map(e=>e.innerText).join(' || ').slice(0,300); }));
+await p.evaluate(()=>{ const g=SH.G; document.querySelector('#modal').classList.add('hidden'); for(let i=0;i<30;i++){ g.s.full=10; SH.advance(60); if(document.querySelector('#modal:not(.hidden)')) break; } });
+r.push('1st: '+await p.evaluate(()=>{ const m=document.querySelector('#modal:not(.hidden)'); return m? m.innerText.replace(/\s+/g,' ').slice(0,200):'none'; }));
+await choose('Get up'); await p.waitForTimeout(200);
+r.push('after: ended '+await p.evaluate(()=>!!SH.G.ended+' collapse '+SH.G._exCollapse+' '+SH.fmt12()));
+await p.evaluate(()=>{ const g=SH.G; document.querySelector('#modal').classList.add('hidden'); for(let i=0;i<30;i++){ g.s.full=10; SH.advance(60); if(document.querySelector('#modal:not(.hidden)')||g.ended) break; } });
+r.push('2nd: '+await p.evaluate(()=>{ const m=document.querySelector('#modal:not(.hidden)'); return m? m.innerText.replace(/\s+/g,' ').slice(0,200):'none'; }));
+return r.join('\n')+'\nERRS '+errs.join('|');

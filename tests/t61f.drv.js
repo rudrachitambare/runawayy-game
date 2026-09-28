@@ -1,0 +1,10 @@
+const r=[];
+await goTown('p6');
+await p.evaluate(()=>{ const g=SH.G; g.t+=8*1440; g.t=Math.floor(g.t/1440)*1440+22*60; g.missingAt=g.t-7*1440; Object.assign(g.s,{health:70,full:20,energy:60,warmth:80}); SH.Events.Q=[]; SH.Exhaust.hit(); });
+r.push('1st: '+await p.evaluate(()=>{ const m=document.querySelector('#modal:not(.hidden)'); return m? m.innerText.replace(/\s+/g,' ').slice(0,60):'none'; }));
+await choose('Get up'); await p.waitForTimeout(200);
+r.push('after: ended '+await p.evaluate(()=>!!SH.G.ended+' '+SH.fmt12()+' Q '+JSON.stringify(SH.Events.Q.map(e=>e.id))+' health '+Math.round(SH.G.s.health)));
+r.push(await p.evaluate(()=>{ const g=SH.G, seen=[]; SH.Events.Q=[]; for(let i=0;i<60;i++){ Object.assign(g.s,{health:70,full:20,energy:60,warmth:80}); SH.advance(60); if(SH.Events.Q.find(e=>e.id==='longRun')){ seen.push('longRun queued at '+SH.fmt12()+' day'+SH.day()); break; } } return seen.join(',')||'no longRun in 60h'; }));
+await p.evaluate(()=>{ SH.Events.Q=SH.Events.Q.filter(e=>e.id==='longRun'); SH.UI.afterAction(); }); await p.waitForTimeout(300);
+r.push('then: '+await p.evaluate(()=>{ const m=document.querySelector('#modal:not(.hidden)'); return m? m.innerText.replace(/\s+/g,' ').slice(0,120):'none'; }));
+return r.join('\n');

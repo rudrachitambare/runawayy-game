@@ -1,0 +1,10 @@
+const r=[];
+await p.evaluate(()=>{ SH.Events.Q = SH.Events.Q.filter(e=>e.id==='longRun'); SH.UI.afterAction(); });
+await p.waitForTimeout(300);
+r.push('1st: '+await p.evaluate(()=>{ const m=document.querySelector('#modal:not(.hidden)'); return m? m.innerText.replace(/\s+/g,' ').slice(0,260):'none'; }));
+await choose('Get up'); await p.waitForTimeout(200);
+r.push('after: ended '+await p.evaluate(()=>!!SH.G.ended+' collapse '+SH.G._exCollapse+' '+SH.fmt12()+' Q '+JSON.stringify(SH.Events.Q.map(e=>e.id))));
+await p.evaluate(()=>{ const g=SH.G; SH.Events.Q=[]; for(let i=0;i<30;i++){ g.s.full=10; SH.advance(60); if(SH.Events.Q.find(e=>e.id==='longRun')) break; } SH.Events.Q = SH.Events.Q.filter(e=>e.id==='longRun'); SH.UI.afterAction(); });
+await p.waitForTimeout(300);
+r.push('2nd: '+await p.evaluate(()=>{ const m=document.querySelector('#modal:not(.hidden)'); return m? m.innerText.replace(/\s+/g,' ').slice(0,200):'none'; }));
+return r.join('\n');

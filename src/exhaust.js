@@ -13,7 +13,7 @@
 
   K.hourly.push(() => {
     const g = G(); if (!g || g.ended || g.phase !== 'run' || days() < 5 || inVillage()) return;
-    if (g._exGrace > g.t || (g._exWarn && g.t - g._exWarn < 8 * 60)) return;
+    if (g._exWarn && g.t - g._exWarn < 8 * 60) return;
     const l = low(); if (!l.length) return;
     g._exWarn = g.t;
     const what = { health: 'You feel sick and shaky in a way that isn\'t going away.', food: 'Your stomach has stopped growling. That\'s worse.', energy: 'Your eyes keep closing on their own.' };
@@ -25,7 +25,7 @@
   Ex.hit = function () {
     const g = G(); if (!g || g.ended || inVillage()) return;
     if (g._exCollapse && g.t - g._exCollapse < 3 * 1440) return SH.Endings.found('exhausted');
-    g._exCollapse = g.t;
+    g._exCollapse = g.t; g._exGrace = g.t + 20 * 60; // the next morning doesn't count; you get a day to fix it
     const where = g.away ? 'a bench' : 'the curb';
     SH.UI.dialog({ title: 'Your body decides', cls: 'hot', text: [
       `You sit down on ${where} "for a second." The next thing you know, the light is different and your neck hurts and a pigeon is staring at you.`,

@@ -573,3 +573,8 @@ New `src/power.js` (after logic.js):
 ## 60. Built It Yourself reached (never found)
 - The end screen said "there are 15 endings" (stale). Now it shows SH.EndX.total() plus how many you have seen (129 at the time).
 - PENDING, build only when the user says "go": (a) make the longRun exhaustion rule less harsh, (b) load cash onto PocketPal at any gas station.
+
+## 61. "go" on the two pending items
+- Exhaustion (src/exhaust.js, state.js longRun now calls SH.Exhaust.hit()): after 5+ days on the run, an hourly warning (log + toast) when health < 50, fullness < 35 or energy < 30, at most once every 8h. The first time the daily check fails, Sam collapses instead (dialog "Your body decides": 5h pass, health −8, energy +25, stress +10) with a 20h grace. You're only found (exhausted, which is still talkable) if it fails again within 3 days of that collapse. Villages are still exempt. Fixed the day-9 no-roof clause (it checked G.base.level, which doesn't exist; now it checks G.base). The found intro reads "Too many days of this."
+- Gas stations in away towns: "Load cash onto PocketPal" ($1 fee; the log names the station). Bk.loadCash(amt, where).
+- Tests: tests/t61*.drv.js.
